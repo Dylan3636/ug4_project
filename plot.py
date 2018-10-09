@@ -12,59 +12,71 @@ PlotObject = namedtuple('PlotObject',
                          'yd',
                          'offset'])
 
+triangle_shape = [[20, 0],
+                  [10, -10],
+                  [-10, -10],
+                  [-10, 10],
+                  [10, 10]]
+oval_shape = [[-10, -10],
+              [10, 10]]
+center = [500, 500]
 
 class LivePlot:
     def __init__(self):
         self.window = Tk()
-        self.window.geometry("800x800")
+        self.window.geometry("1000x1000")
         self.canvas = Canvas(self.window,
-                             width=800,
-                             height=800)
+                             width=2*center[0],
+                             height=2*center[1])
         self.canvas.pack()
         self.objects = {}
 
     def create_object(self, sim_obj):
         id = sim_obj.id
-        self.objects[id] = self.canvas.create_polygon(triangle_matrix)
+        if sim_obj.object_type == "STATIC":
+            self.objects[id] = self.canvas.create_oval(oval_shape)
+        elif sim_obj.object_type == "USV":
+            self.objects[id] = self.canvas.create_polygon(triangle_shape)
+        return self.objects[id]
 
-    def rotated_triangle(self, angle):
-        triangle_shape = [[5, 7.5],
-                          [0, -7.5],
-                          [-5, 7.5]]
+    def rotated_triangle_coords(self, angle):
 
-        rotate_matrix = [[np.cos(heading),
-                          -np.sin(heading)],
-                         [np.sin(heading),
-                          np.cos(heading)]]
-
+        rotate_matrix = [[np.cos(angle),
+                          -np.sin(angle)],
+                         [np.sin(angle),
+                          np.cos(angle)]]
         xy = np.dot(rotate_matrix,
-               np.transpose(triangle_shape)) + np.array([x, y])
+               np.transpose(triangle_shape)).T
+        return xy
 
 
-    def transform_object(self, sim_obj)
+    def update_object(self, obj, sim_obj):
         id = sim_obj.id
-        x = sim_obj.x
-        y = sim_obj.y
+        x = sim_obj.x + center[0]
+        y = sim_obj.y + center[1]
         heading = sim_obj.heading
+        obj_type = sim_obj.object_type
 
-        obj = rotated_triangle(heading)
-        xy = self.canvas(obj)
-        xy = np.reshape(xy, [2, None]) + np.array([x, y])
-        self.canvas.coord(obj, *xy.flatten())
-        self.object[id] = obj
-        return
+        if obj_type == "STATIC":
+            self.canvas.coords(obj,
+                               oval_shape[0][0]+x,
+                               oval_shape[0][1]+y,
+                               oval_shape[1][0]+x,
+                               oval_shape[1][1]+y)
+            return
+
+        xy = self.rotated_triangle_coords(heading)
+        xy = xy + np.array([[x, y]])
+
+        self.canvas.coords(obj, *xy.flatten())
+        self.objects[id] = obj
 
     def update_world_state(self, sim_objects):
-        for obj in sim_objects:
-            if obj.id not in self.objects:
-                ob = self.create_object(obj)
+        for sim_object in sim_objects:
+            if sim_object.id in self.objects:
+                obj = self.objects[sim_object.id]
             else:
-                ob = self.objects[obj.id]
-            xd = obj.speed*np.cos(obj.heading)*0.1
-            yd = obj.speed*np.sin(obj.heading)*0.1
-            self.canvas.coords(
-                ob,
-                xd,
-                yd)
-            sleep(0.1)
+                obj = self.create_object(sim_object)
+            self.update_object(obj, sim_object)
+            sleep(0.2)
             self.canvas.update()
