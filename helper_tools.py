@@ -11,6 +11,9 @@ SimState = namedtuple("SimState",
                       "speed",
                       "heading"])
 
+def clip(x, min_x, max_x):
+    return min(max_x, max(x, min_x))
+
 def euclidean_distance(v1, v2):
     return math.sqrt(sum([(x1-x2)**2 for x1,x2 in zip(v1, v2)]))
 
