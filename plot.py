@@ -8,9 +8,7 @@ PlotObject = namedtuple('PlotObject',
                         ['x',
                          'y',
                          'heading',
-                         'xd',
-                         'yd',
-                         'offset'])
+                         'radius'])
 
 triangle_shape = [[20, 0],
                   [10, -10],
@@ -32,12 +30,12 @@ class LivePlot:
         self.objects = {}
 
     def create_object(self, sim_obj):
-        id = sim_obj.id
+        sim_id = sim_obj.sim_id
         if sim_obj.object_type == "STATIC":
-            self.objects[id] = self.canvas.create_oval(oval_shape)
+            self.objects[sim_id] = self.canvas.create_oval(oval_shape)
         elif sim_obj.object_type == "USV":
-            self.objects[id] = self.canvas.create_polygon(triangle_shape)
-        return self.objects[id]
+            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape)
+        return self.objects[sim_id]
 
     def rotated_triangle_coords(self, angle):
 
@@ -51,7 +49,7 @@ class LivePlot:
 
 
     def update_object(self, obj, sim_obj):
-        id = sim_obj.id
+        sim_id = sim_obj.sim_id
         x = sim_obj.x + center[0]
         y = sim_obj.y + center[1]
         heading = sim_obj.heading
@@ -69,14 +67,13 @@ class LivePlot:
         xy = xy + np.array([[x, y]])
 
         self.canvas.coords(obj, *xy.flatten())
-        self.objects[id] = obj
+        self.objects[sim_id] = obj
 
     def update_world_state(self, sim_objects):
         for sim_object in sim_objects:
-            if sim_object.id in self.objects:
-                obj = self.objects[sim_object.id]
+            if sim_object.sim_id in self.objects:
+                obj = self.objects[sim_object.sim_id]
             else:
                 obj = self.create_object(sim_object)
             self.update_object(obj, sim_object)
-            sleep(0.2)
             self.canvas.update()

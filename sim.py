@@ -13,22 +13,23 @@ class Simulation:
         self.sim_objects = dict([(obj.sim_id, obj) for obj in sim_objects])
         self.OK = True
         self.anim = LivePlot()
+        self.timeout=timeout
 
-    def update_simulation_state():
-        readings = perceive(self.plot_objects)
-        for obj in self.sim_objects:
+    def update_simulation_state(self):
+        readings = perceive(self.sim_objects)
+        for sim_id, obj in self.sim_objects.items():
             if obj.object_type != "STATIC":
                 obj.command = avoid(obj, readings)
-            state = obj.update_state(self.timeout)
+            obj.update_state(self.timeout)
 
     def command_by_object_id(self, sim_id, command):
         self.sim_objects[sim_id].command = command
  
-    def begin(self, timeout):
+    def begin(self):
         while(self.OK):
             self.update_simulation_state()
-            self.anim.update_world_state(self.plot_objects)
-            sleep(timeout)
+            self.anim.update_world_state(self.sim_objects.values())
+            sleep(self.timeout)
 
     def kill(self):
         self.OK = False
@@ -40,12 +41,6 @@ class Simulation:
     @delta_t.setter
     def delta_t(self, delta_t):
         self._delta_t = delta_t
-
-    @property
-    def plot_objects(self):
-        return [obj.to_plot_object() for obj in self.sim_objects]
-
-
 
 
 def simulation():
@@ -62,11 +57,13 @@ def simulation():
     return lp
 
 if __name__ == '__main__':
-    usv_1 = BasicUSV(0, [])
-    static_1 = StaticObject(100, [200, 100, 0, 0], 10)
-    static_2 = StaticObject(101, [250, 75, 0, 0], 10)
+    usv_1 = BasicUSV(0, [0,75,20,0], radius_buffer=25)
+    static_1 = StaticObject(100, [200, 100, 0, 0], radius_buffer=25)
+    static_2 = StaticObject(101, [250, 75, 0, 0], radius_buffer=10)
 
-    sim=Simulation([usv_1, static_1, static_2])
+    sim=Simulation([usv_1, static_1, static_2],
+                    0.1)
+
     sim.begin()
     lp = sim.anim
     lp.canvas.mainloop()

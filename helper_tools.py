@@ -1,10 +1,6 @@
 from collections import namedtuple
 import math
 
-Command = namedtuple("Command",
-                     ["delta_speed",
-                      "delta_heading"])
-
 SimState = namedtuple("SimState",  
                      ["x",
                       "y",
@@ -14,10 +10,26 @@ SimState = namedtuple("SimState",
 def clip(x, min_x, max_x):
     return min(max_x, max(x, min_x))
 
+def center_point(origin, point):
+    return tuple([x-origin[i] for i, x in enumerate(point)])
+
 def euclidean_distance(v1, v2):
     return math.sqrt(sum([(x1-x2)**2 for x1,x2 in zip(v1, v2)]))
 
-def close_enough(x1, x2, epsilon=1e-15):
+def mid_point(p1, p2):
+    return tuple([(x+y)/2 for x, y in zip(p1, p2)])
+
+def angle_between(p1, p2):
+    p3 = center_point(p1, p2)
+    return math.atan2(p3[1], p3[0])
+
+def less_than_or_close_enough(x1, x2, epsilon=1e-10):
+    return x1 < x2 or close_enough(x1, x2, epsilon)
+
+def greater_than_or_close_enough(x1, x2, epsilon=1e-10):
+    return x1 > x2 or close_enough(x1, x2, epsilon)
+
+def close_enough(x1, x2, epsilon=1e-10):
     return math.fabs(x1-x2)<epsilon
 
 def edge_points_of_circle(reference_point, center, radius):
@@ -33,3 +45,7 @@ def edge_points_of_circle(reference_point, center, radius):
     rightmost_point = hyp*math.cos(beta-alpha)+ref_x, hyp*math.sin(beta-alpha)+ref_y
     return (leftmost_point, rightmost_point)
 
+class Command:
+    def __init__(self, delta_speed, delta_heading):
+        self.delta_speed = delta_speed
+        self.delta_heading = delta_heading

@@ -1,6 +1,7 @@
 import numpy as np
 from threading import Lock
 from helper_tools import *
+from plot import *
 
 lock = Lock()
 class SimObject:
@@ -12,6 +13,7 @@ class SimObject:
                  radius_buffer=10,
                  noise=None,
                  object_type="STATIC"):
+
         self.sim_id = sim_id
         self._command = None
         self.state = [0, 0, 0, 0] \
@@ -21,17 +23,17 @@ class SimObject:
         self.radius = radius_buffer
         self.noise = None
         self.object_type = object_type
-        assert(type(sim_id) == int, "sim_id must be of type integer")
-        assert(len(self.state) == 4, "State must be 4 dimensional")
-        assert(len(self.constraints) == 3, "Constraints must be 3 dimensional")
+        assert type(sim_id) == int, "sim_id must be of type integer"
+        assert len(self.state) == 4, "State must be 4 dimensional"
+        assert len(self.constraints) == 3, "Constraints must be 3 dimensional"
 
     def update_state(self, delta_t):
         global lock
         lock.acquire()
         # Action commands
         command = self.command
-        delta_speed = command[0]
-        delta_heading = command[1]
+        delta_speed = command.delta_heading
+        delta_heading = command.delta_heading
 
         # Kinematics
         pos_x = self.x
@@ -96,7 +98,11 @@ class SimObject:
 
     @heading.setter
     def heading(self, new_heading):
-        self.state[3] = new_heading
+        if new_heading > 2*np.pi:
+            new_heading -= 2*np.pi
+        if new_heading < 0:
+            new_heading += 2*np.pi
+        self.state[3] = new_heading 
 
 
     @property
@@ -107,11 +113,18 @@ class SimObject:
     @command.setter
     def command(self, command):
         if command is None:
-            self._command = [0, 0]
+            self._command = Command(0, 0)
             return
+        print("Command: ", np.rad2deg(command.delta_heading))
+
         max_delta_speed, max_delta_heading = self.constraints[1::]
-        command[0] = clip(command[0], -max_delta_speed, max_delta_speed)
-        command[1] = clip(command[1], -max_delta_heading, max_delta_heading)
+        command.delta_speed = clip(command.delta_speed,
+                                   -max_delta_speed,
+                                   max_delta_speed)
+ 
+        command.delta_heading = clip(command.delta_heading,
+                                     -max_delta_heading,
+                                     max_delta_heading)
  
         global lock
         lock.acquire()
@@ -143,9 +156,9 @@ class StaticObject(SimObject):
                  initial_state,
                  radius_buffer=25):
         
-        super.__init__(sim_id,
+        super().__init__(sim_id,
               initial_state,
-              constraints,
+              None,
               radius_buffer,
               None,
               "STATIC")
@@ -161,7 +174,7 @@ class BasicUSV(SimObject):
                  radius_buffer=100,
                  noise=None):
     
-        super.__init__(sim_id,
+        super().__init__(sim_id,
               initial_state,
               constraints,
               radius_buffer,
