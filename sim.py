@@ -57,8 +57,8 @@ def simulation():
     return lp
 
 if __name__ == '__main__':
-    usv_1 = BasicUSV(0, [0,75,30,0], radius_buffer=25)
-    usv_2 = BasicUSV(1, [300,75,30,np.pi], radius_buffer=25)
+    usv_1 = BasicUSV(0, [0,75,30,0], radius_buffer=40)
+    usv_2 = BasicUSV(1, [300,75,30,np.pi], radius_buffer=40)
     static_1 = StaticObject(100, [200, 100, 0, 0], radius_buffer=30)
     static_2 = StaticObject(101, [250, 75, 0, 0], radius_buffer=30)
 
