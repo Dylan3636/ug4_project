@@ -17,6 +17,9 @@ def clip(x, min_x, max_x):
 def euclidean_distance(v1, v2):
     return math.sqrt(sum([(x1-x2)**2 for x1,x2 in zip(v1, v2)]))
 
+def close_enough(x1, x2, epsilon=1e-15):
+    return math.fabs(x1-x2)<epsilon
+
 def edge_points_of_circle(reference_point, center, radius):
     ref_x = reference_point[0]
     ref_y = reference_point[1]
