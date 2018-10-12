@@ -4,18 +4,21 @@ from numpy import pi as PI
 from helper_tools import *
 
 
-def collision_check(agent_point,
+def collision_check(agent_state,
                     left_edge,
                     right_edge,
                     max_distance=45,
                     max_angle=PI/4):
 
     assert max_angle <= PI/2, "{} </= PI/2".rad2deg(max_angle)
-    distance = euclidean_distance(agent_point,
+    agent_position = agent_state[0:2]
+    agent_heading = agent_state[3]
+
+    distance = euclidean_distance(agent_position,
                                   mid_point(left_edge,
                                             right_edge))
-    l_theta = angle_between(agent_point, left_edge)  
-    r_theta = angle_between(agent_point, right_edge)  
+    l_theta = relative_angle_between(agent_state[0:2], left_edge, agent_heading)
+    r_theta = relative_angle_between(agent_state[0:2], right_edge, agent_heading)
     flag = in_fan(distance, l_theta, r_theta, max_distance, max_angle)
 
     if flag:
@@ -30,6 +33,7 @@ def in_fan(distance, l_theta, r_theta, max_distance, max_angle):
     return flag
 
 def angle_check(l_theta, r_theta):
+    print(np.rad2deg([l_theta, r_theta]))
     if l_theta >= 0 and r_theta <=0:
         return True
     else:
@@ -69,7 +73,7 @@ def correct(state,
 
     agent_pos = [state.x, state.y]
     max_delta_heading = differential_constraints[2]
-    occupied_intervals = collision_intervals(agent_pos,
+    occupied_intervals = collision_intervals(state.state,
                                     points,
                                     max_distance,
                                     max_angle
@@ -106,7 +110,7 @@ def correct(state,
     print("Safe command: ", np.rad2deg(safe_delta_heading))
     return safe_command
 
-def collision_intervals(agent_pos,
+def collision_intervals(agent_state,
                         points,
                         max_angle,
                         max_distance
@@ -115,7 +119,7 @@ def collision_intervals(agent_pos,
     intervals=[]
     for point in points:
         left_edge, right_edge = point
-        interval = collision_check(agent_pos,
+        interval = collision_check(agent_state,
                                    left_edge,
                                    right_edge,
                                    max_angle,

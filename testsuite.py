@@ -8,7 +8,9 @@ class OATests(unittest.TestCase):
     def test_collision_intervals_inside(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/2
         max_distance = 100
         
@@ -19,7 +21,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
@@ -36,7 +38,9 @@ class OATests(unittest.TestCase):
     def test_collision_intervals_outside_contained(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/3
         max_distance = 100
         
@@ -47,7 +51,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
@@ -59,7 +63,9 @@ class OATests(unittest.TestCase):
     def test_collision_intervals_outside_left(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/2
         max_distance = 100
         
@@ -70,7 +76,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)

@@ -11,7 +11,7 @@ def clip(x, min_x, max_x):
     return min(max_x, max(x, min_x))
 
 def center_point(origin, point):
-    return tuple([x-origin[i] for i, x in enumerate(point)])
+    return tuple([x-o for x, o in zip(point, origin)])
 
 def euclidean_distance(v1, v2):
     return math.sqrt(sum([(x1-x2)**2 for x1,x2 in zip(v1, v2)]))
@@ -21,7 +21,18 @@ def mid_point(p1, p2):
 
 def angle_between(p1, p2):
     p3 = center_point(p1, p2)
-    return math.atan2(p3[1], p3[0])
+    print(p3)
+    angle = math.atan2(p3[1], p3[0])
+    print(angle)
+    return angle
+
+def relative_angle_between(p1, p2, offset_angle):
+    p3 = center_point(p1, p2)
+    angle = math.atan2(p3[1], p3[0])
+    if angle < -math.pi/2:
+        angle += 2*math.pi
+    angle -= offset_angle
+    return angle
 
 def less_than_or_close_enough(x1, x2, epsilon=1e-10):
     return x1 < x2 or close_enough(x1, x2, epsilon)
