@@ -9,31 +9,36 @@ def collision_check(agent_state,
                     right_edge,
                     max_distance=45,
                     max_angle=PI/4):
-
+    # Ensure agent doesn't try to look behind itself
     assert max_angle <= PI/2, "{} </= PI/2".rad2deg(max_angle)
+
     agent_position = agent_state[0:2]
     agent_heading = agent_state[3]
 
-    distance = euclidean_distance(agent_position,
-                                  mid_point(left_edge,
-                                            right_edge))
+    distance = euclidean_distance(agent_position,mid_point(left_edge,
+                                                           right_edge))
     l_theta = relative_angle_between(agent_state[0:2], left_edge, agent_heading)
     r_theta = relative_angle_between(agent_state[0:2], right_edge, agent_heading)
+
+    # Check if it's in the observation fan
     flag = in_fan(distance, l_theta, r_theta, max_distance, max_angle)
 
     if flag:
+        # To be between visible bounds
         return (min(l_theta, max_angle), max(r_theta, -max_angle))
     else:
         return None
 
 def in_fan(distance, l_theta, r_theta, max_distance, max_angle):
-    assert angle_check(l_theta, r_theta), "right point is more left than it is right!"
+    if not(PI/2 >= l_theta >= -PI/2 and PI/2 >= r_theta >= -PI/2):
+        # Ignores objects behind it.
+        return False
+    assert angle_check(l_theta, r_theta), "right point at {} degrees is more left than the left point at {} degrees!".format(np.rad2deg(l_theta), np.rad2deg(r_theta))
     flag = not(l_theta < -max_angle or r_theta > max_angle)
     flag = distance<max_distance and flag
     return flag
 
 def angle_check(l_theta, r_theta):
-    print(np.rad2deg([l_theta, r_theta]))
     if l_theta >= 0 and r_theta <=0:
         return True
     else:
@@ -78,9 +83,11 @@ def correct(state,
                                     max_distance,
                                     max_angle
                                     )
-    print("Occupied intervals: ",np.rad2deg(occupied_intervals))
+
     intervals = safe_intervals(occupied_intervals, max_angle)
+    print("Occupied intervals: ",np.rad2deg(occupied_intervals))
     print("Safe intervals: ", np.rad2deg(intervals))
+
     if not intervals:
         safe_command = Command(command.delta_speed, -max_delta_heading)
         return safe_command
@@ -105,6 +112,7 @@ def correct(state,
         safe_delta_heading = aggression*l_theta + (1-aggression)*r_theta
     else:
         safe_delta_heading = aggression*r_theta + (1-aggression)*l_theta
+
     safe_delta_heading = clip(safe_delta_heading, -max_delta_heading, max_delta_heading)
     safe_command = Command(command.delta_speed, safe_delta_heading)
     print("Safe command: ", np.rad2deg(safe_delta_heading))
@@ -157,77 +165,4 @@ def collision_intervals(agent_state,
             intervals.append([l_theta, r_theta])
     return intervals
 
-def correct_using_fan(state,
-                      command,
-                      fan,
-                      differential_constraints,
-                      max_theta,
-                      step,
-                      aggression=0.5):
-
-    assert np.abs(differential_constraints[2])<2*np.pi, "max_delta_heading should be between [0, 2pi]"
-
-    theta = state.heading
-    delta_theta = command.delta_heading
-    max_delta_theta = differential_constraints[1]
-
-    
-    block = np.deg2rad(np.arange(-max_theta,
-                                 max_theta,
-                                 step))
-
-    safe_delta_thetas_mask = np.logical_not(fan)
-    reachable_delta_thetas_mask = np.abs(block)<max_delta_theta
-
-    safe_and_reachable_mask = np.logical_and(safe_delta_thetas_mask,
-                                             reachable_delta_thetas_mask)
-
-    safe_delta_thetas = block[safe_and_reachable_mask]
-    print(np.logical_not(fan))
-    print(reachable_delta_thetas_mask)
-    print(np.rad2deg(block[safe_delta_thetas_mask]))
-
-    if not list(safe_delta_thetas):
-        if theta + delta_theta >= 0:
-            safe_delta_theta = max_delta_theta
-        else:
-            safe_delta_theta = -max_delta_theta
-    else:
-        if np.any(np.abs(safe_delta_thetas-delta_theta)<1e-10):
-            safe_delta_theta = delta_theta
-        else:
-            start=None
-            intervals = []
-            for i, mark in enumerate(safe_and_reachable_mask):
-                if mark: 
-                    if start is None:
-                        start = i
-                    else:
-                        if i == np.size(safe_and_reachable_mask)-1:
-                            intervals.append((start, i))
-                            start=None
-                        else:
-                            continue
-                elif start is not None:
-                    intervals.append((start, i-1))
-                    start=None
-                else:
-                    continue
-            interval_lenghts = [(block[end]-block[start]) for (start, end) in intervals]
-            max_interval_id = np.argmax(interval_lenghts)
-            max_interval = intervals[max_interval_id]
-            print("INTERVAL")
-            print(max_interval)
-
-            if np.abs(block[max_interval[0]]-delta_theta) < np.abs(block[max_interval[1]]-delta_theta):
-                safe_delta_theta = aggression*block[max_interval[0]] + (1-aggression)*block[max_interval[1]]
-                # print(np.rad2deg(block[max_interval[0]]*0.5 + block[max_interval[1]]*0.5))
-            else:
-                safe_delta_theta = aggression*block[max_interval[1]] + (1-aggression)*block[max_interval[0]]
-                # print(np.rad2deg(block[max_interval[0]]*0.5 + block[max_interval[1]]*0.5))
-            # safe_delta_theta = safe_delta_thetas[np.argmin(np.abs(safe_delta_thetas-delta_theta))]
-    # print(np.rad2deg(safe_delta_theta))
-
-    command = Command(command.delta_speed, safe_delta_theta)
-    return command
 
