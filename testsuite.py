@@ -90,7 +90,10 @@ class OATests(unittest.TestCase):
     def test_collision_intervals_outside_right(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
+
         max_angle = PI/2
         max_distance = 100
         
@@ -101,10 +104,10 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
-                            points,
-                            max_distance,
-                            max_angle)
+        intervals = collision_intervals(agent_state,
+                                        points,
+                                        max_distance,
+                                        max_angle)
 
         assert len(intervals) == 2
         interval = intervals.pop()
@@ -115,7 +118,9 @@ class OATests(unittest.TestCase):
     def test_collision_intervals_inbetween_left(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/4
         max_distance = 100
         
@@ -126,7 +131,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
@@ -143,7 +148,9 @@ class OATests(unittest.TestCase):
     def test_collision_intervals_inbetween_right(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/2
         max_distance = 100
         
@@ -154,7 +161,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
@@ -170,7 +177,9 @@ class OATests(unittest.TestCase):
     def test_safe_intervals_outside_left(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/4
         max_distance = 100
         
@@ -181,7 +190,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
@@ -197,7 +206,11 @@ class OATests(unittest.TestCase):
     def test_safe_intervals_outside_right(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
+        max_angle = PI/4
+        max_distance = 100
         max_angle = PI/4
         max_distance = 100
         
@@ -208,7 +221,7 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
@@ -222,7 +235,9 @@ class OATests(unittest.TestCase):
     def test_safe_intervals_with_wider_fan(self):
         x=10
         y=20
-        agent_pos = [x, y]
+        speed=0
+        heading=0
+        agent_state = [x, y, speed, heading]
         max_angle = PI/2
         max_distance = 100
         
@@ -233,12 +248,11 @@ class OATests(unittest.TestCase):
         r_points = [(np.cos(r_theta) + x, np.sin(r_theta) + y) for r_theta in r_thetas]
         points = list(zip(l_points, r_points))
 
-        intervals = collision_intervals(agent_pos,
+        intervals = collision_intervals(agent_state,
                             points,
                             max_distance,
                             max_angle)
         intervals = safe_intervals(intervals, max_angle)
-        print(np.rad2deg(intervals))
 
         assert len(intervals) == 3
         interval = intervals.pop(0)
@@ -292,7 +306,7 @@ class OATests(unittest.TestCase):
 
 
         with self.assertRaises(AssertionError):
-            collision_check([0, 0],
+            collision_check([0, 0, 0, 0],
                             [1, -1],
                             [1, 1],
                             100,
@@ -314,7 +328,7 @@ class OATests(unittest.TestCase):
         points = list(zip(l_points, r_points))
 
 
-        interval = collision_check([0, 0],
+        interval = collision_check([0, 0, 0, 0],
                             [0, 1],
                             [0, -1],
                             100,
