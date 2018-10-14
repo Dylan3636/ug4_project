@@ -120,8 +120,8 @@ def correct(state,
 
 def collision_intervals(agent_state,
                         points,
-                        max_angle,
-                        max_distance
+                        max_distance,
+                        max_angle
                         ):
 
     intervals=[]
@@ -130,8 +130,9 @@ def collision_intervals(agent_state,
         interval = collision_check(agent_state,
                                    left_edge,
                                    right_edge,
-                                   max_angle,
-                                   max_distance)
+                                   max_distance,
+                                   max_angle
+                                   )
         if interval is None:
             continue
         l_theta, r_theta = interval
@@ -164,5 +165,4 @@ def collision_intervals(agent_state,
         if not contained:
             intervals.append([l_theta, r_theta])
     return intervals
-
 

@@ -15,8 +15,17 @@ triangle_shape = [[20, 0],
                   [-10, -10],
                   [-10, 10],
                   [10, 10]]
+
+
+asset_shape = [[50, 0],
+                  [20, -20],
+                  [-20, -20],
+                  [-20, 20],
+                  [20, 20]]
+
 oval_shape = [[-10, -10],
               [10, 10]]
+
 center = [500, 500]
 
 class LivePlot:
@@ -32,9 +41,12 @@ class LivePlot:
     def create_object(self, sim_obj):
         sim_id = sim_obj.sim_id
         if sim_obj.object_type == "STATIC":
-            self.objects[sim_id] = self.canvas.create_oval(oval_shape)
+            self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill="YELLOW")
         elif sim_obj.object_type == "USV":
-            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape)
+            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="BLUE")
+        elif som_obj.object_type == "ASSET":
+            self.objects[sim_id] = self.canvas.create_polygon(asset_shape)
+
         return self.objects[sim_id]
 
     def rotated_triangle_coords(self, angle):
@@ -47,7 +59,6 @@ class LivePlot:
                np.transpose(triangle_shape)).T
         return xy
 
-
     def update_object(self, obj, sim_obj):
         sim_id = sim_obj.sim_id
         x = sim_obj.x + center[0]
@@ -55,19 +66,19 @@ class LivePlot:
         heading = sim_obj.heading
         obj_type = sim_obj.object_type
 
-        if obj_type == "STATIC":
+        if obj_type in["STATIC", "ASSET"]:
             self.canvas.coords(obj,
                                oval_shape[0][0]+x,
                                oval_shape[0][1]+y,
                                oval_shape[1][0]+x,
                                oval_shape[1][1]+y)
-            return
+        else:
 
-        xy = self.rotated_triangle_coords(heading)
-        xy = xy + np.array([[x, y]])
+            xy = self.rotated_triangle_coords(heading)
+            xy = xy + np.array([[x, y]])
 
-        self.canvas.coords(obj, *xy.flatten())
-        self.objects[sim_id] = obj
+            self.canvas.coords(obj, *xy.flatten())
+            self.objects[sim_id] = obj
 
     def update_world_state(self, sim_objects):
         for sim_object in sim_objects:
