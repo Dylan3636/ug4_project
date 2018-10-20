@@ -5,7 +5,8 @@ SimState = namedtuple("SimState",
                      ["x",
                       "y",
                       "speed",
-                      "heading"])
+                      "heading",
+                      "radius"])
 
 def clip(x, min_x, max_x):
     return min(max_x, max(x, min_x))

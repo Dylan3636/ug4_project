@@ -1,17 +1,15 @@
+#include <iostream>
 #include "swarm_tools.h"
 #include "collision_avoidance.h"
 #include <vector>
 #include <algorithm>
 #include <cmath>
 
-using namespace collision_avoidance;
-
-
-int correct_command(
-    const AgentState &agent_state,
-    AgentCommand &command,
+int collision_avoidance::correct_command(
+    const agent::AgentState &agent_state,
+    agent::AgentCommand &command,
     const std::vector<swarm_tools::PointInterval> &edge_points,
-    const AgentConstraints &constraints,
+    const agent::AgentConstraints &constraints,
     const double &max_distance,
     const double &max_angle_rad,
     const double &aggression
@@ -44,10 +42,10 @@ int correct_command(
 
     // Get largest interval
     int largest_interval_index = largest_safe_interval(safe_intervals);
-    auto largest_interval = safe_intervals[largest_interval_index];
+    swarm_tools::AngleInterval largest_interval = safe_intervals[largest_interval_index];
 
-    auto l_theta_rad = largest_interval.l_theta_rad;
-    auto r_theta_rad = largest_interval.r_theta_rad;
+    double l_theta_rad = largest_interval.l_theta_rad;
+    double r_theta_rad = largest_interval.r_theta_rad;
 
     // Get the weighted mid point of the interval.
     if (std::abs(l_theta_rad-delta_heading) < std::abs(r_theta_rad-delta_heading)){
@@ -61,9 +59,9 @@ int correct_command(
     return 1;
 }
 
-bool is_command_safe(
+bool collision_avoidance::is_command_safe(
     const double &delta_heading,
-    const std::vector<swarm_tools::AngleInterval> safe_intervals
+    const std::vector<swarm_tools::AngleInterval>& safe_intervals
 ){
     for (const swarm_tools::AngleInterval interval : safe_intervals){
         if (interval.contains(delta_heading)){
@@ -73,10 +71,10 @@ bool is_command_safe(
     return false;
 }
 
-int largest_safe_interval(
-    const std::vector<swarm_tools::AngleInterval> safe_intervals
+int collision_avoidance::largest_safe_interval(
+    const std::vector<swarm_tools::AngleInterval>& safe_intervals
 ){
-    int max_index = -1;
+    int max_index;
     double max_diff = -1;
     for (auto ip=safe_intervals.begin();ip != safe_intervals.end(); ip++){
         double diff = std::abs(ip->l_theta_rad-ip->r_theta_rad);
@@ -89,8 +87,7 @@ int largest_safe_interval(
 }
 
 bool collision_avoidance::collision_check(
-
-    const AgentState &agent_state,
+    const agent::AgentState &agent_state,
     const swarm_tools::Point2D &left,
     const swarm_tools::Point2D &right,
     const double &max_distance,
@@ -112,8 +109,10 @@ bool collision_avoidance::collision_check(
     bool is_in_fan = in_fan(distance, l_theta_rad, r_theta_rad, max_distance, max_angle_rad);
 
     if (is_in_fan){
-        l_theta_rad = std::max(l_theta_rad, max_angle_rad);
+        l_theta_rad = swarm_tools::clip(l_theta_rad, -max_angle_rad, max_angle_rad);
+        r_theta_rad = swarm_tools::clip(r_theta_rad, -max_angle_rad, max_angle_rad);
     }
+    std::cout <<"Fan: " << is_in_fan<<std::endl;
 
     return is_in_fan;
 }//collision_check
@@ -126,35 +125,34 @@ bool collision_avoidance::in_fan(
     const double &max_angle_rad
 ){
     // Check if angles are in range
-    bool left_in_range = swarm_tools::PI/2 <= l_theta_rad && l_theta_rad <= tools::PI/2;
-    bool right_in_range = swarm_tools::PI/2 <= r_theta_rad && l_theta_rad <= tools::PI/2;
+    bool left_in_range = -max_angle_rad <= l_theta_rad && l_theta_rad <= max_angle_rad;
+    bool right_in_range = -max_angle_rad <= r_theta_rad && r_theta_rad <= max_angle_rad;
 
-    if (!(left_in_range && right_in_range)){
+    if (!(left_in_range || right_in_range)){
         return false; // Angles are out of range
     }
  
-    bool flag;
     if (l_theta_rad >= 0 and r_theta_rad<=0){
-        flag = true;
+        return true;
     }
     else{
-        flag = l_theta_rad >= r_theta_rad;
+        return l_theta_rad >= r_theta_rad;
     }
 }//in_fan
 
 
 int collision_avoidance::get_safe_intervals(
-    const AgentState agent_state,
-    const std::vector<swarm_tools::PointInterval> edge_intervals,
-    const double max_distance,
-    const double max_angle_rad,
-    std::vector<swarm_tools::AngleInterval> safe_intervals
+    const agent::AgentState& agent_state,
+    const std::vector<swarm_tools::PointInterval>& edge_intervals,
+    const double& max_distance,
+    const double& max_angle_rad,
+    std::vector<swarm_tools::AngleInterval>& safe_intervals
 ){
     std::vector<swarm_tools::AngleInterval> occupied_intervals;
-    
-    for (auto point_interval : edge_intervals){
-        const auto left_point = point_interval.left_point;
-        const auto right_point = point_interval.right_point;
+    std::cout << "Size: " << edge_intervals.size() << std::endl;
+    for (swarm_tools::PointInterval point_interval : edge_intervals){
+        swarm_tools::Point2D left_point = point_interval.left_point;
+        swarm_tools::Point2D right_point = point_interval.right_point;
 
         double l_theta;
         double r_theta;
@@ -166,32 +164,34 @@ int collision_avoidance::get_safe_intervals(
                                    max_angle_rad,
                                    l_theta,
                                    r_theta);
-        if (flag){
+        if (!flag){
             continue;
         }else{
             const swarm_tools::AngleInterval interval = {l_theta, r_theta};
             occupied_intervals.push_back(interval);
         }
-    
-    std::sort(occupied_intervals); //TODO
+    }
+    std::sort(occupied_intervals.begin(), occupied_intervals.end(), swarm_tools::greater_ai); //TODO
     swarm_tools::AngleInterval safe_interval;
-    double right_theta_rad=max_angle_rad;
-    for ( auto ip = occupied_intervals.begin(); ip == occupied_intervals.end(); ip++){
+    double right_theta_rad = max_angle_rad;
+    for ( auto ip = occupied_intervals.begin(); ip <= occupied_intervals.end(); ip++){
         if (ip==occupied_intervals.end()){
             if(right_theta_rad > -max_angle_rad){
                 safe_interval = {right_theta_rad, -max_angle_rad};
                 safe_intervals.push_back(safe_interval);
+                return right_theta_rad;
             }
         }else{
             if(right_theta_rad < ip->l_theta_rad){
-                right_theta_rad = ip->l_theta_rad;
+                right_theta_rad = ip->r_theta_rad;
             }else{
-                safe_interval = {right_theta_rad, ip->l_theta_rad};
+                safe_interval = swarm_tools::AngleInterval{right_theta_rad, ip->l_theta_rad};
                 safe_intervals.push_back(safe_interval);
                 right_theta_rad = ip->r_theta_rad;
+                // return safe_intervals.size();
             }
         }
     }
-        
-    }
+
+    return -1;
 }

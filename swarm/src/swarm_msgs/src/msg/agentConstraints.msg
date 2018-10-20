@@ -1,0 +1,4 @@
+int32 sim_id
+float32 max_speed
+float32 max_delta_speed
+float32 max_delta_heading

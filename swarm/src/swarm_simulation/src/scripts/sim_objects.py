@@ -15,7 +15,7 @@ class SimObject:
                  object_type="STATIC"):
 
         self.sim_id = sim_id
-        self._command = None
+        self.command = None
         self.state = [0, 0, 0, 0] \
                 if initial_state is None else initial_state
         self.constraints = [10, 2, np.pi/4] \
@@ -24,7 +24,7 @@ class SimObject:
         self.noise = None
         self.object_type = object_type
         assert type(sim_id) == int, "sim_id must be of type integer"
-        assert len(self.state) == 4, "State must be 4 dimensional"
+        assert len(self._state) == 4, "State must be 4 dimensional"
         assert len(self.constraints) == 3, "Constraints must be 3 dimensional"
 
     def update_state(self, delta_t):
@@ -62,11 +62,11 @@ class SimObject:
 
     @property
     def state(self):
-        return self._state
+        return SimState(*self._state, self.radius)
 
     @state.setter
     def state(self, state):
-        self._state = state
+        self._state = state 
 
     @property
     def x(self):
@@ -86,15 +86,15 @@ class SimObject:
     
     @x.setter
     def x(self, x):
-        self.state[0] = x
+        self._state[0] = x
 
     @y.setter
     def y(self, y):
-        self.state[1] = y
+        self._state[1] = y
 
     @speed.setter
     def speed(self, new_speed):
-        self.state[2] = new_speed
+        self._state[2] = new_speed
 
     @heading.setter
     def heading(self, new_heading):
@@ -102,7 +102,7 @@ class SimObject:
             new_heading -= 2*np.pi
         if new_heading < 0:
             new_heading += 2*np.pi
-        self.state[3] = new_heading 
+        self._state[3] = new_heading 
 
 
     @property
@@ -164,7 +164,7 @@ class StaticObject(SimObject):
               "STATIC")
 
     def update_state(self, delta_t):
-        return
+        return self.state
 
 class BasicUSV(SimObject):
     def __init__(self,

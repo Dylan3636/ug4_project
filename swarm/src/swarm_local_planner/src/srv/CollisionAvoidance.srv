@@ -1,0 +1,6 @@
+swarm_msgs/agentCommand desired_command
+swarm_msgs/worldState world_state
+swarm_msgs/agentParam agent_params
+swarm_msgs/agentConstraints agent_constraints
+---
+swarm_msgs/agentCommand safe_command

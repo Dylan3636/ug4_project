@@ -1,4 +1,9 @@
+#include "swarm_tools.h"
 
+#ifndef AGENT_H
+#define AGENT_H
+
+namespace agent{
 enum AgentType{
     USV,
     Intruder,
@@ -15,7 +20,7 @@ struct AgentState
     double radius;
     double sim_id;
 
-    Point2D position() const;
+    swarm_tools::Point2D position() const;
 };
 
 struct AgentCommand
@@ -32,3 +37,5 @@ struct AgentConstraints
 };
 
 int get_left_and_right_points();
+}
+#endif
