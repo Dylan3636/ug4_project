@@ -2,7 +2,10 @@ import numpy as np
 import rospy
 from sim import Simulation
 from sim_objects import *
-from swarm_msgs.msg import agentState, agentCommand, worldState 
+from swarm_msgs.msg import (agentState,
+                            agentCommand,
+                            agentType,
+                            worldState)
 
 class SimulationNode:
 
@@ -32,13 +35,21 @@ def state_to_msg(sim_id, sim_state):
     msg.heading = sim_state.heading
     msg.radius = sim_state.radius
     msg.sim_id = sim_id
+    if sim_state.object_type == "USV":
+        msg.agent_type = agentType().USV
+    elif sim_state.object_type == "Intruder":
+        msg.agent_type = agentType().Intruder
+    elif sim_state.object_type == "Tanker":
+        msg.agent_type = agentType().Tanker
+    else:
+        msg.agent_type = agentType().Static
     return msg
 
 if __name__ == "__main__":
-    usv_1 = BasicUSV(0, [0,75,30,0], radius_buffer=40)
+    usv_1 = BasicUSV(0, [-300,75,30,0], radius_buffer=40)
     usv_2 = BasicUSV(1, [300,75,30,np.pi], radius_buffer=40)
-    static_1 = StaticObject(100, [200, 100, 0, 0], radius_buffer=30)
-    static_2 = StaticObject(101, [250, 75, 0, 0], radius_buffer=30)
+    static_1 = StaticObject(100, [0, 100, 0, 0], radius_buffer=30)
+    static_2 = StaticObject(101, [0, 75, 0, 0], radius_buffer=30)
     sn = SimulationNode([usv_1, usv_2, static_1, static_2])
     sn.sim.begin()
     

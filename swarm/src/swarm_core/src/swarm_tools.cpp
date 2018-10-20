@@ -50,6 +50,15 @@ namespace swarm_tools{
         return Point2D{x, y};
     }
 
+    double absolute_angle_between_points(
+        const Point2D& p1,
+        const Point2D& p2
+    ){
+        Point2D centered_p2 = center_point(p1, p2);
+        double angle = atan2(centered_p2.y, centered_p2.x);
+        return angle;
+    }
+
     double relative_angle_between_points(
         const Point2D& p1,
         const Point2D& p2,

@@ -16,6 +16,7 @@ add_message_files(
   worldState.msg
   agentConstraints.msg
   agentParam.msg
+  agentType.msg
 )
 
 generate_messages(DEPENDENCIES

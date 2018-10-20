@@ -31,9 +31,9 @@ struct AgentCommand
 
 struct AgentConstraints
 {
-    const double max_speed;
-    const double max_delta_speed;
-    const double max_delta_heading; 
+    double max_speed;
+    double max_delta_speed;
+    double max_delta_heading; 
 };
 
 int get_left_and_right_points();

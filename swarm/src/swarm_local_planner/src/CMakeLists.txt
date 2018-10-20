@@ -60,8 +60,12 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #   FILES_MATCHING PATTERN "*.h"
 #)
 
+add_executable(collision_avoidance_service collision_avoidance_service.cpp)
+add_dependencies(collision_avoidance_service collision_avoidance swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(collision_avoidance_service collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
+
 add_executable(local_planner local_planner.cpp)
-add_dependencies(local_planner collision_avoidance swarm_local_planner_generate_msgs_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(local_planner collision_avoidance collision_avoidance_service swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(local_planner collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
 #install(FILES nodelet_plugins.xml

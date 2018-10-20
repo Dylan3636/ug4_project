@@ -15,13 +15,13 @@ int collision_avoidance::correct_command(
     const double &aggression
 ){
     std::vector<swarm_tools::AngleInterval> safe_intervals;
-    bool flag = get_safe_intervals(agent_state,
+    int flag = get_safe_intervals(agent_state,
                                    edge_points,
                                    max_distance,
                                    max_angle_rad,
                                    safe_intervals);
 
-    if (!flag){
+    if (safe_intervals.empty()){
         // Fan is totally blocked
         if (command.delta_heading<0){
             command.delta_heading = -max_angle_rad;
@@ -112,7 +112,7 @@ bool collision_avoidance::collision_check(
         l_theta_rad = swarm_tools::clip(l_theta_rad, -max_angle_rad, max_angle_rad);
         r_theta_rad = swarm_tools::clip(r_theta_rad, -max_angle_rad, max_angle_rad);
     }
-    std::cout <<"Fan: " << is_in_fan<<std::endl;
+    // std::cout <<"Fan: " << is_in_fan<<std::endl;
 
     return is_in_fan;
 }//collision_check

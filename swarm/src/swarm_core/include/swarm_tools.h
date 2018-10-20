@@ -37,7 +37,10 @@ namespace swarm_tools{
 
     Point2D mid_point(const Point2D& p1, 
                       const Point2D& p2);
-
+    double absolute_angle_between_points(
+        const Point2D& p1,
+        const Point2D& p2
+    );
     double relative_angle_between_points(
         const Point2D& p1,
         const Point2D& p2,

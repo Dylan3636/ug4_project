@@ -32,7 +32,7 @@ class SimObject:
         lock.acquire()
         # Action commands
         command = self.command
-        delta_speed = command.delta_heading
+        delta_speed = command.delta_speed
         delta_heading = command.delta_heading
 
         # Kinematics
@@ -42,15 +42,15 @@ class SimObject:
         heading = self.state[3]
 
         # Update state
-        pos_x += speed*np.cos(heading)*delta_t 
-        pos_y += speed*np.sin(heading)*delta_t
         heading += delta_heading*delta_t
         speed += delta_speed*delta_t
+        pos_x += speed*np.cos(heading)*delta_t 
+        pos_y += speed*np.sin(heading)*delta_t
 
         # Set state
         self.x = pos_x
         self.y = pos_y
-        self.speed = speed
+        self.speed = max(speed, 0)
         self.heading = heading
         lock.release()
         self.command = None
@@ -62,7 +62,7 @@ class SimObject:
 
     @property
     def state(self):
-        return SimState(*self._state, self.radius)
+        return SimState(*self._state, self.radius, self.object_type)
 
     @state.setter
     def state(self, state):
@@ -166,6 +166,20 @@ class StaticObject(SimObject):
     def update_state(self, delta_t):
         return self.state
 
+class Tanker(SimObject):
+    def __init__(self,
+                 sim_id,
+                 initial_state,
+                 radius_buffer=25):
+        
+        super().__init__(sim_id,
+              initial_state,
+              None,
+              radius_buffer,
+              None,
+              "Tanker")
+
+
 class BasicUSV(SimObject):
     def __init__(self,
                  sim_id,
@@ -180,3 +194,18 @@ class BasicUSV(SimObject):
               radius_buffer,
               None,
               "USV")
+
+class Intruder(SimObject):
+    def __init__(self,
+                 sim_id,
+                 initial_state=None,
+                 constraints=None,
+                 radius_buffer=100,
+                 noise=None):
+    
+        super().__init__(sim_id,
+              initial_state,
+              constraints,
+              radius_buffer,
+              None,
+              "Intruder")
