@@ -177,7 +177,7 @@ class Tanker(SimObject):
               None,
               radius_buffer,
               None,
-              "Tanker")
+              "TANKER")
 
 
 class BasicUSV(SimObject):
@@ -208,4 +208,4 @@ class Intruder(SimObject):
               constraints,
               radius_buffer,
               None,
-              "Intruder")
+              "INTRUDER")

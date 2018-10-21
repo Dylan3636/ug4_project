@@ -26,14 +26,14 @@ bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
         double heading = agent_state.heading;
         double radius = agent_state.radius;
 
-        ROS_INFO("I heard from agent [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
-                sim_id,
-                x,
-                y,
-                speed,
-                heading*180/swarm_tools::PI,
-                radius
-                );
+        // ROS_INFO("I heard from agent [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
+        //         sim_id,
+        //         x,
+        //         y,
+        //         speed,
+        //         heading*180/swarm_tools::PI,
+        //         radius
+        //         );
         if (sim_id==usv_id){
            usv = {x, y, speed, heading, radius, sim_id}; 
         }

@@ -6,14 +6,14 @@ if __name__ == "__main__":
     intruder_1 = Intruder(0, [-300,0,30,0], radius_buffer=40)
     intruder_2 = Intruder(1, [300,0,30,np.pi], radius_buffer=40)
     tanker = Tanker(100, [0, 0, 0, 0], radius_buffer=30)
-    static_1 = StaticObject(200, [-30, 40, 0, 0], radius_buffer=30)
-    static_2 = StaticObject(201, [-30, 20, 0, 0], radius_buffer=30)
-    static_3 = StaticObject(202, [-30, -20, 0, 0], radius_buffer=30)
-    static_4 = StaticObject(203, [-30, -40, 0, 0], radius_buffer=30)
-    static_5 = StaticObject(204, [30, 40, 0, 0], radius_buffer=30)
-    static_6 = StaticObject(205, [30, 20, 0, 0], radius_buffer=30)
-    static_7 = StaticObject(206, [30, -20, 0, 0], radius_buffer=30)
-    static_8 = StaticObject(207, [30, -40, 0, 0], radius_buffer=30)
+    static_1 = StaticObject(200, [-30, 40, 0, 0], radius_buffer=40)
+    static_2 = StaticObject(201, [-30, 10, 0, 0], radius_buffer=40)
+    static_3 = StaticObject(202, [-30, -20, 0, 0], radius_buffer=40)
+    static_4 = StaticObject(203, [-30, -40, 0, 0], radius_buffer=40)
+    static_5 = StaticObject(204, [30, 40, 0, 0], radius_buffer=40)
+    static_6 = StaticObject(205, [30, 10, 0, 0], radius_buffer=40)
+    static_7 = StaticObject(206, [30, -20, 0, 0], radius_buffer=40)
+    static_8 = StaticObject(207, [30, -40, 0, 0], radius_buffer=40)
     sn = SimulationNode([intruder_1,
                         intruder_2,
                         static_1,

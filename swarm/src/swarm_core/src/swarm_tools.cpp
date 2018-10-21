@@ -30,7 +30,7 @@ namespace swarm_tools{
     }
 
     bool AngleInterval::contains(const double angle_rad)const{
-        return this->r_theta_rad<=angle_rad &&  angle_rad <= this->l_theta_rad;
+        return this->r_theta_rad<angle_rad &&  angle_rad < this->l_theta_rad;
     }
     
 
@@ -55,6 +55,7 @@ namespace swarm_tools{
         const Point2D& p2
     ){
         Point2D centered_p2 = center_point(p1, p2);
+        std::cout << "(" << centered_p2.x << ", " << centered_p2.y << ")" << std::endl;
         double angle = atan2(centered_p2.y, centered_p2.x);
         return angle;
     }
@@ -64,13 +65,21 @@ namespace swarm_tools{
         const Point2D& p2,
         const double& offset_angle
     ){
-        Point2D centered_p2 = center_point(p1, p2);
-        double angle = atan2(centered_p2.y, centered_p2.x);
-        if (angle<-PI){
-            angle += 2*PI;
+        double abs_angle = swarm_tools::absolute_angle_between_points(p1,
+                                                                      p2);
+        if (abs_angle<0){
+            abs_angle += 2*swarm_tools::PI;
         }
-        angle -= offset_angle;
-        return angle;
+        double rel_angle;
+        double left = abs_angle-offset_angle;
+        if (std::abs(left) <= swarm_tools::PI)
+            {rel_angle = left;}
+        else if (left<0)
+            {rel_angle = left + 2*swarm_tools::PI;}
+        else
+            {rel_angle = left -2*swarm_tools::PI;}
+
+        return rel_angle;
     }
     double euclidean_distance(
         const Point2D& p1,

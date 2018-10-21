@@ -31,14 +31,15 @@ int collision_avoidance::correct_command(
         return -1; // Indicates the fan was completely blocked 
     }
 
+    if (is_command_safe(command.delta_heading, safe_intervals)){
+        return 0; // Indicates no change was made.
+    }
+
     // restrict command using differential constraints
     double delta_heading = swarm_tools::clip(command.delta_heading,
                                              -max_angle_rad,
                                              max_angle_rad);
  
-    if (is_command_safe(command.delta_heading, safe_intervals)){
-        return 0; // Indicates no change was made.
-    }
 
     // Get largest interval
     int largest_interval_index = largest_safe_interval(safe_intervals);
@@ -64,6 +65,9 @@ bool collision_avoidance::is_command_safe(
     const std::vector<swarm_tools::AngleInterval>& safe_intervals
 ){
     for (const swarm_tools::AngleInterval interval : safe_intervals){
+        double l_theta = interval.l_theta_rad;
+        double r_theta = interval.r_theta_rad;
+        std::cout << "(" <<l_theta*180/swarm_tools::PI << ", " << r_theta*180/swarm_tools::PI << ")"<< std::endl;
         if (interval.contains(delta_heading)){
             return true;
         }

@@ -37,12 +37,12 @@ def state_to_msg(sim_id, sim_state):
     msg.sim_id = sim_id
     if sim_state.object_type == "USV":
         msg.agent_type = agentType().USV
-    elif sim_state.object_type == "Intruder":
-        msg.agent_type = agentType().Intruder
-    elif sim_state.object_type == "Tanker":
-        msg.agent_type = agentType().Tanker
+    elif sim_state.object_type == "INTRUDER":
+        msg.agent_type = agentType().INTRUDER
+    elif sim_state.object_type == "TANKER":
+        msg.agent_type = agentType().TANKER
     else:
-        msg.agent_type = agentType().Static
+        msg.agent_type = agentType().STATIC
     return msg
 
 if __name__ == "__main__":

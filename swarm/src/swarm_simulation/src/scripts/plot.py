@@ -44,12 +44,17 @@ class LivePlot:
             self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill="YELLOW")
         elif sim_obj.object_type == "USV":
             self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="BLUE")
+        elif sim_obj.object_type == "INTRUDER":
+            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="RED")
+        elif sim_obj.object_type == "TANKER":
+            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="YELLOW")
         elif som_obj.object_type == "ASSET":
             self.objects[sim_id] = self.canvas.create_polygon(asset_shape)
 
         return self.objects[sim_id]
 
     def rotated_triangle_coords(self, angle):
+        angle = -angle
 
         rotate_matrix = [[np.cos(angle),
                           -np.sin(angle)],
@@ -62,7 +67,7 @@ class LivePlot:
     def update_object(self, obj, sim_obj):
         sim_id = sim_obj.sim_id
         x = sim_obj.x + center[0]
-        y = sim_obj.y + center[1]
+        y = -sim_obj.y + center[1]
         heading = sim_obj.heading
         obj_type = sim_obj.object_type
 
