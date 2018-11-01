@@ -18,9 +18,11 @@ struct AgentState
     double speed;
     double heading;
     double radius;
-    double sim_id;
+    int sim_id;
 
-    swarm_tools::Point2D position() const;
+    swarm_tools::Point2D position() const{
+        return swarm_tools::Point2D{this->x, this->y};
+    }
 };
 
 struct AgentCommand
@@ -34,6 +36,16 @@ struct AgentConstraints
     double max_speed;
     double max_delta_speed;
     double max_delta_heading; 
+};
+
+struct MotionGoal{
+    double x;   
+    double y;
+    double speed;
+    double heading_rad;
+    swarm_tools::Point2D position() const{
+        return swarm_tools::Point2D{this->x, this->y};
+    }
 };
 
 int get_left_and_right_points();

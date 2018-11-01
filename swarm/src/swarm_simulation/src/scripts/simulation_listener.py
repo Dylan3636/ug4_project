@@ -5,16 +5,19 @@ from sim_objects import *
 from swarm_msgs.msg import (agentState,
                             agentCommand,
                             agentType,
+                            simulationMarker,
                             worldState)
 
 class SimulationNode:
 
-    def __init__(self, sim_objects):
+    def __init__(self, sim_objects, delta_t=0.1):
         rospy.init_node("Simulation", anonymous=True)
-        self.sim = Simulation(sim_objects)
+        self.sim = Simulation(sim_objects, timeout=delta_t)
         self.sim.update_simulation_state = self.tick
         self.publisher = rospy.Publisher('Perception', worldState, queue_size=10)
         self.listener = rospy.Subscriber("Commands", agentCommand, self.command_callback)
+        self.marker_listener = rospy.Subscriber("Markers", simulationMarker, self.sim.anim.marker_callback)
+
 
     def command_callback(self, msg):
         command = Command(msg.delta_speed,
@@ -25,6 +28,7 @@ class SimulationNode:
         ws = worldState().worldState
         [ws.append(state_to_msg(sim_id, obj.update_state(self.sim.timeout))) for sim_id, obj in self.sim.sim_objects.items()]
         self.publisher.publish(ws)
+    
     
 
 def state_to_msg(sim_id, sim_state):

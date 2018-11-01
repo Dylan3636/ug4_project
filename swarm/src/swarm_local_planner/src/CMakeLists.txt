@@ -30,7 +30,7 @@ generate_messages(
 catkin_package(
   DEPENDS Boost
   CATKIN_DEPENDS message_runtime roscpp std_msgs swarm_msgs swarm_core
-  LIBRARIES agent swarm_tools
+  LIBRARIES swarm_tools
   INCLUDE_DIRS ../include
 )
 
@@ -51,6 +51,16 @@ install(TARGETS
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+add_library(motion_goal_control motion_goal_control.cpp)
+#add_dependencies(collision_avoidance)
+target_link_libraries(motion_goal_control ${swarm_core_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+install(TARGETS
+  motion_goal_control
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 install(DIRECTORY include/${PROJECT_NAME}/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
@@ -64,9 +74,13 @@ add_executable(collision_avoidance_service collision_avoidance_service.cpp)
 add_dependencies(collision_avoidance_service collision_avoidance swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(collision_avoidance_service collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(local_planner local_planner.cpp)
-add_dependencies(local_planner collision_avoidance collision_avoidance_service swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(local_planner collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
+add_executable(intruder_planner intruder_planner.cpp)
+add_dependencies(intruder_planner collision_avoidance motion_goal_control collision_avoidance_service swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(intruder_planner motion_goal_control collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(usv_planner usv_planner.cpp)
+add_dependencies(usv_planner collision_avoidance motion_goal_control collision_avoidance_service swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(usv_planner motion_goal_control collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
 #install(FILES nodelet_plugins.xml
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}

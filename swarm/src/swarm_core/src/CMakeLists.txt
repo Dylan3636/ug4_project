@@ -9,7 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Boost 1.49.0 REQUIRED)
-find_package(Eigen REQUIRED)
+#find_package(Eigen3 REQUIRED)
 
 set(BUILD_FLAGS "-std=c++11 -Wuninitialized")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
@@ -18,7 +18,7 @@ catkin_package(
   DEPENDS Boost
   CATKIN_DEPENDS roscpp std_msgs swarm_msgs
   INCLUDE_DIRS ../include
-  LIBRARIES agent swarm_tools
+  LIBRARIES swarm_tools
 )
 
 include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eigen3_INCLUDE_DIRS})
@@ -28,18 +28,18 @@ include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eig
 #   FILES_MATCHING PATTERN "*.launch" PATTERN "*.machine" PATTERN "*.yaml"
 #)
 
-add_library(agent agent.cpp)
+# add_library(agent ../include/agent.h)
 # add_dependencies(agents)
-target_link_libraries(agent ${catkin_LIBRARIES} ${Boost_LIBRARIES})
-install(TARGETS
-  agent
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# target_link_libraries(agent ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+# install(TARGETS
+#  agent
+#  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
 
 add_library(swarm_tools swarm_tools.cpp)
-add_dependencies(swarm_tools agent)
+# add_dependencies(swarm_tools)
 target_link_libraries(swarm_tools ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 install(TARGETS
   swarm_tools

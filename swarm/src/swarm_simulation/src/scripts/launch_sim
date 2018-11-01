@@ -3,9 +3,11 @@
 from simulation_listener import *
 
 if __name__ == "__main__":
-    intruder_1 = Intruder(0, [-300,0,30,0], radius_buffer=40)
-    intruder_2 = Intruder(1, [300,0,30,np.pi], radius_buffer=40)
-    tanker = Tanker(100, [0, 0, 0, 0], radius_buffer=30)
+    intruder_1 = Intruder(101, [-800,0,30,0], constraints=[100, 100, 2*np.pi], radius_buffer=30)
+    usv_1 = BasicUSV(1, [-200,0,30,np.pi], constraints=[100, 100, 2*np.pi], radius_buffer=60)
+    usv_2 = BasicUSV(2, [-200,100,30,np.pi], constraints=[100, 100, 2*np.pi], radius_buffer=60)
+    # intruder_2 = Intruder(1, [300,0,30,np.pi], radius_buffer=40)
+    tanker = Tanker(100, [0, 0, 0, 0], radius_buffer=40)
     static_1 = StaticObject(200, [-30, 40, 0, 0], radius_buffer=40)
     static_2 = StaticObject(201, [-30, 10, 0, 0], radius_buffer=40)
     static_3 = StaticObject(202, [-30, -20, 0, 0], radius_buffer=40)
@@ -15,16 +17,18 @@ if __name__ == "__main__":
     static_7 = StaticObject(206, [30, -20, 0, 0], radius_buffer=40)
     static_8 = StaticObject(207, [30, -40, 0, 0], radius_buffer=40)
     sn = SimulationNode([intruder_1,
-                        intruder_2,
-                        static_1,
-                        static_2,
-                        static_3,
-                        static_4,
-                        static_5,
-                        static_6,
-                        static_7,
-                        static_8,
+                        usv_1,
+                        #usv_2,
+                        #static_1,
+                        #static_2,
+                        #static_3,
+                        #static_4,
+                        #static_5,
+                        #static_6,
+                        #static_7,
+                        #static_8,
                         tanker
-                        ])
+                        ],
+                        delta_t=0.1)
     sn.sim.begin()
     

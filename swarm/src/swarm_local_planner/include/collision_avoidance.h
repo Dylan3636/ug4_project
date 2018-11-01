@@ -47,6 +47,10 @@ bool is_command_safe(
 int largest_safe_interval(
     const std::vector<swarm_tools::AngleInterval>& safe_intervals);
 
+int nearest_safe_interval(
+    const std::vector<swarm_tools::AngleInterval>& safe_intervals,
+    const double &delta_heading);
+
 int get_safe_intervals(
     const agent::AgentState& agent_state,
     const std::vector<swarm_tools::PointInterval>& edges,

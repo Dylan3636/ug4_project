@@ -115,7 +115,6 @@ class SimObject:
         if command is None:
             self._command = Command(0, 0)
             return
-        print("Command: ", np.rad2deg(command.delta_heading))
 
         max_delta_speed, max_delta_heading = self.constraints[1::]
         command.delta_speed = clip(command.delta_speed,
@@ -125,6 +124,7 @@ class SimObject:
         command.delta_heading = clip(command.delta_heading,
                                      -max_delta_heading,
                                      max_delta_heading)
+        print("Command: ", np.rad2deg(command.delta_heading))
  
         global lock
         lock.acquire()

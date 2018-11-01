@@ -9,7 +9,15 @@ namespace swarm_tools{
 
         bool operator==(const Point2D& rhs) const;
         bool operator!=(const Point2D& rhs) const;
+        Point2D operator-(const Point2D& rhs) const;
+        Point2D operator+(const Point2D& rhs) const;
+        Point2D operator*(const double c) const;
         //friend std::ostream& operator<<(std::ostream& stream, Point2D p);
+    };
+    struct Vector2D:Point2D{
+        Vector2D(const Point2D& start, const Point2D& end);
+        double dot(Point2D& rhs) const;
+        double norm();
     };
 
     struct PointInterval{
@@ -25,6 +33,7 @@ namespace swarm_tools{
         bool operator==(const AngleInterval& rhs) const;
         bool contains(double theta_rad) const;
     };
+
 
     bool greater_ai(const AngleInterval &ai1, const AngleInterval &ai2);
 
@@ -55,6 +64,7 @@ namespace swarm_tools{
         const Point2D& reference,
         const Point2D& center,
         const double& radius,
+        const double& heading,
         Point2D& leftmost_point,
         Point2D& rightmost_point
     );

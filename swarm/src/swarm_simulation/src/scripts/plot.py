@@ -3,7 +3,7 @@ import numpy as np
 from collections import namedtuple
 from tkinter import *
 from time import sleep
-
+from threading import Lock
 PlotObject = namedtuple('PlotObject',
                         ['x',
                          'y',
@@ -12,31 +12,33 @@ PlotObject = namedtuple('PlotObject',
 
 triangle_shape = [[20, 0],
                   [10, -10],
-                  [-10, -10],
-                  [-10, 10],
+                  [-20, -10],
+                  [-20, 10],
                   [10, 10]]
 
 
-asset_shape = [[50, 0],
+asset_shape = [[30, 0],
                   [20, -20],
-                  [-20, -20],
-                  [-20, 20],
+                  [-30, -20],
+                  [-30, 20],
                   [20, 20]]
 
 oval_shape = [[-10, -10],
               [10, 10]]
 
-center = [500, 500]
+center = [1000, 500]
 
 class LivePlot:
     def __init__(self):
         self.window = Tk()
-        self.window.geometry("1000x1000")
+        self.window.geometry("2000x1000")
         self.canvas = Canvas(self.window,
-                             width=2*center[0],
-                             height=2*center[1])
+                             width=2000,#20*center[0],
+                             height=1000)#20*center[1])
         self.canvas.pack()
         self.objects = {}
+        self.markers = {}
+        self.thread_lock = Lock()
 
     def create_object(self, sim_obj):
         sim_id = sim_obj.sim_id
@@ -79,7 +81,7 @@ class LivePlot:
                                oval_shape[1][1]+y)
         else:
 
-            xy = self.rotated_triangle_coords(heading)
+            xy = self.rotated_triangle_coords(heading) /( 2 if obj_type != "TANKER" else 1)
             xy = xy + np.array([[x, y]])
 
             self.canvas.coords(obj, *xy.flatten())
@@ -92,4 +94,22 @@ class LivePlot:
             else:
                 obj = self.create_object(sim_object)
             self.update_object(obj, sim_object)
-            self.canvas.update()
+        self.thread_lock.acquire()
+        for sim_id, marker in self.markers.items():
+            if marker.sim_id not in self.objects:
+                self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill="RED")
+            obj = self.objects[sim_id]
+            x = marker.x + center[0]
+            y = -marker.y + center[1]
+            self.canvas.coords(obj,
+                               oval_shape[0][0]+x,
+                               oval_shape[0][1]+y,
+                               oval_shape[1][0]+x,
+                               oval_shape[1][1]+y)
+            print('Updating marker')
+        self.thread_lock.release()
+        self.canvas.update()
+    
+    def marker_callback(self, marker):
+        with self.thread_lock:
+            self.markers[marker.sim_id] = marker

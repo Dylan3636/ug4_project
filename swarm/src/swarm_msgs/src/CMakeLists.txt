@@ -17,6 +17,7 @@ add_message_files(
   agentConstraints.msg
   agentParam.msg
   agentType.msg
+  simulationMarker.msg
 )
 
 generate_messages(DEPENDENCIES

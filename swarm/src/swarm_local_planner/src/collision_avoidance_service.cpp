@@ -3,6 +3,7 @@
 #include "agent.h"
 #include "collision_avoidance.h"
 #include "swarm_local_planner/CollisionAvoidance.h"
+#include "swarm_msgs/agentType.h"
 #include "swarm_msgs/worldState.h"
 #include "swarm_msgs/agentCommand.h"
 
@@ -38,6 +39,9 @@ bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
            usv = {x, y, speed, heading, radius, sim_id}; 
         }
         else{
+            // if (agent_state.agent_type == swarm_msgs::agentType::TANKER){
+            //    continue;
+            // }
             agent::AgentState as = {x, y, speed, heading, radius, sim_id};
             obstacles.push_back(as);
         }
@@ -50,12 +54,14 @@ bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
         swarm_tools::edge_points_of_circle(usv.position(),
                                            obstacle.position(),
                                            obstacle.radius,
+                                           usv.heading,
                                            left_edge,
                                            right_edge
                                            );
         swarm_tools::PointInterval pi = {left_edge, right_edge};
         edges.push_back(pi);
     }
+    ROS_INFO("AGENT: %d CA", usv.sim_id);
 
     agent::AgentCommand command = {req.desired_command.delta_speed,
                                    req.desired_command.delta_heading};

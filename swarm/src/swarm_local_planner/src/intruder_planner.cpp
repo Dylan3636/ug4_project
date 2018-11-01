@@ -2,6 +2,7 @@
 #include <ros/ros.h>
 #include "agent.h"
 #include "collision_avoidance.h"
+#include "motion_goal_control.h"
 #include "swarm_msgs/agentType.h"
 #include "swarm_msgs/agentState.h"
 #include "swarm_msgs/worldState.h"
@@ -10,52 +11,6 @@
 
 ros::Publisher command_pub;
 ros::ServiceClient client;
-
-struct MotionGoal{
-    double x;   
-    double y;
-    double heading_rad;
-
-    swarm_tools::Point2D position() const{
-        return swarm_tools::Point2D{this->x, this->y};
-    }
-};
-
-bool move_to_motion_goal(
-    const agent::AgentState& agent_state,
-    const agent::AgentConstraints& agent_constraints,
-    const MotionGoal& motion_goal,
-    agent::AgentCommand& command
-);
-bool is_in_interval(
-    const double angle,
-    const double lower_bound,
-    const double upper_bound
-){
-    return lower_bound<= angle && angle<= upper_bound;
-}
-
-bool move_to_motion_goal(
-    const agent::AgentState& agent_state,
-    const agent::AgentConstraints& agent_constraints,
-    const MotionGoal& motion_goal,
-    agent::AgentCommand& command
-){
-    double delta_heading = swarm_tools::relative_angle_between_points(agent_state.position(),
-                                                                      motion_goal.position(),
-                                                                      agent_state.heading); 
-
-    delta_heading = swarm_tools::clip(delta_heading,
-                                      -agent_constraints.max_delta_heading,
-                                      agent_constraints.max_delta_heading);
-    double delta_speed = agent_constraints.max_speed-agent_state.speed;
-    delta_speed = swarm_tools::clip(delta_speed,
-                                    -agent_constraints.max_delta_speed,
-                                    agent_constraints.max_delta_speed);
-    command.delta_speed=delta_speed;
-    command.delta_heading=delta_heading;
-    return true;
-}
 
 void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     auto ws = world_state->worldState;
@@ -106,7 +61,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     for (auto intruder : intruders){
         int sim_id = intruder.sim_id;
         double max_speed = 30;
-        double max_delta_speed = 2; 
+        double max_delta_speed = 5; 
         double max_delta_heading =  swarm_tools::PI/6;
         agent::AgentConstraints constraints;
         constraints.max_speed = max_speed;
@@ -114,18 +69,18 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         constraints.max_delta_heading = max_delta_heading;
         agent::AgentCommand command;
 
-        MotionGoal motion_goal = {tanker.x, tanker.y};
+        agent::MotionGoal motion_goal = {tanker.x, tanker.y};
         
         ROS_INFO("Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
 
-        move_to_motion_goal(intruder,
-                            constraints,
-                            motion_goal,
-                            command);
+        swarm_control::move_to_motion_goal(intruder,
+                                           constraints,
+                                           motion_goal,
+                                           command);
 
-        double max_distance = 200;
-        double max_angle_rad = swarm_tools::PI/4;
-        double aggression = 0.1;
+        double max_distance = 150;
+        double max_angle_rad = swarm_tools::PI/3;
+        double aggression = 0.5;
         
         swarm_local_planner::CollisionAvoidance srv;
         

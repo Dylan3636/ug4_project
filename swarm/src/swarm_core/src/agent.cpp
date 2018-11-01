@@ -1,5 +1,4 @@
 #include "agent.h"
-#include "swarm_tools.h"
 
 namespace agent{
 swarm_tools::Point2D AgentState::position() const{
