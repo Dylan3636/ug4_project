@@ -42,7 +42,6 @@ include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eig
 #)
 
 add_library(collision_avoidance collision_avoidance.cpp)
-#add_dependencies(collision_avoidance)
 target_link_libraries(collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 install(TARGETS
   collision_avoidance
@@ -52,7 +51,6 @@ install(TARGETS
 )
 
 add_library(motion_goal_control motion_goal_control.cpp)
-#add_dependencies(collision_avoidance)
 target_link_libraries(motion_goal_control ${swarm_core_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 install(TARGETS
   motion_goal_control

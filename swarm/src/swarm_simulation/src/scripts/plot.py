@@ -97,7 +97,7 @@ class LivePlot:
         self.thread_lock.acquire()
         for sim_id, marker in self.markers.items():
             if marker.sim_id not in self.objects:
-                self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill="RED")
+                self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill=marker.colour)
             obj = self.objects[sim_id]
             x = marker.x + center[0]
             y = -marker.y + center[1]

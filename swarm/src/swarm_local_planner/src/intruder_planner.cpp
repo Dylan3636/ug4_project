@@ -62,7 +62,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         int sim_id = intruder.sim_id;
         double max_speed = 30;
         double max_delta_speed = 5; 
-        double max_delta_heading =  swarm_tools::PI/6;
+        double max_delta_heading =  swarm_tools::PI/2;
         agent::AgentConstraints constraints;
         constraints.max_speed = max_speed;
         constraints.max_delta_speed = max_delta_speed;

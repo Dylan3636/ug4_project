@@ -4,7 +4,6 @@ project(swarm_simulation)
 find_package(catkin REQUIRED COMPONENTS
   swarm_msgs
   cmake_modules
-  rospy
   std_msgs
 )
 
@@ -16,7 +15,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 
 catkin_package(
   DEPENDS Boost
-  CATKIN_DEPENDS rospy std_msgs swarm_msgs
+  CATKIN_DEPENDS std_msgs swarm_msgs
   swarm_msgs
 )
 

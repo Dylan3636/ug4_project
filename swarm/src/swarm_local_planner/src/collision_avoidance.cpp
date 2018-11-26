@@ -20,6 +20,7 @@ int collision_avoidance::correct_command(
                                    max_distance,
                                    max_angle_rad,
                                    safe_intervals);
+    command.delta_heading = swarm_tools::clip(command.delta_heading, -max_angle_rad, max_angle_rad);
 
     if (safe_intervals.empty()){
         // Fan is totally blocked

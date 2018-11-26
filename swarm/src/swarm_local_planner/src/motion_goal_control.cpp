@@ -5,6 +5,19 @@
 #include "motion_goal_control.h"
 
 namespace swarm_control{
+    bool usv_delay_motion_goal(const agent::USVAgent &usv,
+                               const agent::IntruderAgent &intruder,
+                               const agent::AssetAgent &asset,
+                               agent::MotionGoal motion_goal){
+
+        return usv_delay_motion_goal(usv.state,
+                                     usv.constraints,
+                                     intruder.state,
+                                     intruder.constraints,
+                                     asset.state,
+                                     motion_goal);
+
+    }
     bool usv_delay_motion_goal(
         const agent::AgentState& usv_state,
         const agent::AgentConstraints& usv_constraints,
@@ -20,7 +33,7 @@ namespace swarm_control{
         swarm_tools::Point2D intruder_position = intruder_state.position();
         swarm_tools::Point2D asset_position = asset_state.position();
 
-        double usv_max_speed = intruder_constraints.max_speed;// Remember this
+        double usv_max_speed = usv_constraints.max_speed;// Remember this
         double intruder_max_speed = intruder_constraints.max_speed;
 
         swarm_tools::Vector2D d = {usv_position, intruder_position};
@@ -30,7 +43,7 @@ namespace swarm_control{
         double d_norm = d.norm();
 
         double A = o_norm*o_norm * (1 + -(usv_max_speed*usv_max_speed/(intruder_max_speed*intruder_max_speed)));
-        double B = -2*d.dot(o); //Ax^2 -Bx + C
+        double B = 2*d.dot(o); //Ax^2 -Bx + C
         double C = d_norm*d_norm;
 
         double det = B*B -4*A*C;
@@ -47,7 +60,8 @@ namespace swarm_control{
         {
             double alpha_minus;
             double alpha_plus;
-            double min_alpha = 0.1;
+            double capture_radius = 30;
+            double min_alpha = std::min(capture_radius/o_norm, 1.0);
 
             if (A==0){
                 alpha_minus = C/B;
@@ -169,13 +183,30 @@ namespace swarm_control{
         return true;
     }
 
+    bool usv_guard_motion_goal(const int& num_of_usvs,
+                               const int& usv_assignment,
+                               const double& radius,
+                               const agent::AgentState asset_state,
+                               agent::MotionGoal& motion_goal
+    ){
+        double angle = (usv_assignment/num_of_usvs) * 2*swarm_tools::PI;
+        swarm_tools::Point2D asset_location = asset_state.position();
+        swarm_tools::Point2D offset = {radius*std::cos(angle), radius*std::sin(angle)};
+        swarm_tools::Point2D guard_position = asset_location+offset;
+
+        motion_goal.x=guard_position.x; 
+        motion_goal.y=guard_position.y; 
+        motion_goal.heading_rad = angle;
+        return true;
+    }
+
     bool move_to_motion_goal(
         const agent::AgentState& agent_state,
         const agent::AgentConstraints& agent_constraints,
         const agent::MotionGoal& motion_goal,
         agent::AgentCommand& command
     ){
-        double close_param = 8;
+        double close_param = 40;
         double angle_between = swarm_tools::absolute_angle_between_points(agent_state.position(),
                                                                           motion_goal.position());
         double distance = swarm_tools::euclidean_distance(agent_state.position(),
