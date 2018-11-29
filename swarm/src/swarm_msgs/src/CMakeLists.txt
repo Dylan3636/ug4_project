@@ -17,6 +17,9 @@ add_message_files(
   agentConstraints.msg
   agentParam.msg
   agentType.msg
+  agentAssignment.msg
+  usvAgent.msg
+  intruderAgent.msg
   simulationMarker.msg
 )
 
@@ -27,3 +30,7 @@ generate_messages(DEPENDENCIES
 catkin_package(
     CATKIN_DEPENDS std_msgs
     )
+
+install(DIRECTORY include/${PROJECT_NAME}/
+   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)

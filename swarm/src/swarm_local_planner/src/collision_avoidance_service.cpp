@@ -14,8 +14,8 @@ bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
     ROS_INFO("I AM BEING CALLED!");
     // std::vector<swarm_msgs::agentState_<std::allocator<void>>, std::allocator<swarm_msgs::agentState_<std::allocator<void>>>> ws = msg->worldState;
     auto ws = req.world_state.worldState;
-    std::vector<agent::AgentState> obstacles;
-    agent::AgentState usv;
+    std::vector<agent::AgentState> obstacle_states;
+    agent::AgentState usv_state;
 
     int usv_id = req.desired_command.sim_id;
     for (auto agent_state : ws){
@@ -27,41 +27,30 @@ bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
         double heading = agent_state.heading;
         double radius = agent_state.radius;
 
-        // ROS_INFO("I heard from agent [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
-        //         sim_id,
-        //         x,
-        //         y,
-        //         speed,
-        //         heading*180/swarm_tools::PI,
-        //         radius
-        //         );
         if (sim_id==usv_id){
-           usv = {x, y, speed, heading, radius, sim_id}; 
+           usv_state = {x, y, speed, heading, radius, sim_id}; 
         }
         else{
-            // if (agent_state.agent_type == swarm_msgs::agentType::TANKER){
-            //    continue;
-            // }
             agent::AgentState as = {x, y, speed, heading, radius, sim_id};
-            obstacles.push_back(as);
+            obstacle_states.push_back(as);
         }
     }
 
     std::vector<swarm_tools::PointInterval> edges;
-    for (auto obstacle : obstacles){
+    for (auto obstacle_state : obstacle_states){
         swarm_tools::Point2D left_edge;
         swarm_tools::Point2D right_edge;
-        swarm_tools::edge_points_of_circle(usv.position(),
-                                           obstacle.position(),
-                                           obstacle.radius,
-                                           usv.heading,
+        swarm_tools::edge_points_of_circle(usv_state.get_position(),
+                                           obstacle_state.get_position(),
+                                           obstacle_state.radius,
+                                           usv_state.heading,
                                            left_edge,
                                            right_edge
                                            );
         swarm_tools::PointInterval pi = {left_edge, right_edge};
         edges.push_back(pi);
     }
-    ROS_INFO("AGENT: %d CA", usv.sim_id);
+    ROS_INFO("AGENT: %d CA", usv_state.sim_id);
 
     agent::AgentCommand command = {req.desired_command.delta_speed,
                                    req.desired_command.delta_heading};
@@ -75,17 +64,17 @@ bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
     double max_angle_rad = req.agent_params.max_angle;
     double aggression = req.agent_params.aggression;
 
-    int flag = collision_avoidance::correct_command(usv,
-                                        command,
-                                        edges,
-                                        constraints,
-                                        max_distance,
-                                        max_angle_rad,
-                                        aggression);
+    int flag = collision_avoidance::correct_command(usv_state,
+                                                    command,
+                                                    edges,
+                                                    constraints,
+                                                    max_distance,
+                                                    max_angle_rad,
+                                                    aggression);
     ROS_INFO("Correct command [%d]", flag);
 
     
-    res.safe_command.sim_id = usv.sim_id;
+    res.safe_command.sim_id = usv_state.sim_id;
     res.safe_command.delta_speed = command.delta_speed;
     res.safe_command.delta_heading = command.delta_heading;
     return true;

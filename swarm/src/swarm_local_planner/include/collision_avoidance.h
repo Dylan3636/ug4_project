@@ -8,6 +8,12 @@
 namespace collision_avoidance{
 
 int correct_command(
+    const agent::USVAgent &agent,
+    const std::vector<agent::AgentState> &obstacle_states,
+    agent::AgentCommand &command
+);
+
+int correct_command(
     const agent::AgentState &agent_state,
     agent::AgentCommand &command,
     const std::vector<swarm_tools::PointInterval> &edge_points,

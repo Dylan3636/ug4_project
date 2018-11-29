@@ -1,0 +1,8 @@
+swarm_msgs/intruderAgent[] intruders
+swarm_msgs/usvAgent[] usvs
+int32 sim_id
+
+------------------------
+
+swarm_msgs/intruderAgent[] intruders
+swarm_msgs/usvAgent[] usvs

@@ -5,6 +5,36 @@
 #include <algorithm>
 #include <cmath>
 
+
+int collision_avoidance::correct_command(
+    const agent::USVAgent &agent,
+    const std::vector<agent::AgentState> &obstacle_states,
+    agent::AgentCommand &command
+){
+    std::vector<swarm_tools::PointInterval> edge_points;
+    for (auto obstacle_state : obstacle_states){
+        swarm_tools::Point2D left_edge;
+        swarm_tools::Point2D right_edge;
+        swarm_tools::edge_points_of_circle(agent.get_position(),
+                                           obstacle_state.get_position(),
+                                           obstacle_state.radius,
+                                           agent.get_heading(),
+                                           left_edge,
+                                           right_edge
+                                           );
+        swarm_tools::PointInterval pi = {left_edge, right_edge};
+        edge_points.push_back(pi);
+    }
+    return collision_avoidance::correct_command(
+                agent.get_state(),
+                command,
+                edge_points,
+                agent.get_constraints(),
+                agent.get_collision_avoidance_params().max_radar_distance,
+                agent.get_collision_avoidance_params().max_radar_angle_rad,
+                agent.get_collision_avoidance_params().aggression);
+}
+
 int collision_avoidance::correct_command(
     const agent::AgentState &agent_state,
     agent::AgentCommand &command,
@@ -126,7 +156,7 @@ bool collision_avoidance::collision_check(
     double &r_theta_rad
 ){
 
-    swarm_tools::Point2D agent_position = agent_state.position();
+    swarm_tools::Point2D agent_position = agent_state.get_position();
     swarm_tools::Point2D mid_point = swarm_tools::mid_point(left, right);
     
     // Get distance to mid point of object

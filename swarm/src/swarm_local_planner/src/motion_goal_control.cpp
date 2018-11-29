@@ -8,13 +8,13 @@ namespace swarm_control{
     bool usv_delay_motion_goal(const agent::USVAgent &usv,
                                const agent::IntruderAgent &intruder,
                                const agent::AssetAgent &asset,
-                               agent::MotionGoal motion_goal){
+                               agent::MotionGoal &motion_goal){
 
-        return usv_delay_motion_goal(usv.state,
-                                     usv.constraints,
-                                     intruder.state,
-                                     intruder.constraints,
-                                     asset.state,
+        return usv_delay_motion_goal(usv.get_state(),
+                                     usv.get_constraints(),
+                                     intruder.get_state(),
+                                     intruder.get_constraints(),
+                                     asset.get_state(),
                                      motion_goal);
 
     }
@@ -29,9 +29,11 @@ namespace swarm_control{
         ROS_INFO("USV DELAY: ");
         motion_goal.speed = intruder_state.speed;
         motion_goal.heading_rad = intruder_state.heading;
-        swarm_tools::Point2D usv_position = usv_state.position();
-        swarm_tools::Point2D intruder_position = intruder_state.position();
-        swarm_tools::Point2D asset_position = asset_state.position();
+        swarm_tools::Point2D usv_position = usv_state.get_position();
+        swarm_tools::Point2D intruder_position = intruder_state.get_position();
+        intruder_position.x += intruder_state.radius*std::cos(intruder_state.heading);
+        intruder_position.y += intruder_state.radius*std::sin(intruder_state.heading);
+        swarm_tools::Point2D asset_position = asset_state.get_position();
 
         double usv_max_speed = usv_constraints.max_speed;// Remember this
         double intruder_max_speed = intruder_constraints.max_speed;
@@ -158,9 +160,9 @@ namespace swarm_control{
     ){
         motion_goal.speed = intruder_state.speed;
         motion_goal.heading_rad = intruder_state.heading;
-        swarm_tools::Point2D usv_position = usv_state.position();
-        swarm_tools::Point2D intruder_position = intruder_state.position();
-        swarm_tools::Point2D asset_position = asset_state.position();
+        swarm_tools::Point2D usv_position = usv_state.get_position();
+        swarm_tools::Point2D intruder_position = intruder_state.get_position();
+        swarm_tools::Point2D asset_position = asset_state.get_position();
 
         double usv_max_speed = intruder_constraints.max_speed;// Remember this
         double intruder_max_speed = intruder_constraints.max_speed;
@@ -190,7 +192,7 @@ namespace swarm_control{
                                agent::MotionGoal& motion_goal
     ){
         double angle = (usv_assignment/num_of_usvs) * 2*swarm_tools::PI;
-        swarm_tools::Point2D asset_location = asset_state.position();
+        swarm_tools::Point2D asset_location = asset_state.get_position();
         swarm_tools::Point2D offset = {radius*std::cos(angle), radius*std::sin(angle)};
         swarm_tools::Point2D guard_position = asset_location+offset;
 
@@ -206,11 +208,11 @@ namespace swarm_control{
         const agent::MotionGoal& motion_goal,
         agent::AgentCommand& command
     ){
-        double close_param = 40;
-        double angle_between = swarm_tools::absolute_angle_between_points(agent_state.position(),
-                                                                          motion_goal.position());
-        double distance = swarm_tools::euclidean_distance(agent_state.position(),
-                                                          motion_goal.position());
+        double close_param = 10;
+        double angle_between = swarm_tools::absolute_angle_between_points(agent_state.get_position(),
+                                                                          motion_goal.get_position());
+        double distance = swarm_tools::euclidean_distance(agent_state.get_position(),
+                                                          motion_goal.get_position());
         double heading_goal;
         double speed_goal; 
 
@@ -223,15 +225,18 @@ namespace swarm_control{
             heading_goal = alpha*angle_between + (1-alpha)*(motion_goal.heading_rad);
             if (abs(angle_between-agent_state.heading) < swarm_tools::PI){
                 distance *= -1;}
-            speed_goal = alpha*agent_constraints.max_speed;//motion_goal.speed;
+            speed_goal = distance;// agent_constraints.max_speed;//motion_goal.speed;
             // speed_goal = agent_constraints.max_delta_speed*(agent_constraints.max_speed/close_param);
         }
         if (heading_goal<0) heading_goal += 2*swarm_tools::PI;
         double left_turn = heading_goal-agent_state.heading;
+
         if (left_turn<0) left_turn+= 2*swarm_tools::PI;
         double right_turn = -(2*swarm_tools::PI-left_turn);
-        std::cout << "Left Turn: " << left_turn*180/swarm_tools::PI << std::endl;
-        std::cout << "Right Turn: " << right_turn*180/swarm_tools::PI << std::endl;
+
+        // std::cout << "Left Turn: " << left_turn*180/swarm_tools::PI << std::endl;
+        // std::cout << "Right Turn: " << right_turn*180/swarm_tools::PI << std::endl;
+
         double delta_heading;
         if (std::abs(left_turn)<=std::abs(right_turn)) {delta_heading = left_turn;} else {delta_heading = right_turn;}
 
@@ -240,6 +245,7 @@ namespace swarm_control{
                                         agent_constraints.max_delta_heading);
         
         double delta_speed = speed_goal-agent_state.speed;
+        std::cout << "SPEED GOAL: "<< speed_goal << " USV SPEED: " << agent_state.speed << "DELTA SPEED: " << delta_speed;
         delta_speed = swarm_tools::clip(delta_speed,
                                         -agent_constraints.max_delta_speed,
                                         agent_constraints.max_delta_speed);

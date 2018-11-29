@@ -66,3 +66,62 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
         }
     }
 }
+
+std::map<int, agent::IntruderAgent> extract_from_intruder_msgs(const std::vector<swarm_msgs::intruderAgent> &intruder_msgs){
+    std::map<int, agent::IntruderAgent> intruder_map;
+    for (auto const &intruder_msg : intruder_msgs){
+        intruder_map[intruder_msg.state.sim_id]=extract_from_intruder_msg(intruder_msg);
+    }
+    return intruder_map;
+}
+
+agent::IntruderAgent extract_from_intruder_msg(const swarm_msgs::intruderAgent &intruder_msg){
+    return agent::IntruderAgent{extract_from_state_msg(intruder_msg.state),
+                                extract_from_constraints_msg(intruder_msg.constraints),
+                                extract_from_ca_params_msg(intruder_msg.ca_params)};
+}
+
+std::map<int, agent::USVAgent> extract_from_usv_msgs(const std::vector<swarm_msgs::usvAgent> &usv_msgs){
+    std::map<int, agent::USVAgent> usv_map;
+    for (auto const &usv_msg : usv_msgs){
+        usv_map[usv_msg.state.sim_id]=extract_from_usv_msg(usv_msg);
+    }
+    return usv_map;
+}
+
+agent::USVAgent extract_from_usv_msg(const swarm_msgs::usvAgent &usv_msg){
+    return agent::USVAgent(extract_from_state_msg(usv_msg.state),
+                           extract_from_constraints_msg(usv_msg.constraints),
+                           extract_from_ca_params_msg(usv_msg.ca_params),
+                           extract_from_assignment_msg(usv_msg.assignment));
+}
+
+
+agent::AgentState extract_from_state_msg(const swarm_msgs::agentState &state_msg){
+    return agent::AgentState{state_msg.x,
+                             state_msg.y,
+                             state_msg.speed,
+                             state_msg.heading,
+                             state_msg.radius,
+                             state_msg.sim_id};
+}
+
+agent::AgentConstraints extract_from_constraints_msg(const swarm_msgs::agentConstraints &constraints_msg){
+    return agent::AgentConstraints{constraints_msg.max_speed,
+                                   constraints_msg.max_delta_speed,
+                                   constraints_msg.max_delta_heading};
+}
+
+agent::CollisionAvoidanceParameters extract_from_ca_params_msg(const swarm_msgs::agentParam &ca_params_msg){
+    return agent::CollisionAvoidanceParameters{ca_params_msg.max_distance,
+                                               ca_params_msg.max_angle,
+                                               ca_params_msg.aggression};
+}
+
+agent::AgentAssignment extract_from_assignment_msg(const swarm_msgs::agentAssignment assignment_msg){
+    return agent::AgentAssignment{assignment_msg.delay_assignment, assignment_msg.guard_assignment};
+}
+
+agent::AgentCommand extract_from_command_msg(const swarm_msgs::agentCommand &command_msg){
+    return agent::AgentCommand{command_msg.delta_speed, command_msg.delta_heading};
+}

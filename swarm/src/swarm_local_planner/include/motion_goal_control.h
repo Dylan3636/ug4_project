@@ -8,7 +8,7 @@ namespace swarm_control{
     bool usv_delay_motion_goal(const agent::USVAgent &usv,
                                const agent::IntruderAgent &intruder,
                                const agent::AssetAgent &asset,
-                               agent::MotionGoal motion_goal);
+                               agent::MotionGoal &motion_goal);
 
     bool usv_delay_motion_goal(
         const agent::AgentState& usv_state,

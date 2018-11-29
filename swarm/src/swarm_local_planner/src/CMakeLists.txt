@@ -2,18 +2,21 @@ cmake_minimum_required(VERSION 2.8.3)
 project(swarm_local_planner)
 
 find_package(catkin REQUIRED COMPONENTS
-  swarm_msgs
-  swarm_core
   cmake_modules
   roscpp
   std_msgs
   message_generation
 )
-
+find_package(swarm_msgs REQUIRED COMPONENTS
+    std_msgs
+    message_generation)
+find_package(swarm_core REQUIRED)
+find_package(swarm_task_manager REQUIRED COMPONENTS
+    swarm_msgs
+    std_msgs
+    message_generation)
 find_package(Boost 1.49.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(swarm_core)
-find_package(swarm_msgs)
 
 set(BUILD_FLAGS "-std=c++11 -Wuninitialized")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
@@ -29,17 +32,18 @@ generate_messages(
 
 catkin_package(
   DEPENDS Boost
-  CATKIN_DEPENDS message_runtime roscpp std_msgs swarm_msgs swarm_core
-  LIBRARIES swarm_tools
+  CATKIN_DEPENDS message_runtime roscpp std_msgs swarm_msgs swarm_core swarm_task_manager
+  LIBRARIES collision_avoidance motion_goal_control
   INCLUDE_DIRS ../include
 )
 
-include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eigen3_INCLUDE_DIRS})
-
-#install(DIRECTORY launch/
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-#   FILES_MATCHING PATTERN "*.launch" PATTERN "*.machine" PATTERN "*.yaml"
-#)
+include_directories(../include
+    ${catkin_INCLUDE_DIRS}
+    ${swarm_msgs_INCLUDE_DIRS}
+    ${swarm_core_INCLUDE_DIRS}
+    ${swarm_task_manager_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIR}
+    ${Eigen3_INCLUDE_DIRS})
 
 add_library(collision_avoidance collision_avoidance.cpp)
 target_link_libraries(collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
@@ -63,11 +67,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
-#install(DIRECTORY cfg/cpp/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#)
-
 add_executable(collision_avoidance_service collision_avoidance_service.cpp)
 add_dependencies(collision_avoidance_service collision_avoidance swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(collision_avoidance_service collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
@@ -80,6 +79,3 @@ add_executable(usv_planner usv_planner.cpp)
 add_dependencies(usv_planner collision_avoidance motion_goal_control collision_avoidance_service swarm_local_planner_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(usv_planner motion_goal_control collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
-#install(FILES nodelet_plugins.xml
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-#)
