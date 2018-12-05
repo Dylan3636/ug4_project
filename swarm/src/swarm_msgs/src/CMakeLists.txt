@@ -21,6 +21,7 @@ add_message_files(
   usvAgent.msg
   intruderAgent.msg
   simulationMarker.msg
+  swarmAssignment.msg
 )
 
 generate_messages(DEPENDENCIES

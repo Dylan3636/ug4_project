@@ -201,8 +201,13 @@ namespace swarm_control{
         motion_goal.heading_rad = angle;
         return true;
     }
+    bool intruder_motion_goal(const agent::AgentState &asset,
+                              agent::MotionGoal &motion_goal){
 
-    bool move_to_motion_goal(
+        motion_goal = {asset.x, asset.y};
+    }
+
+    bool get_command_from_motion_goal(
         const agent::AgentState& agent_state,
         const agent::AgentConstraints& agent_constraints,
         const agent::MotionGoal& motion_goal,
@@ -282,4 +287,64 @@ namespace swarm_control{
         weighted_motion_goal.heading_rad=weighted_heading;
         return true;
     }
+    bool get_motion_goals_from_assignment(int usv_id,
+                                          const agent::USVSwarm &swarm,
+                                          const agent::AssetAgent &asset,
+                                          agent::MotionGoal &delay_motion_goal,
+                                          agent::MotionGoal &guard_motion_goal,
+                                          agent::MotionGoal &motion_goal
+                                          ){
+        agent::USVAgent usv = swarm.get_usv_estimate_by_id(usv_id);
+        int num_usvs = swarm.get_num_usvs();
+        agent::AgentAssignment assignment = usv.get_current_assignment();
+        if (assignment.guard_assignment_idx == -1){
+            int guard_index = assignment.guard_assignment_idx;
+            // ROS_INFO("Assignment: Delay index: NULL Guard index %d", guard_index);
+            swarm_control::usv_guard_motion_goal(num_usvs,
+                                                 guard_index,
+                                                 100,
+                                                 asset.get_state(),
+                                                 motion_goal
+                                                 );
+        
+        
+        } else if(assignment.delay_assignment_idx == -1){
+            int intruder_id = assignment.delay_assignment_idx;
+            // ROS_INFO("Assignment: Delay index: %d Guard index: NULL", intruder_id);
+            agent::IntruderAgent intruder = swarm.get_intruder_estimate_by_id(intruder_id);
+            swarm_control::usv_delay_motion_goal(usv,
+                                                 intruder,
+                                                 asset,
+                                                 motion_goal);
+        }
+        else{
+            int guard_index = assignment.guard_assignment_idx;
+            int intruder_id = assignment.delay_assignment_idx;
+            // ROS_INFO("Assignment: Delay index: %d Guard index: %d", intruder_id, guard_index);
+            agent::IntruderAgent intruder = swarm.get_intruder_estimate_by_id(intruder_id);
+            
+            swarm_control::usv_delay_motion_goal(usv,
+                                                 intruder,
+                                                 asset,
+                                                 delay_motion_goal);
+            
+            swarm_control::usv_guard_motion_goal(num_usvs,
+                                                 guard_index,
+                                                 100,
+                                                 asset.get_state(),
+                                                 guard_motion_goal
+                                                 );
+            std::vector<agent::MotionGoal> mgs = {delay_motion_goal, guard_motion_goal};
+            double dist = swarm_tools::euclidean_distance(intruder.get_position(), asset.get_position());
+            double alpha = dist/1000;
+            if (dist>1000){
+                alpha = 0.7;
+            }
+            std::vector<double> weights = {1-alpha, alpha};
+            swarm_control::weighted_motion_goal(mgs,
+                                                weights,
+                                                motion_goal);
+        return true;
+    }
+}
 }

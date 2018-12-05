@@ -73,10 +73,10 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         
         ROS_INFO("Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
 
-        swarm_control::move_to_motion_goal(intruder,
-                                           constraints,
-                                           motion_goal,
-                                           command);
+        swarm_control::get_command_from_motion_goal(intruder,
+                                                    constraints,
+                                                    motion_goal,
+                                                    command);
 
         double max_distance = 150;
         double max_angle_rad = swarm_tools::PI/3;

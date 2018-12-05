@@ -1,0 +1,8 @@
+int num_timesteps_lookahead
+float32 delta_time_secs
+float32 threshold
+
+-------------
+
+swarmAssignment candidate_assignment
+float32 weight

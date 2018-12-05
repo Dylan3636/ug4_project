@@ -5,14 +5,15 @@
 #include <algorithm>
 #include <cmath>
 
-
+template<typename T>
 int collision_avoidance::correct_command(
-    const agent::USVAgent &agent,
+    const T &agent,
     const std::vector<agent::AgentState> &obstacle_states,
     agent::AgentCommand &command
 ){
     std::vector<swarm_tools::PointInterval> edge_points;
     for (auto obstacle_state : obstacle_states){
+        if(agent.get_sim_id()==obstacle_state.sim_id) continue;
         swarm_tools::Point2D left_edge;
         swarm_tools::Point2D right_edge;
         swarm_tools::edge_points_of_circle(agent.get_position(),

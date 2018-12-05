@@ -28,8 +28,10 @@ namespace swarm_control{
         const agent::AgentState& asset_state,
         agent::MotionGoal& motion_goal
     );
+    bool intruder_motion_goal(const agent::AgentState &asset,
+                              agent::MotionGoal &motion_goal);
 
-    bool move_to_motion_goal(
+    bool get_command_from_motion_goal(
         const agent::AgentState& agent_state,
         const agent::AgentConstraints& agent_constraints,
         const agent::MotionGoal& motion_goal,
@@ -47,5 +49,11 @@ namespace swarm_control{
                                const agent::AgentState asset_state,
                                agent::MotionGoal& motion_goal
     );
+    bool get_motion_goals_from_assignment(int num_usvs,
+                                          const agent::USVSwarm &swarm,
+                                          const agent::AssetAgent &asset,
+                                          agent::MotionGoal &delay_motion_goal,
+                                          agent::MotionGoal &guard_motion_goal,
+                                          agent::MotionGoal &motion_goal);
 }
 #endif

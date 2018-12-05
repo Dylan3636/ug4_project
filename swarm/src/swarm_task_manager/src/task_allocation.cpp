@@ -32,8 +32,8 @@ bool allocate_tasks(const std::vector<agent::USVAgent> &usvs,
             agent::MotionGoal delay_motion_goal;
             usv_delay_motion_goal(usvs[i], intruders[j], asset, delay_motion_goal);
 
-            double delay_cost = -1/swarm_tools::euclidean_distance(usvs[i].position(),
-                                                                   delay_motion_goal.position());
+            double delay_cost = -1/swarm_tools::euclidean_distance(usvs[i].get_position(),
+                                                                   delay_motion_goal.get_position());
 
             for(int k=0; k<=num_guards; k++){
                 double asset_cost;
@@ -43,13 +43,13 @@ bool allocate_tasks(const std::vector<agent::USVAgent> &usvs,
                     asset_delay_cost = 0.5 * no_guard_weight/asset_delay_weight;
                 }else{
                     agent::MotionGoal guard_motion_goal;
-                    usv_guard_motion_goal(num_usvs, k, guard_radius, asset.state, guard_motion_goal);
+                    usv_guard_motion_goal(num_usvs, k, guard_radius, asset.get_state(), guard_motion_goal);
 
-                    asset_cost = -1/swarm_tools::euclidean_distance(usvs[i].position(),
-                                                                    guard_motion_goal.position());
+                    asset_cost = -1/swarm_tools::euclidean_distance(usvs[i].get_position(),
+                                                                    guard_motion_goal.get_position());
 
-                    asset_delay_cost = -1/swarm_tools::euclidean_distance(guard_motion_goal.position(),
-                                                                          delay_motion_goal.position());
+                    asset_delay_cost = -1/swarm_tools::euclidean_distance(guard_motion_goal.get_position(),
+                                                                          delay_motion_goal.get_position());
  
                 }
                // double intruder_guard_cost = swarm_tools::relative_angle_between_points(guard_motion_goal.position(),

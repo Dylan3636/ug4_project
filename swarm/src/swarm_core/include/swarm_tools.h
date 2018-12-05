@@ -1,4 +1,5 @@
 #include <iostream>
+#include <math.h>
 #ifndef SWARM_H
 #define SWARM_H
 namespace swarm_tools{

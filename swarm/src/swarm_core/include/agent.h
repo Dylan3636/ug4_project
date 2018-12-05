@@ -1,7 +1,4 @@
 #include "swarm_tools.h"
-#include <vector>
-#include <map>
-#include <math.h>
 #ifndef AGENT_H
 #define AGENT_H
 
@@ -82,7 +79,17 @@ struct CollisionAvoidanceParameters
     double max_radar_angle_rad;
     double aggression;
 };
-typedef std::map<int, AgentAssignment> SwarmAssignment;
+
+struct MotionGoal{
+    double x;   
+    double y;
+    double speed;
+    double heading_rad;
+    swarm_tools::Point2D get_position() const{
+        return swarm_tools::Point2D{this->x, this->y};
+    }
+};
+
 
 class BaseAgent
 {
@@ -172,8 +179,8 @@ class BaseAgent
                                          double delta_time_secs
                                          );
 
-        AgentState command_state_forward(const AgentCommand &command,
-                                         double delta_time_secs) const{
+        void command_agent_forward(const AgentCommand &command,
+                                         double delta_time_secs){
 
             double x = this->state.x;
             double y = this->state.y;
@@ -185,7 +192,7 @@ class BaseAgent
 
             x += speed*cos(heading);
             y += speed*sin(heading); 
-            return AgentState(x, y, speed, heading, state.radius, state.sim_id);
+            set_state(AgentState(x, y, speed, heading, state.radius, state.sim_id));
     }
 };
 
@@ -220,37 +227,10 @@ class USVAgent : public BaseAgent
 {
     // private variables
     AgentAssignment current_assignment;
-    std::map<int, USVAgent> usv_map;
-    std::map<int, IntruderAgent> intruder_map;
-    AssetAgent asset;
-
-    // private methods
-    void update_intruder_state_estimate(const AgentState &intruder_state);
-    void update_intruder_estimate(const IntruderAgent &intruder);
-    void update_usv_state_estimate(const AgentState &usv_state);
-    void update_usv_estimate(const USVAgent &usv);
-
     public:
-        IntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
-
-        std::vector<USVAgent> get_usv_estimates() const;
-        std::vector<IntruderAgent> get_intruder_estimates() const;
-        std::vector<AgentState> get_obstacle_states() const;
-        SwarmAssignment get_swarm_assignment() const;
-
         AgentAssignment get_current_assignment() const;
         void set_current_assignment(AgentAssignment assignment);
 
-        void update_estimates(const std::map<int, AgentState> &usv_state_map,
-                              const std::map<int, AgentState> &intruder_state_map);
-        void update_estimates(const std::map<int,
-                                  agent::USVAgent> &new_usv_map,
-                              const std::map<int,
-                                  agent::IntruderAgent> &new_intruder_map);
-
-        std::vector<double> evaluate_swarm_assignment(const SwarmAssignment &swarm_assignment,
-                                                      int timesteps,
-                                                      double delta_time_secs);
         void copy(const USVAgent &usv);
         USVAgent(){}
         USVAgent(AgentState state,
@@ -276,20 +256,8 @@ class USVAgent : public BaseAgent
             set_current_assignment(AgentAssignment {delay_id, guard_id});
             set_agent_type(USV);
         }
+};
 
-};
-class SwarmAgents{
-    
-};
-struct MotionGoal{
-    double x;   
-    double y;
-    double speed;
-    double heading_rad;
-    swarm_tools::Point2D get_position() const{
-        return swarm_tools::Point2D{this->x, this->y};
-    }
-};
 
 int get_left_and_right_points();
 }

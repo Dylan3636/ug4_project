@@ -1,8 +1,6 @@
 #define BOOST_TEST_MAIN
 #include <swarm_tools.h>
-#include <math.h>
 #include <algorithm>
-#include <iostream>
 
 namespace swarm_tools{
 
