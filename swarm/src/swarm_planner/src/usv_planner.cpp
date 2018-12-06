@@ -1,19 +1,15 @@
-#include <string>
-#include <ros/ros.h>
-#include <boost/format.hpp>
-//#include <boost/shared_ptr>
+// #include <string>
+//#include <ros/ros.h>
+// #include <boost/format.hpp>
+// #include <boost/shared_ptr>
 #include <mutex>
-#include "usv_swarm.h"
-#include "collision_avoidance.h"
 #include "motion_goal_control.h"
+#include "collision_avoidance.h"
 #include "ros_swarm_tools.h"
-#include "swarm_msgs/agentType.h"
-#include "swarm_msgs/agentState.h"
-#include "swarm_msgs/worldState.h"
-#include "swarm_msgs/agentCommand.h"
 #include "swarm_msgs/simulationMarker.h"
-#include "swarm_local_planner/CollisionAvoidance.h"
-#include "swarm_task_manager/resync.h"
+#include "task_allocation.h"
+// #include "swarm_task_manager/resync.h"
+#include "swarm_task_manager/modelPredictiveSimulation.h"
 
 agent::USVSwarm swarm;
 int usv_id;
@@ -34,7 +30,7 @@ struct RosContainer{
     RosContainer(int argc, char** argv, const char *node_name) : init(argc, argv, node_name){}
 };
 
-// Declare ros container
+// // Declare ros container
 boost::shared_ptr<RosContainer> ros_container_ptr;
 
 std::map<int, ros::ServiceClient> usv_sync_service_map;
@@ -72,64 +68,16 @@ void publish_markers(const agent::MotionGoal &delay_motion_goal,
     ros_container_ptr->marker_pub.publish(marker);
 }
 
-int collision_avoidance_check(const int &sim_id,
-                              const agent::AgentConstraints constraints,
-                              const double &max_distance,
-                              const double &max_angle_rad,
-                              const double &aggression,
-                              const swarm_msgs::worldStateConstPtr &world_state,
-                              const agent::AgentCommand &command,
-                              swarm_local_planner::CollisionAvoidance &srv){
-
-    // WorldState
-    srv.request.world_state = *world_state;
-    
-    // Command
-    srv.request.desired_command.sim_id=sim_id;
-    srv.request.desired_command.delta_speed=command.delta_speed;
-    srv.request.desired_command.delta_heading=command.delta_heading;
-    
-    // Constraints
-    srv.request.agent_constraints.sim_id=sim_id;
-    srv.request.agent_constraints.max_speed;
-    srv.request.agent_constraints.max_delta_speed;
-    srv.request.agent_constraints.max_delta_heading;
-
-    // Parameters
-    srv.request.agent_params.sim_id=sim_id;
-    srv.request.agent_params.max_distance=max_distance;
-    srv.request.agent_params.max_angle=max_angle_rad;
-    srv.request.agent_params.aggression=aggression;
-
-    ROS_INFO("Correcting command for USV [%d]", sim_id);
-    ROS_INFO("Recommended command ([%f], [%f])",
-            command.delta_speed,
-            command.delta_heading*180/swarm_tools::PI);
-    if (ros_container_ptr->client.call(srv)){
-        ROS_INFO("Collision Avoidance Service successful.");
-        ROS_INFO("Corrected command ([%f], [%f])",
-                srv.response.safe_command.delta_speed,
-                srv.response.safe_command.delta_heading*180/swarm_tools::PI);
-        return 0;
-    }else{
-        ROS_ERROR("Collision Avoidance Service Failed!");
-        return -1;
-    }
-}
-
-
-
-
-void callback(const swarm_msgs::worldState::ConstPtr& world_state){
+void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
     std::map<int, agent::AgentState> usv_state_map;
     std::map<int, agent::AgentState> intruder_state_map;
     agent::AgentState asset_state;
 
-    extract_from_world_msg(world_state,
+    extract_from_world_msg(world_state_ptr,
                            usv_state_map,
                            intruder_state_map,
                            asset_state);
-    
+ 
     swarm.update_estimates(usv_state_map, intruder_state_map);
 
     agent::USVAgent usv = swarm.get_usv_estimate_by_id(usv_id);
@@ -158,8 +106,9 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                                                 motion_goal,
                                                 command);
 
+    std::vector<agent::AgentState> obstacle_states = swarm.get_obstacle_states();
     collision_avoidance::correct_command(usv,
-                                         swarm.get_obstacle_states(),
+                                         obstacle_states,
                                          command);
 
     swarm_msgs::agentCommand command_msg = swarm_msgs::agentCommand();
@@ -170,62 +119,89 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 } // callback
 
 
-bool sync_response(swarm_task_manager::resync::Request &req,
-                   swarm_task_manager::resync::Response &res){
+// bool sync_response(swarm_task_manager::resync::Request &req,
+//                    swarm_task_manager::resync::Response &res){
 
-    // check if you have already synced and you have communication
-    if (usv_sync_map[req.sim_id] && usv_communication_map[req.sim_id]){
-        return false;
-    }
+//     // check if you have already synced and you have communication
+//     if (usv_sync_map[req.sim_id] && usv_communication_map[req.sim_id]){
+//         return false;
+//     }
 
-    mtx.lock();
-    usv_sync_map[req.sim_id] = true;
-    usv_communication_map[req.sim_id] = true;
-    mtx.unlock();
+//     mtx.lock();
+//     usv_sync_map[req.sim_id] = true;
+//     usv_communication_map[req.sim_id] = true;
+//     mtx.unlock();
 
-    std::map<int, agent::IntruderAgent> intruders = extract_from_intruder_msgs(req.intruders);
-    std::map<int, agent::USVAgent> usvs = extract_from_usv_msgs(req.usvs);
-    swarm.update_estimates(usvs, intruders);
-    // TODO: Do something with this
-}
+//     std::map<int, agent::IntruderAgent> intruders = extract_from_intruder_msgs(req.intruders);
+//     std::map<int, agent::USVAgent> usvs = extract_from_usv_msgs(req.usvs);
+//     swarm.update_estimates(usvs, intruders);
+//     // TODO: Do something with this
+// }
 
-bool sync_request(int response_sim_id,
-                  swarm_task_manager::resync::Request &req,
-                  swarm_task_manager::resync::Response &res){
+// bool sync_request(int response_sim_id,
+//                   swarm_task_manager::resync::Request &req,
+//                   swarm_task_manager::resync::Response &res){
     
-    // check if you have already synced and you have communication
-    if (usv_sync_map[response_sim_id] && usv_communication_map[response_sim_id]){
+//     // check if you have already synced and you have communication
+//     if (usv_sync_map[response_sim_id] && usv_communication_map[response_sim_id]){
+//         return false;
+//     }
+
+//     auto index = usv_sync_service_map.find(response_sim_id);
+
+//     if (index == usv_sync_service_map.end()){
+//         auto sync_name = boost::format("sync_service_%d") % usv_id;
+//         usv_sync_service_map[response_sim_id] = ros_container_ptr->n.serviceClient<swarm_task_manager::resync>(sync_name.str()); 
+//     }
+//     auto sync_client = usv_sync_service_map[response_sim_id];
+//     if(sync_client.call(req, res)){
+//         mtx.lock();
+//         usv_sync_map[response_sim_id] = true;
+//         usv_communication_map[response_sim_id] = true;
+//         mtx.unlock();
+
+//         // TODO: do stuff here
+//     }else{
+//         mtx.lock();
+//         usv_sync_map[response_sim_id] = true;
+//         usv_communication_map[response_sim_id] = false;
+//         mtx.unlock();
+//     }
+// }
+
+void task_allocator_callback(swarm_msgs::swarmAssignment::ConstPtr swarm_task_assignment_ptr){
+    agent::SwarmAssignment swarm_allocation = extract_from_swarm_assignment_msg(*swarm_task_assignment_ptr);
+    mtx.lock();
+    swarm.update_swarm_assignment(swarm_allocation);
+    mtx.unlock();
+}
+
+bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Request &req,
+                               swarm_task_manager::modelPredictiveSimulation::Response &res){
+    int num_timesteps_lookahead=req.num_timesteps_lookahead;
+    double delta_time_secs = req.delta_time_secs;
+    double threshold = req.threshold;
+    try{
+    auto weighted_swarm_assignment = swarm_task_manager::get_best_candidate_swarm_assignment(usv_id,
+                                                                                             swarm,
+                                                                                             usv_communication_map,
+                                                                                             num_timesteps_lookahead,
+                                                                                             delta_time_secs,
+                                                                                             threshold);
+ 
+    res.candidate_assignment = convert_to_swarm_assignment_msg(weighted_swarm_assignment.first);
+    res.weight = weighted_swarm_assignment.second;
+    }catch(std::exception& e){
+        ROS_ERROR("Task Allocate ERROR: %s", e.what());
         return false;
     }
-
-    auto index = usv_sync_service_map.find(response_sim_id);
-
-    if (index == usv_sync_service_map.end()){
-        auto sync_name = boost::format("sync_service_%d") % usv_id;
-        usv_sync_service_map[response_sim_id] = ros_container_ptr->n.serviceClient<swarm_task_manager::resync>(sync_name.str()); 
+    return true;
     }
-    auto sync_client = usv_sync_service_map[response_sim_id];
-    if(sync_client.call(req, res)){
-        mtx.lock();
-        usv_sync_map[response_sim_id] = true;
-        usv_communication_map[response_sim_id] = true;
-        mtx.unlock();
-
-        // TODO: do stuff here
-    }else{
-        mtx.lock();
-        usv_sync_map[response_sim_id] = true;
-        usv_communication_map[response_sim_id] = false;
-        mtx.unlock();
-    }
-}
-
-bool submit_weighted_assignments(){
-
-}
 
 int main(int argc, char **argv){
 
+    usv_communication_map[1]=true;
+    usv_communication_map[2]=true;
     if (argc >2){
         usv_id = std::stoi(argv[1]);
         intruder_id = std::stoi(argv[2]);
@@ -235,8 +211,8 @@ int main(int argc, char **argv){
     }
     auto s = boost::format("usv_planner_%d") % usv_id;
     ros_container_ptr.reset(new RosContainer(argc, argv, s.str().c_str()));
-    // Initialize usv
-    //swarm();
+    // Initialize swarm
+    // swarm();
     // usv = agent::USVAgent(agent::AgentState {0, 0, 0, 0, 30, usv_id});
 
 
@@ -245,16 +221,19 @@ int main(int argc, char **argv){
     ros_container_ptr->marker_pub = ros_container_ptr->n.advertise<swarm_msgs::simulationMarker>("Markers", 1000);
     
     // Perception Subscriber
-    ros::Subscriber sub = ros_container_ptr->n.subscribe("Perception", 1000, callback);
-    // client = n.serviceClient<swarm_local_planner::CollisionAvoidance>("collision_avoidance");
+    ros::Subscriber perc_sub = ros_container_ptr->n.subscribe("Perception", 1000, callback);
+    ros::Subscriber task_sub = ros_container_ptr->n.subscribe("Task_Allocation", 1000, task_allocator_callback);
     
     // Advertise sync service
     auto sync_name = boost::format("sync_service_%d") % usv_id;
-    ros::ServiceServer sync_service = ros_container_ptr->n.advertiseService(sync_name.str(), sync_response);
+    auto mp_name = boost::format("mp_simulation_service_%d") % usv_id;
+    ///ros::ServiceServer sync_service = ros_container_ptr->n.advertiseService(sync_name.str(), sync_response);
+    ros::ServiceServer mp_service = ros_container_ptr->n.advertiseService(mp_name.str(), model_predictive_response);
     ros::spin();
+
     return 0;
 
-    //ros::Rate loop_rate(10);
+    // ros::Rate loop_rate(10);
     // loop_rate.sleep();
 
 }

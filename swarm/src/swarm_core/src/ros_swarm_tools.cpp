@@ -125,3 +125,29 @@ agent::AgentAssignment extract_from_assignment_msg(const swarm_msgs::agentAssign
 agent::AgentCommand extract_from_command_msg(const swarm_msgs::agentCommand &command_msg){
     return agent::AgentCommand{command_msg.delta_speed, command_msg.delta_heading};
 }
+
+agent::SwarmAssignment extract_from_swarm_assignment_msg(const swarm_msgs::swarmAssignment &swarm_assignment_msg){
+    agent::SwarmAssignment swarm_assignment;
+    for (const auto &agent_assignment_msg : swarm_assignment_msg.usvAssignments){
+        auto agent_assignment = extract_from_assignment_msg(agent_assignment_msg);
+        swarm_assignment[agent_assignment_msg.sim_id] = agent_assignment;
+    }
+    return swarm_assignment;
+}
+
+swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(const agent::SwarmAssignment &swarm_assignment){
+    swarm_msgs::swarmAssignment swarm_assignment_msg;
+    for(const auto &assignment_pair : swarm_assignment){
+        swarm_assignment_msg.usvAssignments.push_back(
+            convert_to_agent_assignment_msg(assignment_pair.first,
+                                            assignment_pair.second));
+    }
+
+}
+
+swarm_msgs::agentAssignment convert_to_agent_assignment_msg(int sim_id, const agent::AgentAssignment &agent_assignment){
+    swarm_msgs::agentAssignment assignment_msg;
+    assignment_msg.delay_assignment= agent_assignment.delay_assignment_idx;
+    assignment_msg.guard_assignment= agent_assignment.guard_assignment_idx;
+    assignment_msg.sim_id = sim_id;
+}

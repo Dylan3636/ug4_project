@@ -7,7 +7,7 @@
 #include "swarm_msgs/agentState.h"
 #include "swarm_msgs/worldState.h"
 #include "swarm_msgs/agentCommand.h"
-#include "swarm_local_planner/CollisionAvoidance.h"
+#include "swarm_control/CollisionAvoidance.h"
 
 ros::Publisher command_pub;
 ros::ServiceClient client;
@@ -82,7 +82,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         double max_angle_rad = swarm_tools::PI/3;
         double aggression = 0.5;
         
-        swarm_local_planner::CollisionAvoidance srv;
+        swarm_control::CollisionAvoidance srv;
         
         // WorldState
         srv.request.world_state = *world_state;
@@ -127,7 +127,7 @@ int main(int argc, char **argv){
     ros::NodeHandle n;
     command_pub = n.advertise<swarm_msgs::agentCommand>("Commands", 1000);
     ros::Subscriber sub = n.subscribe("Perception", 1000, callback);
-    client = n.serviceClient<swarm_local_planner::CollisionAvoidance>("collision_avoidance");
+    client = n.serviceClient<swarm_control::CollisionAvoidance>("collision_avoidance");
     ros::spin();
     return 0;
     //ros::Rate loop_rate(10);

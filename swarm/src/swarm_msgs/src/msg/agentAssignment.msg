@@ -1,2 +1,3 @@
 int32 delay_assignment
 int32 guard_assignment
+int32 sim_id

@@ -1,6 +1,6 @@
 #include <map>
 #include <ros/ros.h>
-#include "agent.h"
+#include "usv_swarm.h"
 #include "swarm_msgs/agentType.h"
 #include "swarm_msgs/agentState.h"
 #include "swarm_msgs/agentAssignment.h"
@@ -8,7 +8,10 @@
 #include "swarm_msgs/worldState.h"
 #include "swarm_msgs/usvAgent.h"
 #include "swarm_msgs/intruderAgent.h"
+#include "swarm_msgs/swarmAssignment.h"
 
+#ifndef SWARM_CORE_ROS_SWARM_TOOLS_H
+#define SWARM_CORE_ROS_SWARM_TOOLS_H
 void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                             std::map<int, agent::AgentState> &usv_state_map,
                             std::map<int, agent::AgentState> &intruder_state_map,
@@ -40,3 +43,12 @@ agent::IntruderAgent extract_from_intruder_msg(
 
 std::map<int, agent::IntruderAgent> extract_from_intruder_msgs(
     const std::vector<swarm_msgs::intruderAgent> &intruder_msgs);
+
+agent::SwarmAssignment extract_from_swarm_assignment_msg(
+    const swarm_msgs::swarmAssignment &swarm_assignment_msg);
+
+swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(
+    const agent::SwarmAssignment &swarm_assignment);
+swarm_msgs::agentAssignment convert_to_agent_assignment_msg(
+    int sim_id, const agent::AgentAssignment &agent_assignment);
+#endif

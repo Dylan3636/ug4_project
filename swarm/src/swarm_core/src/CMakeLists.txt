@@ -18,7 +18,7 @@ catkin_package(
   DEPENDS Boost
   CATKIN_DEPENDS roscpp std_msgs swarm_msgs
   INCLUDE_DIRS ../include
-  LIBRARIES agent swarm_tools ros_swarm_tools
+  LIBRARIES agent usv_swarm swarm_tools ros_swarm_tools
 )
 
 include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eigen3_INCLUDE_DIRS})
@@ -37,6 +37,14 @@ install(TARGETS
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+add_library(usv_swarm usv_swarm.cpp)
+target_link_libraries(usv_swarm agent ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+install(TARGETS
+  usv_swarm
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
 
 add_library(swarm_tools swarm_tools.cpp)
 target_link_libraries(swarm_tools ${catkin_LIBRARIES} ${Boost_LIBRARIES})
@@ -48,7 +56,7 @@ install(TARGETS
 )
 
 add_library(ros_swarm_tools ros_swarm_tools.cpp)
-target_link_libraries(ros_swarm_tools ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(ros_swarm_tools usv_swarm ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 install(TARGETS
   ros_swarm_tools
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

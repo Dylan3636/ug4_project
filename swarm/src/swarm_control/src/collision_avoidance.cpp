@@ -1,12 +1,11 @@
 #include <iostream>
-#include "swarm_tools.h"
 #include "collision_avoidance.h"
+#include "swarm_tools.h"
 #include <vector>
 #include <algorithm>
 #include <cmath>
 
-template<typename T>
-int collision_avoidance::correct_command(
+template<typename T> int collision_avoidance::correct_command(
     const T &agent,
     const std::vector<agent::AgentState> &obstacle_states,
     agent::AgentCommand &command
@@ -26,15 +25,20 @@ int collision_avoidance::correct_command(
         swarm_tools::PointInterval pi = {left_edge, right_edge};
         edge_points.push_back(pi);
     }
-    return collision_avoidance::correct_command(
-                agent.get_state(),
-                command,
-                edge_points,
-                agent.get_constraints(),
-                agent.get_collision_avoidance_params().max_radar_distance,
-                agent.get_collision_avoidance_params().max_radar_angle_rad,
-                agent.get_collision_avoidance_params().aggression);
+    return collision_avoidance::correct_command(agent.get_state(),
+                                                command,
+                                                edge_points,
+                                                agent.get_constraints(),
+                                                agent.get_collision_avoidance_params().max_radar_distance,
+                                                agent.get_collision_avoidance_params().max_radar_angle_rad,
+                                                agent.get_collision_avoidance_params().aggression);
 }
+template int collision_avoidance::correct_command<agent::USVAgent>(const agent::USVAgent &agent,
+                                                                   const std::vector<agent::AgentState> &obstacle_states,
+                                                                   agent::AgentCommand &command);
+template int collision_avoidance::correct_command<agent::IntruderAgent>(const agent::IntruderAgent &agent,
+                                                                        const std::vector<agent::AgentState> &obstacle_states,
+                                                                        agent::AgentCommand &command);
 
 int collision_avoidance::correct_command(
     const agent::AgentState &agent_state,

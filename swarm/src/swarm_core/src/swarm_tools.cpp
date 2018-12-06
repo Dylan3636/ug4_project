@@ -93,14 +93,6 @@ namespace swarm_tools{
         if (left > swarm_tools::PI){left -= 2*swarm_tools::PI;}
         if (left < -swarm_tools::PI){left += 2*swarm_tools::PI;}
         return left;
-        // if (std::abs(left) <= swarm_tools::PI)
-        //     {rel_angle = left;}
-        // else if (left<0)
-        //     {rel_angle = left + 2*swarm_tools::PI;}
-        // else
-        //     {rel_angle = left -2*swarm_tools::PI;}
-
-        // return rel_angle;
     }
     double euclidean_distance(
         const Point2D& p1,
@@ -137,10 +129,6 @@ namespace swarm_tools{
                           reference.y + hyp*sin(alpha + beta)};
         rightmost_point = {reference.x + hyp*cos(-alpha + beta), 
                            reference.y + hyp*sin(-alpha + beta)};
-        // leftmost_point = {centered_point.x*cos(alpha) - centered_point.y*sin(alpha) + reference.x,
-        //                   centered_point.x*sin(alpha) + centered_point.y*cos(alpha) + reference.y};
-        // rightmost_point = {centered_point.x*cos(-alpha) - centered_point.y*sin(-alpha) + reference.x ,
-        //                    centered_point.x*sin(-alpha) + centered_point.y*cos(-alpha)  + reference.y};
         std::cout<< "Leftmost Point : (" << leftmost_point.x << ", " << leftmost_point.y << ")" << std::endl;
         std::cout<< "Rightmost Point : (" << rightmost_point.x << ", " << rightmost_point.y << ")" << std::endl;
         return -1;

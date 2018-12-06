@@ -7,8 +7,7 @@
 #define CA_H
 namespace collision_avoidance{
 
-template<typename T>
-int correct_command(
+template<typename T> int correct_command(
     const T &agent,
     const std::vector<agent::AgentState> &obstacle_states,
     agent::AgentCommand &command

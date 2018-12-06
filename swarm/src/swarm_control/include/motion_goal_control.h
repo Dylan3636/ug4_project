@@ -1,6 +1,6 @@
 #include <vector>
-#include "agent.h"
 #include "swarm_tools.h"
+#include "usv_swarm.h"
 
 #ifndef MG_H
 #define MG_H
@@ -55,5 +55,7 @@ namespace swarm_control{
                                           agent::MotionGoal &delay_motion_goal,
                                           agent::MotionGoal &guard_motion_goal,
                                           agent::MotionGoal &motion_goal);
+    bool intruder_motion_goal(const agent::AgentState &asset_state,
+                              agent::MotionGoal &motion_goal);
 }
 #endif

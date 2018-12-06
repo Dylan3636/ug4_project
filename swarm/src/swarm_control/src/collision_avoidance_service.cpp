@@ -2,17 +2,15 @@
 #include <ros/ros.h>
 #include "agent.h"
 #include "collision_avoidance.h"
-#include "swarm_local_planner/CollisionAvoidance.h"
+#include "swarm_control/CollisionAvoidance.h"
 #include "swarm_msgs/agentType.h"
 #include "swarm_msgs/worldState.h"
 #include "swarm_msgs/agentCommand.h"
 
 
-bool avoid_collision(swarm_local_planner::CollisionAvoidance::Request &req,
-                     swarm_local_planner::CollisionAvoidance::Response &res)
+bool avoid_collision(swarm_control::CollisionAvoidance::Request &req,
+                     swarm_control::CollisionAvoidance::Response &res)
 {
-    ROS_INFO("I AM BEING CALLED!");
-    // std::vector<swarm_msgs::agentState_<std::allocator<void>>, std::allocator<swarm_msgs::agentState_<std::allocator<void>>>> ws = msg->worldState;
     auto ws = req.world_state.worldState;
     std::vector<agent::AgentState> obstacle_states;
     agent::AgentState usv_state;
