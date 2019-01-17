@@ -6,6 +6,8 @@ find_package(catkin REQUIRED COMPONENTS
   cmake_modules
   std_msgs
 )
+find_package(catkin REQUIRED COMPONENTS roslaunch)
+roslaunch_add_file_check(launch)
 
 # find_package(tkinter REQUIRED)
 # find_package(numpy REQUIRED)
@@ -19,27 +21,5 @@ catkin_package(
   swarm_msgs
 )
 
-# include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eigen3_INCLUDE_DIRS})
-
-#install(DIRECTORY launch/
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-#   FILES_MATCHING PATTERN "*.launch" PATTERN "*.machine" PATTERN "*.yaml"
-#)
-
-# install(DIRECTORY include/${PROJECT_NAME}/
-#    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-# )
-
-#install(DIRECTORY cfg/cpp/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#)
-
 catkin_install_python(PROGRAMS scripts/sim.py
       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-#add_dependencies( agent swarm_tools collision_avoidance swarm_msgs_generate_msgs_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
-#target_link_libraries(local_planner agent swarm_tools collision_avoidance ${catkin_LIBRARIES})
-
-#install(FILES nodelet_plugins.xml
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-#)

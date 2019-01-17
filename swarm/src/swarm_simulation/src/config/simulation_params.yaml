@@ -1,0 +1,97 @@
+delta_time_secs : 0.1
+
+usv_params : {
+  usv_1 : {
+    sim_id : 1,
+    radius_buffer : 60,
+    init_state : {
+        x : 200,
+        y : 0,
+        heading : 30,
+        speed : 0
+      },
+    constraints : {
+      max_speed : 30,
+      max_delta_speed : 10,
+      max_delta_heading : 180
+      },
+    radar_parameters : {
+      max_distance : 100,
+      max_angle : 60
+      } 
+    },
+    
+  usv_2 : {
+    sim_id : 2,
+    radius_buffer : 60,
+    init_state : {
+        x : -200,
+        y : 100,
+        heading : -30,
+        speed : 0
+        },
+    constraints : {
+      max_speed : 45,
+      max_delta_speed : 10,
+      max_delta_heading : 180
+      },
+    radar_parameters : {
+      max_distance : 100,
+      max_angle : 60
+      }
+    }
+  }
+intruder_params : {
+  intruder_1 : {
+    sim_id : 101,
+    radius_buffer : 40,
+    init_state : {
+        x : 800,
+        y : 0,
+        heading : 30,
+        speed : 0
+      },
+    constraints : {
+      max_speed : 30,
+      max_delta_speed : 10,
+      max_delta_heading : 180
+      },
+    radar_parameters : {
+      max_distance : 100,
+      max_angle : 60
+      } 
+    },
+    
+  intruder_2 : {
+    sim_id : 102,
+    radius_buffer : 30,
+    init_state : {
+        x : -800,
+        y : 0,
+        heading : -30,
+        speed : 0
+        },
+    constraints : {
+      max_speed : 30,
+      max_delta_speed : 10,
+      max_delta_heading : 180
+      },
+    radar_parameters : {
+      max_distance : 100,
+      max_angle : 60
+      }
+    }
+  }
+
+asset_params : {
+  asset : {
+    radius_buffer : 60,
+    sim_id : 100,
+    init_state : {
+        x : 0,
+        y : 0,
+        heading : 0,
+        speed : 0
+      }
+  }
+}

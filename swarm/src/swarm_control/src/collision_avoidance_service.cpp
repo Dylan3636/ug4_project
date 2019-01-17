@@ -24,7 +24,9 @@ bool avoid_collision(swarm_control::CollisionAvoidance::Request &req,
         double speed = agent_state.speed;
         double heading = agent_state.heading;
         double radius = agent_state.radius;
-
+        if (agent_state.agent_type==swarm_msgs::agentType::TANKER){
+            continue;
+        }
         if (sim_id==usv_id){
            usv_state = {x, y, speed, heading, radius, sim_id}; 
         }

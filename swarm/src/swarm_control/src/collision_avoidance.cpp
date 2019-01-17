@@ -66,7 +66,7 @@ int collision_avoidance::correct_command(
         }
         return -1; // Indicates the fan was completely blocked 
     }
-    std::cout << "Requested command: " << command.delta_heading*180/swarm_tools::PI<<std::endl;
+    // std::cout << "Requested command: " << command.delta_heading*180/swarm_tools::PI<<std::endl;
 
     // restrict command using differential constraints
     double delta_heading = swarm_tools::clip(command.delta_heading,
@@ -83,7 +83,7 @@ int collision_avoidance::correct_command(
 
     double l_theta_rad = largest_interval.l_theta_rad;
     double r_theta_rad = largest_interval.r_theta_rad;
-    std::cout << "Largest Safe Interval: (" <<l_theta_rad*180/swarm_tools::PI << ", " << r_theta_rad*180/swarm_tools::PI << ")" << std::endl;
+    // std::cout << "Largest Safe Interval: (" <<l_theta_rad*180/swarm_tools::PI << ", " << r_theta_rad*180/swarm_tools::PI << ")" << std::endl;
 
     // Get the weighted mid point of the interval.
     double l_theta_dist = std::abs(l_theta_rad-delta_heading);
@@ -94,7 +94,7 @@ int collision_avoidance::correct_command(
     }else{
         command.delta_heading = aggression*r_theta_rad + (1-aggression)*l_theta_rad;
     }
-    std::cout << "Weighted heading command: "<< command.delta_heading*180/swarm_tools::PI; 
+    // std::cout << "Weighted heading command: "<< command.delta_heading*180/swarm_tools::PI; 
 
     // restrict command using differential constraint
     command.delta_heading = swarm_tools::clip(command.delta_heading, -max_angle_rad, max_angle_rad);
@@ -108,7 +108,7 @@ bool collision_avoidance::is_command_safe(
     for (const swarm_tools::AngleInterval interval : safe_intervals){
         double l_theta = interval.l_theta_rad;
         double r_theta = interval.r_theta_rad;
-        std::cout << "(" <<l_theta*180/swarm_tools::PI << ", " << r_theta*180/swarm_tools::PI << ")"<< std::endl;
+        // std::cout << "(" <<l_theta*180/swarm_tools::PI << ", " << r_theta*180/swarm_tools::PI << ")"<< std::endl;
         if (interval.contains(delta_heading)){
             return true;
         }
@@ -123,7 +123,7 @@ int collision_avoidance::largest_safe_interval(
     double max_diff = -1;
     for (auto ip=safe_intervals.begin();ip != safe_intervals.end(); ip++){
         double diff = std::abs(ip->l_theta_rad-ip->r_theta_rad);
-        std::cout << "Looking for largest interval(" <<ip->l_theta_rad*180/swarm_tools::PI << ", " << ip->r_theta_rad*180/swarm_tools::PI << ")"<< std::endl;
+        // std::cout << "Looking for largest interval(" <<ip->l_theta_rad*180/swarm_tools::PI << ", " << ip->r_theta_rad*180/swarm_tools::PI << ")"<< std::endl;
         if (diff>=max_diff){
             max_index = distance(safe_intervals.begin(), ip);
             max_diff = diff;
@@ -142,7 +142,7 @@ int collision_avoidance::nearest_safe_interval(
         double diff_left = std::abs(ip->l_theta_rad-delta_heading);
         double diff_right = std::abs(ip->r_theta_rad-delta_heading);
         double diff = std::min(diff_left, diff_right);
-        std::cout << "Looking for nearest interval(" <<ip->l_theta_rad*180/swarm_tools::PI << ", " << ip->r_theta_rad*180/swarm_tools::PI << ")"<< std::endl;
+        // std::cout << "Looking for nearest interval(" <<ip->l_theta_rad*180/swarm_tools::PI << ", " << ip->r_theta_rad*180/swarm_tools::PI << ")"<< std::endl;
         if (diff<=min_diff){
             min_index = distance(safe_intervals.begin(), ip);
             min_diff = diff;
@@ -170,14 +170,9 @@ bool collision_avoidance::collision_check(
     // Get the relative angle to the edge points of object
     l_theta_rad = swarm_tools::relative_angle_between_points(agent_position, left, agent_state.heading);
     r_theta_rad = swarm_tools::relative_angle_between_points(agent_position, right, agent_state.heading);
-    // if (l_theta_rad < r_theta_rad){
-    //     double temp = r_theta_rad;
-    //     r_theta_rad = l_theta_rad;
-    //     l_theta_rad = temp;
-    // }
 
     bool is_in_fan = in_fan(distance, l_theta_rad, r_theta_rad, max_distance, max_angle_rad);
-    std::cout << "Collision Check: (" <<l_theta_rad*180/swarm_tools::PI << ", " << r_theta_rad*180/swarm_tools::PI << ") Distance: "<< distance << " Flag: "<< is_in_fan << std::endl;
+    // std::cout << "Collision Check: (" <<l_theta_rad*180/swarm_tools::PI << ", " << r_theta_rad*180/swarm_tools::PI << ") Distance: "<< distance << " Flag: "<< is_in_fan << std::endl;
 
     if (is_in_fan){
         l_theta_rad = swarm_tools::clip(l_theta_rad, -max_angle_rad, max_angle_rad);

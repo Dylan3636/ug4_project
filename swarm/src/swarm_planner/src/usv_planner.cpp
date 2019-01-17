@@ -1,5 +1,5 @@
 // #include <string>
-//#include <ros/ros.h>
+// #include <ros/ros.h>
 // #include <boost/format.hpp>
 // #include <boost/shared_ptr>
 #include <mutex>
@@ -11,31 +11,24 @@
 // #include "swarm_task_manager/resync.h"
 #include "swarm_task_manager/modelPredictiveSimulation.h"
 
+bool initialized = false;
 agent::USVSwarm swarm;
 int usv_id;
 int intruder_id;
-struct RosInit{
-    RosInit(int argc, char** argv, const char *node_name){
-        ros::init(argc, argv, node_name);
-    }
-};
-struct RosContainer{
 
-    RosInit init;
-    ros::NodeHandle n;
-    ros::Publisher command_pub;
-    ros::Publisher marker_pub;
-    ros::ServiceClient client;
-
-    RosContainer(int argc, char** argv, const char *node_name) : init(argc, argv, node_name){}
-};
 
 // // Declare ros container
-boost::shared_ptr<RosContainer> ros_container_ptr;
+RosContainerPtr ros_container_ptr;
+ros::Publisher command_pub;
+ros::Publisher marker_pub;
+ros::ServiceClient client;
 
 std::map<int, ros::ServiceClient> usv_sync_service_map;
 std::map<int, bool> usv_communication_map;
 std::map<int, bool> usv_sync_map;
+std::map<int, agent::AgentState> usv_state_map;
+std::map<int, agent::AgentState> intruder_state_map;
+agent::AgentState asset_state;
 
 std::mutex mtx;
 
@@ -49,7 +42,7 @@ void publish_markers(const agent::MotionGoal &delay_motion_goal,
     delay_marker.y = delay_motion_goal.y;
     delay_marker.sim_id = usv_id+400;
     delay_marker.colour = "GREEN";
-    ros_container_ptr->marker_pub.publish(delay_marker);
+    marker_pub.publish(delay_marker);
 
     ROS_INFO("Publishing Guard Motion Goal ([%f], [%f])", guard_motion_goal.x, guard_motion_goal.y);
     swarm_msgs::simulationMarker guard_marker;
@@ -57,7 +50,7 @@ void publish_markers(const agent::MotionGoal &delay_motion_goal,
     guard_marker.y = guard_motion_goal.y;
     guard_marker.sim_id = usv_id+500;
     guard_marker.colour = "YELLOW";
-    ros_container_ptr->marker_pub.publish(guard_marker);
+    marker_pub.publish(guard_marker);
 
     ROS_INFO("Publishing Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
     swarm_msgs::simulationMarker marker;
@@ -65,13 +58,14 @@ void publish_markers(const agent::MotionGoal &delay_motion_goal,
     marker.y = motion_goal.y;
     marker.sim_id = usv_id+300;
     marker.colour = "RED";
-    ros_container_ptr->marker_pub.publish(marker);
+    marker_pub.publish(marker);
 }
 
 void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
-    std::map<int, agent::AgentState> usv_state_map;
-    std::map<int, agent::AgentState> intruder_state_map;
-    agent::AgentState asset_state;
+
+    ROS_INFO("USV Callback");
+    usv_state_map.clear();
+    intruder_state_map.clear();
 
     extract_from_world_msg(world_state_ptr,
                            usv_state_map,
@@ -115,7 +109,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
     command_msg.delta_heading = command.delta_heading;
     command_msg.delta_speed = command.delta_speed;
     command_msg.sim_id = usv.get_sim_id();
-    ros_container_ptr->command_pub.publish(command_msg);
+    command_pub.publish(command_msg);
 } // callback
 
 
@@ -170,17 +164,30 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
 // }
 
 void task_allocator_callback(swarm_msgs::swarmAssignment::ConstPtr swarm_task_assignment_ptr){
+    ROS_INFO("Setting new task allocation!");
     agent::SwarmAssignment swarm_allocation = extract_from_swarm_assignment_msg(*swarm_task_assignment_ptr);
     mtx.lock();
-    swarm.update_swarm_assignment(swarm_allocation);
+    try{
+        swarm.update_swarm_assignment(swarm_allocation);
+    }catch(std::exception e){
+        throw "Task Allocation Failed.";
+    }
     mtx.unlock();
 }
 
 bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Request &req,
                                swarm_task_manager::modelPredictiveSimulation::Response &res){
+    if(swarm.get_num_usvs()==0){
+        return false;
+    }
+    if(!mtx.try_lock()) return false;
     int num_timesteps_lookahead=req.num_timesteps_lookahead;
     double delta_time_secs = req.delta_time_secs;
     double threshold = req.threshold;
+    ROS_INFO("Model predictive request (%d, %f, %f)",
+                num_timesteps_lookahead,
+                delta_time_secs,
+                threshold);
     try{
     auto weighted_swarm_assignment = swarm_task_manager::get_best_candidate_swarm_assignment(usv_id,
                                                                                              swarm,
@@ -192,43 +199,44 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
     res.candidate_assignment = convert_to_swarm_assignment_msg(weighted_swarm_assignment.first);
     res.weight = weighted_swarm_assignment.second;
     }catch(std::exception& e){
-        ROS_ERROR("Task Allocate ERROR: %s", e.what());
+        ROS_ERROR("Task Allocation ERROR: %s", e.what());
+        mtx.unlock();
         return false;
     }
+    ROS_INFO("Model Predictive Successfull");
+    mtx.unlock();
     return true;
-    }
+}
 
 int main(int argc, char **argv){
 
     usv_communication_map[1]=true;
     usv_communication_map[2]=true;
-    if (argc >2){
-        usv_id = std::stoi(argv[1]);
-        intruder_id = std::stoi(argv[2]);
-    }else{
-        usv_id = 1;
-        intruder_id = 101;
+
+    ros_container_ptr.reset(new RosContainer(argc, argv, "usv_planner"));
+    ros::NodeHandle nh_priv("~");
+    if(!nh_priv.getParam("usv_id", usv_id)){
+        ROS_ERROR("USV ID NOT FOUND");
+        // throw std::exception("USV ID NOT FOUND");
     }
-    auto s = boost::format("usv_planner_%d") % usv_id;
-    ros_container_ptr.reset(new RosContainer(argc, argv, s.str().c_str()));
+    else{ROS_INFO("Found USV ID %d IN PARAMETERS", usv_id);}
     // Initialize swarm
     // swarm();
     // usv = agent::USVAgent(agent::AgentState {0, 0, 0, 0, 30, usv_id});
 
-
     // Command and motion goal marker publisher
-    ros_container_ptr->command_pub = ros_container_ptr->n.advertise<swarm_msgs::agentCommand>("Commands", 1000);
-    ros_container_ptr->marker_pub = ros_container_ptr->n.advertise<swarm_msgs::simulationMarker>("Markers", 1000);
+    command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
+    marker_pub = ros_container_ptr->nh.advertise<swarm_msgs::simulationMarker>("Markers", 1000);
     
     // Perception Subscriber
-    ros::Subscriber perc_sub = ros_container_ptr->n.subscribe("Perception", 1000, callback);
-    ros::Subscriber task_sub = ros_container_ptr->n.subscribe("Task_Allocation", 1000, task_allocator_callback);
+    ros::Subscriber perc_sub = ros_container_ptr->nh.subscribe("Perception", 1000, callback);
+    ros::Subscriber task_sub = ros_container_ptr->nh.subscribe("Task_Allocation", 1000, task_allocator_callback);
     
     // Advertise sync service
     auto sync_name = boost::format("sync_service_%d") % usv_id;
     auto mp_name = boost::format("mp_simulation_service_%d") % usv_id;
     ///ros::ServiceServer sync_service = ros_container_ptr->n.advertiseService(sync_name.str(), sync_response);
-    ros::ServiceServer mp_service = ros_container_ptr->n.advertiseService(mp_name.str(), model_predictive_response);
+    ros::ServiceServer mp_service = ros_container_ptr->nh.advertiseService(mp_name.str(), model_predictive_response);
     ros::spin();
 
     return 0;

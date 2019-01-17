@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="swarm_simulation" type="launch_sim" name="swarm_simulation">
+        <rosparam file="$(find swarm_simulation)/config/simulation_params.yaml" command="load"/>
+    </node>
+</launch>

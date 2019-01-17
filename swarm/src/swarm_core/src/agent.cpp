@@ -10,7 +10,4 @@ namespace agent{
     AgentAssignment USVAgent::get_current_assignment() const{
         return this->current_assignment;
     }
-    void USVAgent::set_current_assignment(AgentAssignment assignment){
-        this->current_assignment=assignment;
-    }
 }

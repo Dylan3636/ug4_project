@@ -17,6 +17,8 @@ find_package(swarm_core REQUIRED)
 #     message_generation)
 find_package(Boost 1.49.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(catkin REQUIRED COMPONENTS roslaunch)
+roslaunch_add_file_check(launch)
 
 set(BUILD_FLAGS "-std=c++11 -Wuninitialized")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")

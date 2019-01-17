@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="swarm_control" type="intruder_planner" name="intruder_control">
+    </node>
+    <node pkg="swarm_control" type="collision_avoidance_service" name="collision_avoidance_service">
+    </node>
+</launch>

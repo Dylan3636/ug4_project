@@ -48,7 +48,6 @@ namespace swarm_tools{
     }
 
     bool AngleInterval::contains(const double angle_rad)const{
-        std::cout << "Contains: "<< l_theta_rad <<", "<< angle_rad << ", " << r_theta_rad << std::endl;
         return this->r_theta_rad<=angle_rad &&  angle_rad <= this->l_theta_rad;
     }
     
@@ -98,8 +97,8 @@ namespace swarm_tools{
         const Point2D& p1,
         const Point2D& p2
     ){
-        std::cout<< "Point 1 : (" << p1.x << ", " << p1.y << ")" << std::endl;
-        std::cout<< "Point 2 : (" << p2.x << ", " << p2.y << ")" << std::endl;
+        // std::cout<< "Point 1 : (" << p1.x << ", " << p1.y << ")" << std::endl;
+        // std::cout<< "Point 2 : (" << p2.x << ", " << p2.y << ")" << std::endl;
         double dx = p1.x-p2.x;
         double dy = p1.y-p2.y;
         return sqrt(dx*dx + dy*dy);
@@ -121,16 +120,16 @@ namespace swarm_tools{
         double beta = atan2(centered_point.y, centered_point.x);
         double hyp = sqrt(r*r + radius*radius);
 
-        std::cout << "Alpha: " << alpha*180/PI << std::endl;
-        std::cout << "Beta: " << beta*180/PI << std::endl;
-        std::cout << "Heading: " << heading*180/PI << std::endl;
+        // std::cout << "Alpha: " << alpha*180/PI << std::endl;
+        // std::cout << "Beta: " << beta*180/PI << std::endl;
+        // std::cout << "Heading: " << heading*180/PI << std::endl;
 
         leftmost_point = {reference.x + hyp*cos(alpha + beta), 
                           reference.y + hyp*sin(alpha + beta)};
         rightmost_point = {reference.x + hyp*cos(-alpha + beta), 
                            reference.y + hyp*sin(-alpha + beta)};
-        std::cout<< "Leftmost Point : (" << leftmost_point.x << ", " << leftmost_point.y << ")" << std::endl;
-        std::cout<< "Rightmost Point : (" << rightmost_point.x << ", " << rightmost_point.y << ")" << std::endl;
+        // std::cout<< "Leftmost Point : (" << leftmost_point.x << ", " << leftmost_point.y << ")" << std::endl;
+        // std::cout<< "Rightmost Point : (" << rightmost_point.x << ", " << rightmost_point.y << ")" << std::endl;
         return -1;
     }
 }

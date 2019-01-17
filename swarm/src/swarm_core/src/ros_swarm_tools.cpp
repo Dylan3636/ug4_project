@@ -137,12 +137,13 @@ agent::SwarmAssignment extract_from_swarm_assignment_msg(const swarm_msgs::swarm
 
 swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(const agent::SwarmAssignment &swarm_assignment){
     swarm_msgs::swarmAssignment swarm_assignment_msg;
+    swarm_assignment_msg.usvAssignments.clear();
     for(const auto &assignment_pair : swarm_assignment){
         swarm_assignment_msg.usvAssignments.push_back(
             convert_to_agent_assignment_msg(assignment_pair.first,
                                             assignment_pair.second));
     }
-
+    return swarm_assignment_msg;
 }
 
 swarm_msgs::agentAssignment convert_to_agent_assignment_msg(int sim_id, const agent::AgentAssignment &agent_assignment){
@@ -150,4 +151,5 @@ swarm_msgs::agentAssignment convert_to_agent_assignment_msg(int sim_id, const ag
     assignment_msg.delay_assignment= agent_assignment.delay_assignment_idx;
     assignment_msg.guard_assignment= agent_assignment.guard_assignment_idx;
     assignment_msg.sim_id = sim_id;
+    return assignment_msg;
 }

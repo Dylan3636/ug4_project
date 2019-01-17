@@ -12,6 +12,23 @@
 
 #ifndef SWARM_CORE_ROS_SWARM_TOOLS_H
 #define SWARM_CORE_ROS_SWARM_TOOLS_H
+
+struct RosInit{
+    RosInit(int argc, char** argv, const char *node_name){
+        ros::init(argc, argv, node_name);
+    }
+};
+
+struct RosContainer{
+
+    RosInit ros_initializer;
+    ros::NodeHandle nh;
+
+    RosContainer(int argc, char** argv, const char *node_name) : ros_initializer(argc, argv, node_name){}
+};
+
+typedef boost::shared_ptr<RosContainer> RosContainerPtr;
+
 void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                             std::map<int, agent::AgentState> &usv_state_map,
                             std::map<int, agent::AgentState> &intruder_state_map,

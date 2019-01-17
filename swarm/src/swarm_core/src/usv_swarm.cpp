@@ -1,4 +1,5 @@
 #include "usv_swarm.h"
+#include "boost/format.hpp"
 #include <assert.h>
 namespace agent{
 
@@ -6,12 +7,26 @@ namespace agent{
         return usv_map.size();
     }
     IntruderAgent USVSwarm::get_intruder_estimate_by_id(int intruder_id) const{
-        assert(intruder_map.find(intruder_id)!=intruder_map.end());
-        return intruder_map.at(intruder_id);
+        // assert(intruder_map.find(intruder_id)!=intruder_map.end());
+        try{
+            return intruder_map.at(intruder_id);
+        }
+        catch (const std::out_of_range &error){
+            auto str = boost::format("INTRUDER ID : %d NOT FOUND!") % intruder_id;
+            std::cout << str.str() << std::endl;
+            throw str.str();
+        }
     }
     USVAgent USVSwarm::get_usv_estimate_by_id(int usv_id) const{
-        assert(usv_map.find(usv_id)!=usv_map.end());
-        return usv_map.at(usv_id);
+        // assert(usv_map.find(usv_id)!=usv_map.end());
+        try{
+            return usv_map.at(usv_id);
+        }
+        catch (const std::out_of_range &error){
+            auto str = boost::format("USV ID : %d NOT FOUND!") % usv_id;
+            std::cout << str.str() << std::endl;
+            throw str.str();
+        }
     }
 
     AssetAgent USVSwarm::get_asset_estimate() const{
@@ -52,6 +67,13 @@ namespace agent{
         }
         return obstacle_states;       
     }
+    std::vector<int> USVSwarm::get_usv_ids() const{
+        std::vector<int> usv_ids;
+        for (const std::pair<int, USVAgent> &usv_pair : usv_map){
+            usv_ids.push_back(usv_pair.first);
+        }
+        return usv_ids;
+    }
 
     std::map<int, AgentType> USVSwarm::get_agent_sim_id_map() const{
         std::map<int, AgentType> sim_id_map;
@@ -74,6 +96,7 @@ namespace agent{
 
     void USVSwarm::update_agent_assignment_by_id(int sim_id,
                                                  const AgentAssignment &assignment){
+        assert(usv_map.find(sim_id)!=usv_map.end());
         usv_map[sim_id].set_current_assignment(assignment);
     }
 
@@ -94,29 +117,61 @@ namespace agent{
 
 
 
-    void USVSwarm::update_estimates(const std::map<int,
-                                        agent::AgentState> &usv_state_map,
-                                    const std::map<int,
-                                        agent::AgentState> &intruder_state_map
-                                    )
+    void USVSwarm::update_intruder_estimates(const std::map<int,
+                                             agent::AgentState> &intruder_state_map)
     {
         for (auto &intruder_pair : intruder_state_map){
             auto i = intruder_map.find(intruder_pair.first);
             if (i == intruder_map.end()){
                 intruder_map[intruder_pair.first] = IntruderAgent(intruder_pair.second);
+                assign_intruder_to_usv(intruder_map[intruder_pair.first]);
             }else{
                 update_intruder_state_estimate(intruder_pair.second);
             }
         }
+    }
 
+    void USVSwarm::update_usv_estimates(const std::map<int,
+                                        agent::AgentState> &usv_state_map)
+    {
         for (auto &usv_pair : usv_state_map){
             auto i = this->usv_map.find(usv_pair.first);
             if (i == usv_map.end()){
                 usv_map[usv_pair.first] = USVAgent(usv_pair.second);
+                assign_guard_task_to_usv(usv_pair.first);
             }else{
                 update_usv_state_estimate(usv_pair.second);
             }
         }
+    }
+
+    void USVSwarm::update_estimates(const std::map<int,
+                                        agent::AgentState> &usv_state_map,
+                                    const std::map<int,
+                                        agent::AgentState> &intruder_state_map
+                                    )
+        {
+        update_usv_estimates(usv_state_map);
+        update_intruder_estimates(intruder_state_map);
+    }
+
+    std::vector<int> USVSwarm::sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point){
+        std::vector<std::pair<int, double>> usv_distance_id_pairs;
+        for (const auto &usv_pair : usv_map){
+            double distance = swarm_tools::euclidean_distance(usv_pair.second.get_position(), point);
+            usv_distance_id_pairs.push_back({usv_pair.first, distance});
+        }
+        std::sort(usv_distance_id_pairs.begin(),
+                  usv_distance_id_pairs.end(),
+                  [](const std::pair<int, double> &usv_pair_1,
+                     const std::pair<int, double> &usv_pair_2){
+                        return usv_pair_1.second<usv_pair_2.second;
+                     } );
+        std::vector<int> sorted_usv_ids;
+        for (const auto &distance_pair : usv_distance_id_pairs){
+            sorted_usv_ids.push_back(distance_pair.first);
+        }
+        return sorted_usv_ids;
     }
 
     void USVSwarm::update_estimates(const std::map<int,
@@ -157,6 +212,21 @@ namespace agent{
     }
     void USVSwarm::update_intruder_estimate(const IntruderAgent &intruder){
         intruder_map[intruder.get_sim_id()].copy(intruder);
+    }
+    void USVSwarm::assign_intruder_to_usv(const IntruderAgent &intruder){
+        std::vector<int> sorted_usv_ids = sort_usvs_by_distance_to_point(intruder.get_position());
+        for(const auto usv_id : sorted_usv_ids){
+            if(usv_map[usv_id].get_current_assignment().delay_assignment_idx!=-1){
+                continue;
+            }
+            else{
+                usv_map[usv_id].set_delay_assignment(intruder.get_sim_id());
+                return;
+            }
+        }
+    }
+    void USVSwarm::assign_guard_task_to_usv(int usv_id){
+        usv_map[usv_id].set_guard_assignment(get_num_usvs()-1);
     }
 
 }

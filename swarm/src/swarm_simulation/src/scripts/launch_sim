@@ -1,34 +1,107 @@
 #!/usr/bin/python3
 
+import rospy
 from simulation_listener import *
 
 if __name__ == "__main__":
-    intruder_1 = Intruder(101, [-800,0,30,0], constraints=[100, 100, 2*np.pi], radius_buffer=30)
-    usv_1 = BasicUSV(1, [-200,0,30,np.pi], constraints=[100, 100, 2*np.pi], radius_buffer=60)
-    usv_2 = BasicUSV(2, [-200,100,30,np.pi], constraints=[100, 100, 2*np.pi], radius_buffer=60)
-    # intruder_2 = Intruder(1, [300,0,30,np.pi], radius_buffer=40)
-    tanker = Tanker(100, [0, 0, 0, 0], radius_buffer=40)
-    static_1 = StaticObject(200, [-30, 40, 0, 0], radius_buffer=40)
-    static_2 = StaticObject(201, [-30, 10, 0, 0], radius_buffer=40)
-    static_3 = StaticObject(202, [-30, -20, 0, 0], radius_buffer=40)
-    static_4 = StaticObject(203, [-30, -40, 0, 0], radius_buffer=40)
-    static_5 = StaticObject(204, [30, 40, 0, 0], radius_buffer=40)
-    static_6 = StaticObject(205, [30, 10, 0, 0], radius_buffer=40)
-    static_7 = StaticObject(206, [30, -20, 0, 0], radius_buffer=40)
-    static_8 = StaticObject(207, [30, -40, 0, 0], radius_buffer=40)
-    sn = SimulationNode([intruder_1,
-                        usv_1,
-                        usv_2,
-                        #static_1,
-                        #static_2,
-                        #static_3,
-                        #static_4,
-                        #static_5,
-                        #static_6,
-                        #static_7,
-                        #static_8,
-                        tanker
-                        ],
-                        delta_t=0.1)
-    sn.sim.begin()
+    default_time_secs = rospy.get_param('swarm_simulation/delta_time_secs')
+
+    usv_params = rospy.get_param('swarm_simulation/usv_params')
+    usvs = []
+    for key, params in usv_params.items():
+        
+        sim_id = params['sim_id']
+        # Initial State
+        x = params['init_state']['x']
+        y = params['init_state']['y']
+        heading = params['init_state']['heading']
+        speed = params['init_state']['speed']
+        init_state = [x, y, speed, np.deg2rad(heading)]
+        
+        # Constraints
+        max_speed = params['constraints']['max_speed']
+        max_delta_speed = params['constraints']['max_delta_speed']
+        max_delta_heading = params['constraints']['max_delta_heading']
+        constraints = [max_speed, max_delta_speed, np.deg2rad(max_delta_heading)]
+
+        # Radius Buffer
+        radius_buffer = params['radius_buffer']
+        
+        usv=BasicUSV(sim_id=sim_id,
+                 initial_state=init_state,
+                 constraints=constraints,
+                 radius_buffer=radius_buffer)
+        usvs.append(usv)
+
+    intruder_params = rospy.get_param('swarm_simulation/intruder_params')
+    intruders = []
+
+    for sim_id, params in intruder_params.items():
+
+        sim_id = params['sim_id']
+        # Initial State
+        x = params['init_state']['x']
+        y = params['init_state']['y']
+        heading = params['init_state']['heading']
+        speed = params['init_state']['speed']
+        init_state = [x, y, speed, np.deg2rad(heading)]
+        
+        # Constraints
+        max_speed = params['constraints']['max_speed']
+        max_delta_speed = params['constraints']['max_delta_speed']
+        max_delta_heading = params['constraints']['max_delta_heading']
+        constraints = [max_speed, max_delta_speed, np.deg2rad(max_delta_heading)]
+
+        # Radius Buffer
+        radius_buffer = params['radius_buffer']
+        
+        intruder = Intruder(sim_id=sim_id,
+                            initial_state=init_state,
+                            constraints=constraints,
+                            radius_buffer=radius_buffer)
+        intruders.append(intruder)
+
+    asset_params = rospy.get_param('swarm_simulation/asset_params/asset')
+    asset_sim_id = 100
+    asset_radius_buffer=asset_params['radius_buffer']
+    x = asset_params['init_state']['x']
+    y = asset_params['init_state']['y']
+    heading = asset_params['init_state']['heading']
+    speed = asset_params['init_state']['speed']
+    asset_init_state = [x, y, speed, np.deg2rad(heading)]
+    tanker=Tanker(sim_id=asset_sim_id, initial_state=asset_init_state, radius_buffer=asset_radius_buffer)
+
+    sim_node = SimulationNode([*intruders, *usvs, tanker])
+    sim_node.sim.begin()
+
+    # intruder_1 = Intruder(101, [-800,0,30,0], constraints=[100, 100, 2*np.pi], radius_buffer=60)
+    # intruder_2 = Intruder(102, [800,0,-30,0], constraints=[100, 100, 2*np.pi], radius_buffer=60)
+    # usv_1 = BasicUSV(1, [200,0,30,np.pi], constraints=[100, 100, 2*np.pi], radius_buffer=60)
+    # usv_2 = BasicUSV(2, [-200,100,30,np.pi], constraints=[100, 100, 2*np.pi], radius_buffer=60)
+    # # intruder_2 = Intruder(1, [300,0,30,np.pi], radius_buffer=40)
+    # tanker = Tanker(100, [0, 0, 0, 0], radius_buffer=60)
+    # static_1 = StaticObject(200, [-30, 40, 0, 0], radius_buffer=40)
+    # static_2 = StaticObject(201, [-30, 10, 0, 0], radius_buffer=40)
+    # static_3 = StaticObject(202, [-30, -20, 0, 0], radius_buffer=40)
+    # static_4 = StaticObject(203, [-30, -40, 0, 0], radius_buffer=40)
+    # static_5 = StaticObject(204, [30, 40, 0, 0], radius_buffer=40)
+    # static_6 = StaticObject(205, [30, 10, 0, 0], radius_buffer=40)
+    # static_7 = StaticObject(206, [30, -20, 0, 0], radius_buffer=40)
+    # static_8 = StaticObject(207, [30, -40, 0, 0], radius_buffer=40)
+    # sn = SimulationNode([intruder_1,
+    #                     intruder_2,
+    #                     usv_1,
+    #                     usv_2,
+    #                     # static_1,
+    #                     # static_2,
+    #                     # static_3,
+    #                     # static_4,
+    #                     # static_5,
+    #                     # static_6,
+    #                     # static_7,
+    #                     # static_8,
+    #                     tanker
+    #                     ],
+    #                     delta_t=0.1)
+    # sn.sim.begin()
 

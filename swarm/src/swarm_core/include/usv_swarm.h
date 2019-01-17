@@ -27,6 +27,8 @@ namespace agent{
             std::vector<USVAgent> get_usv_estimates() const;
             std::vector<IntruderAgent> get_intruder_estimates() const;
             std::vector<AgentState> get_obstacle_states() const;
+            std::vector<int> get_usv_ids() const;
+
             SwarmAssignment get_swarm_assignment() const;
 
 
@@ -47,10 +49,17 @@ namespace agent{
                                       agent::USVAgent> &new_usv_map,
                                   const std::map<int,
                                       agent::IntruderAgent> &new_intruder_map);
+            void update_usv_estimates(const std::map<int,
+                                      agent::AgentState> &usv_state_map);
+            void update_intruder_estimates(const std::map<int,
+                                           agent::AgentState> &intruder_state_map);
+            void assign_intruder_to_usv(const IntruderAgent &intruder);
+            void assign_guard_task_to_usv(int usv_id);
 
             std::vector<double> evaluate_swarm_assignment(const SwarmAssignment &swarm_assignment,
                                                           int timesteps,
                                                           double delta_time_secs);
+            std::vector<int> sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point);
     };
 
 

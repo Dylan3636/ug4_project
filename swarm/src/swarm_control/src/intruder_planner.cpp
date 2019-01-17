@@ -60,7 +60,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 
     for (auto intruder : intruders){
         int sim_id = intruder.sim_id;
-        double max_speed = 30;
+        double max_speed = 35;
         double max_delta_speed = 5; 
         double max_delta_heading =  swarm_tools::PI/2;
         agent::AgentConstraints constraints;
@@ -78,8 +78,8 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                                                     motion_goal,
                                                     command);
 
-        double max_distance = 150;
-        double max_angle_rad = swarm_tools::PI/3;
+        double max_distance = 50;
+        double max_angle_rad = swarm_tools::PI;
         double aggression = 0.5;
         
         swarm_control::CollisionAvoidance srv;

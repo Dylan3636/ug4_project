@@ -191,10 +191,12 @@ namespace agent{
                 double heading = this->state.heading;
 
                 speed += std::min(command.delta_speed*delta_time_secs, this->constraints.max_speed);
-                heading += fmod(command.delta_heading*delta_time_secs, 2*swarm_tools::PI);
+                speed = std::max(speed, 0.0);
+                heading += command.delta_heading*delta_time_secs;
+                heading = fmod(heading, 2*swarm_tools::PI);
 
-                x += speed*cos(heading);
-                y += speed*sin(heading); 
+                x += speed*cos(heading)*delta_time_secs;
+                y += speed*sin(heading)*delta_time_secs; 
                 set_state(AgentState(x, y, speed, heading, state.radius, state.sim_id));
         }
     };
@@ -209,8 +211,8 @@ namespace agent{
                     : BaseAgent(state, constraints, ca_params, Intruder){}
             IntruderAgent(const AgentState &state){
                 set_state(state);
-                set_constraints(AgentConstraints{30, 5, swarm_tools::PI/2});
-                set_collision_avoidance_params(CollisionAvoidanceParameters{100, swarm_tools::PI, 0.5});
+                set_constraints(AgentConstraints{35, 5, swarm_tools::PI/2});
+                set_collision_avoidance_params(CollisionAvoidanceParameters{50, swarm_tools::PI, 0.5});
                 set_agent_type(Intruder);
             }
     };
@@ -232,8 +234,15 @@ namespace agent{
         AgentAssignment current_assignment;
         public:
             AgentAssignment get_current_assignment() const;
-            void set_current_assignment(AgentAssignment assignment);
-
+            void set_current_assignment(AgentAssignment assignment){
+                current_assignment=assignment;
+            }
+            void set_delay_assignment(int delay_assignment_idx){
+                current_assignment.delay_assignment_idx=delay_assignment_idx;
+            }
+            void set_guard_assignment(int guard_assignment_idx){
+                current_assignment.guard_assignment_idx=guard_assignment_idx;
+            }
             void copy(const USVAgent &usv);
             USVAgent(){}
             USVAgent(AgentState state,
@@ -247,15 +256,15 @@ namespace agent{
 
             USVAgent(AgentState state){
                 set_state(state);
-                set_constraints(AgentConstraints{35,
-                                                5,
+                set_constraints(AgentConstraints{40,
+                                                100,
                                                 swarm_tools::PI/2});
                 set_collision_avoidance_params(
-                    CollisionAvoidanceParameters{100,
+                    CollisionAvoidanceParameters{25,
                                                 swarm_tools::PI,
                                                 0.9});
-                int delay_id = 101;
-                int guard_id = 0;
+                int delay_id = -1;
+                int guard_id = -1;
                 set_current_assignment(AgentAssignment {delay_id, guard_id});
                 set_agent_type(USV);
             }
