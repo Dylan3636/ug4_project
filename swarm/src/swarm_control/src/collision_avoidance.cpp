@@ -64,6 +64,7 @@ int collision_avoidance::correct_command(
         }else{
             command.delta_heading = max_angle_rad;
         }
+        command.delta_speed=swarm_tools::clip(0-agent_state.speed, -constraints.max_delta_speed, constraints.max_delta_speed);
         return -1; // Indicates the fan was completely blocked 
     }
     // std::cout << "Requested command: " << command.delta_heading*180/swarm_tools::PI<<std::endl;

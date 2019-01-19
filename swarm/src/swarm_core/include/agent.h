@@ -72,6 +72,23 @@ namespace agent{
     {
         int delay_assignment_idx;
         int guard_assignment_idx;
+
+        void copy(const AgentAssignment &assignment){
+            delay_assignment_idx=assignment.delay_assignment_idx;
+            guard_assignment_idx=assignment.guard_assignment_idx;
+        }
+
+        AgentAssignment(){delay_assignment_idx=-1; guard_assignment_idx=-1;}
+        AgentAssignment(int delay_idx, int guard_idx){
+            delay_assignment_idx=delay_idx;
+            guard_assignment_idx=guard_idx;
+        }
+        AgentAssignment(const AgentAssignment &assignment){
+            copy(assignment);
+        }
+        AgentAssignment operator=(const AgentAssignment &assignment){
+            copy(assignment);
+        }
     };
 
     struct CollisionAvoidanceParameters
@@ -183,21 +200,16 @@ namespace agent{
                                             );
 
             void command_agent_forward(const AgentCommand &command,
-                                            double delta_time_secs){
+                                       double delta_time_secs){
 
-                double x = this->state.x;
-                double y = this->state.y;
-                double speed = this->state.speed;
-                double heading = this->state.heading;
+                state.speed += std::min(command.delta_speed*delta_time_secs, this->constraints.max_speed);
+                state.speed = std::max(state.speed, 0.0);
+                state.heading += command.delta_heading*delta_time_secs;
+                state.heading = fmod(state.heading, 2*swarm_tools::PI);
 
-                speed += std::min(command.delta_speed*delta_time_secs, this->constraints.max_speed);
-                speed = std::max(speed, 0.0);
-                heading += command.delta_heading*delta_time_secs;
-                heading = fmod(heading, 2*swarm_tools::PI);
-
-                x += speed*cos(heading)*delta_time_secs;
-                y += speed*sin(heading)*delta_time_secs; 
-                set_state(AgentState(x, y, speed, heading, state.radius, state.sim_id));
+                state.x += state.speed*cos(state.heading)*delta_time_secs;
+                state.y += state.speed*sin(state.heading)*delta_time_secs; 
+                // set_state(AgentState(x, y, speed, heading, state.radius, state.sim_id));
         }
     };
 
@@ -246,9 +258,9 @@ namespace agent{
             void copy(const USVAgent &usv);
             USVAgent(){}
             USVAgent(AgentState state,
-                    AgentConstraints constraints,
-                    CollisionAvoidanceParameters ca_params,
-                    AgentAssignment assignment)
+                     AgentConstraints constraints,
+                     CollisionAvoidanceParameters ca_params,
+                     AgentAssignment assignment)
                     : BaseAgent(state, constraints, ca_params, USV)
                 {
                     set_current_assignment(assignment);
@@ -263,9 +275,7 @@ namespace agent{
                     CollisionAvoidanceParameters{25,
                                                 swarm_tools::PI,
                                                 0.9});
-                int delay_id = -1;
-                int guard_id = -1;
-                set_current_assignment(AgentAssignment {delay_id, guard_id});
+                set_current_assignment(AgentAssignment());
                 set_agent_type(USV);
             }
     };

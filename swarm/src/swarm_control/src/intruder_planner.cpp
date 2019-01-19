@@ -3,6 +3,7 @@
 #include "agent.h"
 #include "collision_avoidance.h"
 #include "motion_goal_control.h"
+#include "ros_swarm_tools.h"
 #include "swarm_msgs/agentType.h"
 #include "swarm_msgs/agentState.h"
 #include "swarm_msgs/worldState.h"
@@ -11,6 +12,7 @@
 
 ros::Publisher command_pub;
 ros::ServiceClient client;
+RosContainerPtr ros_container_ptr;
 
 void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     auto ws = world_state->worldState;
@@ -78,10 +80,11 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                                                     motion_goal,
                                                     command);
 
-        double max_distance = 50;
-        double max_angle_rad = swarm_tools::PI;
-        double aggression = 0.5;
-        
+        std::string intruder_head_str = (boost::format("/swarm_simulation/intruder_params/intruder_%d") % sim_id).str();
+        agent::AgentConstraints intruder_constraints;
+        agent::CollisionAvoidanceParameters intruder_radar_params;
+        get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints, intruder_radar_params);
+       
         swarm_control::CollisionAvoidance srv;
         
         // WorldState
@@ -94,15 +97,15 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         
         // Constraints
         srv.request.agent_constraints.sim_id=sim_id;
-        srv.request.agent_constraints.max_speed=max_speed;
-        srv.request.agent_constraints.max_delta_speed=max_delta_speed;
-        srv.request.agent_constraints.max_delta_heading=max_delta_heading;
+        srv.request.agent_constraints.max_speed=intruder_constraints.max_speed;
+        srv.request.agent_constraints.max_delta_speed=intruder_constraints.max_delta_speed;
+        srv.request.agent_constraints.max_delta_heading=intruder_constraints.max_delta_heading;
 
         // Parameters
         srv.request.agent_params.sim_id=sim_id;
-        srv.request.agent_params.max_distance=max_distance;
-        srv.request.agent_params.max_angle=max_angle_rad;
-        srv.request.agent_params.aggression=aggression;
+        srv.request.agent_params.max_distance=intruder_radar_params.max_radar_distance;
+        srv.request.agent_params.max_angle=intruder_radar_params.max_radar_angle_rad;
+        srv.request.agent_params.aggression=intruder_radar_params.aggression;
 
         ROS_INFO("Correcting command for intruder [%d]", sim_id);
         ROS_INFO("Recommended command ([%f], [%f])",
@@ -121,15 +124,10 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 }
 
 int main(int argc, char **argv){
-
-    ros::init(argc, argv, "planner");
-
-    ros::NodeHandle n;
-    command_pub = n.advertise<swarm_msgs::agentCommand>("Commands", 1000);
-    ros::Subscriber sub = n.subscribe("Perception", 1000, callback);
-    client = n.serviceClient<swarm_control::CollisionAvoidance>("collision_avoidance");
+    ros_container_ptr.reset(new RosContainer(argc, argv, "intruder_control"));
+    command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
+    ros::Subscriber sub = ros_container_ptr->nh.subscribe("Perception", 1000, callback);
+    client = ros_container_ptr->nh.serviceClient<swarm_control::CollisionAvoidance>("collision_avoidance");
     ros::spin();
     return 0;
-    //ros::Rate loop_rate(10);
-    // loop_rate.sleep();
 }

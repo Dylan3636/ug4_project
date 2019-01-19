@@ -18,6 +18,11 @@ namespace swarm_control{
                                      motion_goal);
 
     }
+    bool usv_delay_motion_goal(int usv_id,
+                               int intruder_id,
+                               agent::USVSwarm){
+        
+    }
     bool usv_delay_motion_goal(
         const agent::AgentState& usv_state,
         const agent::AgentConstraints& usv_constraints,
@@ -31,8 +36,8 @@ namespace swarm_control{
         motion_goal.heading_rad = intruder_state.heading;
         swarm_tools::Point2D usv_position = usv_state.get_position();
         swarm_tools::Point2D intruder_position = intruder_state.get_position();
-        // intruder_position.x += 30*std::cos(intruder_state.heading);
-        // intruder_position.y += 30*std::sin(intruder_state.heading);
+        intruder_position.x += 20*std::cos(intruder_state.heading);
+        intruder_position.y += 20*std::sin(intruder_state.heading);
         swarm_tools::Point2D asset_position = asset_state.get_position();
 
         double usv_max_speed = usv_constraints.max_speed;// Remember this
@@ -52,7 +57,7 @@ namespace swarm_control{
         // ROS_INFO("A: %f, B: %f, C: %f", A, B, C);
 
         if (det<0){
-            // No possible 
+            // Not possible 
             motion_goal.x = asset_position.x;
             motion_goal.y = asset_position.y;
             // ROS_INFO("ALPHA: NO SOLUTIONS FOUND");
@@ -62,7 +67,7 @@ namespace swarm_control{
         {
             double alpha_minus;
             double alpha_plus;
-            double capture_radius = 30;
+            double capture_radius = 10;
             double min_alpha = std::min(capture_radius/o_norm, 1.0);
 
             if (A==0){
@@ -90,7 +95,32 @@ namespace swarm_control{
                 intercept_2_ptr = &intercept_2;
             }
 
-            if (intercept_1_ptr==nullptr && intercept_2_ptr==nullptr){
+            if(intercept_1_ptr!=nullptr && intercept_2_ptr!=nullptr){
+                if (det==0){
+                        motion_goal.x = intercept_1_ptr->x;
+                        motion_goal.y = intercept_1_ptr->y;
+                        // ROS_INFO("USING ALPHA-: %f", alpha_minus);
+                    }
+                else{
+                        // swarm_tools::Point2D intercept_1 = *intercept_1_ptr;
+                        // swarm_tools::Point2D intercept_2 = *intercept_2_ptr;
+                        double dist_1 = swarm_tools::euclidean_distance(intercept_1, usv_position); 
+                        double dist_2 = swarm_tools::euclidean_distance(intercept_2, usv_position); 
+
+                        if (dist_1 <=0){
+                            motion_goal.x = intercept_1_ptr->x;
+                            motion_goal.y = intercept_1_ptr->y;
+                            // ROS_INFO("USING ALPHA-: %f", alpha_minus);
+                        }
+                        else{
+                            // ROS_INFO("USING ALPHA+: %f", alpha_plus);
+                            motion_goal.x = intercept_2_ptr->x;
+                            motion_goal.y = intercept_2_ptr->y;
+                        }
+
+                    }
+            }
+            else if (intercept_1_ptr==nullptr && intercept_2_ptr==nullptr){
                 alpha_minus = C/B;
                 if (0<=alpha_minus && alpha_minus <= 1){
                     alpha_minus = std::max(alpha_minus, min_alpha);
@@ -99,50 +129,30 @@ namespace swarm_control{
                     motion_goal.x = intercept_1.x;
                     motion_goal.y = intercept_1.y;
                 }else{
-                    intercept_1 = (intruder_position + (asset_position-intruder_position)*0.2); 
+                    intercept_1 = (intruder_position + (asset_position-intruder_position)*0.1); 
                     motion_goal.x = intercept_1.x;
                     motion_goal.y = intercept_1.y;
                 }
                 return false;
             }
-
-            if (intercept_1_ptr==nullptr){
+            
+            else if (intercept_1_ptr==nullptr){
                 motion_goal.x = intercept_2_ptr->x;
                 motion_goal.y = intercept_2_ptr->y;
                 // ROS_INFO("USING ALPHA+: %f", alpha_plus);
                 return true;
             }
 
-            if (intercept_2_ptr==nullptr){
+            else if (intercept_2_ptr==nullptr){
                 motion_goal.x = intercept_1_ptr->x;
                 motion_goal.y = intercept_1_ptr->y;
                 // ROS_INFO("USING ALPHA-: %f", alpha_minus);
                 return true;
             }
 
-            if (det==0){
-                    motion_goal.x = intercept_1_ptr->x;
-                    motion_goal.y = intercept_1_ptr->y;
-                    // ROS_INFO("USING ALPHA-: %f", alpha_minus);
-                }
-            else{
-                    // swarm_tools::Point2D intercept_1 = *intercept_1_ptr;
-                    // swarm_tools::Point2D intercept_2 = *intercept_2_ptr;
-                    double dist_1 = swarm_tools::euclidean_distance(intercept_1, usv_position); 
-                    double dist_2 = swarm_tools::euclidean_distance(intercept_2, usv_position); 
+            
 
-                    if (dist_1 <=0){
-                        motion_goal.x = intercept_1_ptr->x;
-                        motion_goal.y = intercept_1_ptr->y;
-                        // ROS_INFO("USING ALPHA-: %f", alpha_minus);
-                    }
-                    else{
-                        // ROS_INFO("USING ALPHA+: %f", alpha_plus);
-                        motion_goal.x = intercept_2_ptr->x;
-                        motion_goal.y = intercept_2_ptr->y;
-                    }
-
-                }
+            
             return true;
         }
         return true;
@@ -213,7 +223,8 @@ namespace swarm_control{
         const agent::MotionGoal& motion_goal,
         agent::AgentCommand& command
     ){
-        double close_param = 8;
+        double dist_param = 5;
+        double slow_param = 10; // Distance to MG in which the agent starts slowing
         double angle_between = swarm_tools::absolute_angle_between_points(agent_state.get_position(),
                                                                           motion_goal.get_position());
         double distance = swarm_tools::euclidean_distance(agent_state.get_position(),
@@ -221,29 +232,16 @@ namespace swarm_control{
         double heading_goal;
         double speed_goal; 
 
-        if (distance>close_param){
+        heading_goal = angle_between;
+        if (distance>slow_param){
             speed_goal = agent_constraints.max_speed;
-            heading_goal = angle_between;
+        }
+        else if(distance>dist_param){
+            double alpha = distance/slow_param;
+            speed_goal = alpha*agent_constraints.max_speed;
         }
         else{
-            double alpha = distance/close_param;
-            double rel_angle = swarm_tools::relative_angle_between_points(
-                motion_goal.get_position(),
-                agent_state.get_position(),
-                motion_goal.heading_rad);
-            heading_goal = angle_between; // + (1-alpha)*(motion_goal.heading_rad);
-            speed_goal = 0; //agent_constraints.max_speed;
-            
-            //if(rel_angle<swarm_tools::PI/2 || rel_angle>-swarm_tools::PI/2){
-            //    speed_goal=0;
-            //    heading_goal=motion_goal.heading_rad;
-            //    ROS_INFO("Relative Angle: %f", rel_angle);
-            //}
-            //if (distance<30){
-            //    speed_goal=motion_goal.speed;
-            //}
-            // agent_constraints.max_speed;//motion_goal.speed;
-            // speed_goal = agent_constraints.max_delta_speed*(agent_constraints.max_speed/close_param);
+            speed_goal = 0;
         }
         if (heading_goal<0) heading_goal += 2*swarm_tools::PI;
         double left_turn = heading_goal-agent_state.heading;
@@ -251,8 +249,6 @@ namespace swarm_control{
         if (left_turn<0) left_turn+= 2*swarm_tools::PI;
         double right_turn = -(2*swarm_tools::PI-left_turn);
 
-        // std::cout << "Left Turn: " << left_turn*180/swarm_tools::PI << std::endl;
-        // std::cout << "Right Turn: " << right_turn*180/swarm_tools::PI << std::endl;
 
         double delta_heading;
         if (std::abs(left_turn)<=std::abs(right_turn)) {delta_heading = left_turn;} else {delta_heading = right_turn;}
@@ -262,7 +258,6 @@ namespace swarm_control{
                                         agent_constraints.max_delta_heading);
         
         double delta_speed = speed_goal-agent_state.speed;
-        // std::cout << "SPEED GOAL: "<< speed_goal << " USV SPEED: " << agent_state.speed << "DELTA SPEED: " << delta_speed;
         delta_speed = swarm_tools::clip(delta_speed,
                                         -agent_constraints.max_delta_speed,
                                         agent_constraints.max_delta_speed);
@@ -310,7 +305,7 @@ namespace swarm_control{
         int num_usvs = swarm.get_num_usvs();
         agent::AgentAssignment assignment = usv.get_current_assignment();
         if (assignment.delay_assignment_idx != -1 && assignment.guard_assignment_idx != -1){
-             int guard_index = assignment.guard_assignment_idx;
+            int guard_index = assignment.guard_assignment_idx;
             int intruder_id = assignment.delay_assignment_idx;
             // ROS_INFO("Assignment: Delay index: %d Guard index: %d", intruder_id, guard_index);
             agent::IntruderAgent intruder = swarm.get_intruder_estimate_by_id(intruder_id);
@@ -332,7 +327,7 @@ namespace swarm_control{
             if (dist>3000){
                 alpha = 0.5;
             }
-            std::vector<double> weights = {1-alpha, alpha};
+            std::vector<double> weights = {1, 0};
             swarm_control::weighted_motion_goal(mgs,
                                                 weights,
                                                 motion_goal);

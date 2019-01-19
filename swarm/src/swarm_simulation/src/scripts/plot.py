@@ -106,7 +106,6 @@ class LivePlot:
                                oval_shape[0][1]+y,
                                oval_shape[1][0]+x,
                                oval_shape[1][1]+y)
-            print('Updating marker')
         self.thread_lock.release()
         self.canvas.update()
     

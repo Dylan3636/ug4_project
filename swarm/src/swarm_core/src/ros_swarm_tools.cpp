@@ -119,7 +119,7 @@ agent::CollisionAvoidanceParameters extract_from_ca_params_msg(const swarm_msgs:
 }
 
 agent::AgentAssignment extract_from_assignment_msg(const swarm_msgs::agentAssignment assignment_msg){
-    return agent::AgentAssignment{assignment_msg.delay_assignment, assignment_msg.guard_assignment};
+    return agent::AgentAssignment(assignment_msg.delay_assignment, assignment_msg.guard_assignment);
 }
 
 agent::AgentCommand extract_from_command_msg(const swarm_msgs::agentCommand &command_msg){
@@ -152,4 +152,122 @@ swarm_msgs::agentAssignment convert_to_agent_assignment_msg(int sim_id, const ag
     assignment_msg.guard_assignment= agent_assignment.guard_assignment_idx;
     assignment_msg.sim_id = sim_id;
     return assignment_msg;
+}
+
+bool get_agent_parameters(RosContainerPtr ros_container_ptr,
+                          std::string head_str,
+                          agent::AgentConstraints &constraints,
+                          agent::CollisionAvoidanceParameters &radar_params){
+    std::string error_str = "COULD NOT FIND PARAMETER ";
+    std::string debug_str = "LOADED PARAMETER ";
+    std::string param_value_str = "\nAS VALUE %f";
+
+    // constraints
+    double max_speed;
+    double max_delta_speed;
+    double max_delta_heading;
+
+    auto param_str = head_str;
+    param_str += "/constraints/max_speed";
+    bool failed = !ros_container_ptr->nh.getParam(param_str, max_speed);
+    if(failed){
+        error_str += param_str;
+        ROS_ERROR(error_str.c_str());
+        return !failed;
+    }
+    else{
+        debug_str += param_str;
+        debug_str += (boost::format(param_value_str) % max_speed).str();
+        ROS_INFO(debug_str.c_str());
+    }
+
+    param_str = head_str;
+    error_str = "COULD NOT FIND PARAMETER ";
+    debug_str = "LOADED PARAMETER ";
+    param_str += "/constraints/max_delta_speed";
+    failed = !ros_container_ptr->nh.getParam(param_str, max_delta_speed);
+    if(failed){
+        error_str += param_str;
+        ROS_ERROR(error_str.c_str());
+        return !failed;
+    }
+    else{
+        debug_str += param_str;
+        debug_str += (boost::format(param_value_str) % max_delta_speed).str();
+        ROS_INFO(debug_str.c_str());
+    }
+
+    param_str = head_str;
+    error_str = "COULD NOT FIND PARAMETER ";
+    debug_str = "LOADED PARAMETER ";
+    param_str += "/constraints/max_delta_heading";
+    failed = !ros_container_ptr->nh.getParam(param_str, max_delta_heading);
+    if(failed){
+        error_str += param_str;
+        ROS_ERROR(error_str.c_str());
+        return !failed;
+    }
+    else{
+        debug_str += param_str;
+        debug_str += (boost::format(param_value_str) % max_delta_heading).str();
+        ROS_INFO(debug_str.c_str());
+    }
+
+    constraints = {max_speed, max_delta_speed, max_delta_heading*swarm_tools::PI/180};
+
+    // radar parameters
+    double max_distance;
+    double max_angle;
+    double aggression;
+
+    param_str = head_str;
+    error_str = "COULD NOT FIND PARAMETER ";
+    debug_str = "LOADED PARAMETER ";
+    param_str += "/radar_parameters/max_distance";
+    failed = !ros_container_ptr->nh.getParam(param_str, max_distance);
+    if(failed){
+        error_str += param_str;
+        ROS_ERROR(error_str.c_str());
+        return !failed;
+    }
+    else{
+        debug_str += param_str;
+        debug_str += (boost::format(param_value_str) % max_distance).str();
+        ROS_INFO(debug_str.c_str());
+    }
+
+    param_str = head_str;
+    error_str = "COULD NOT FIND PARAMETER ";
+    debug_str = "LOADED PARAMETER ";
+    param_str += "/radar_parameters/max_angle";
+    failed = !ros_container_ptr->nh.getParam(param_str, max_angle);
+    if(failed){
+        error_str += param_str;
+        ROS_ERROR(error_str.c_str());
+        return !failed;
+    }
+    else{
+        debug_str += param_str;
+        debug_str += (boost::format(param_value_str) % max_angle).str();
+        ROS_INFO(debug_str.c_str());
+    }
+
+    param_str = head_str;
+    error_str = "COULD NOT FIND PARAMETER ";
+    debug_str = "LOADED PARAMETER ";
+    param_str += "/radar_parameters/aggression";
+    failed = !ros_container_ptr->nh.getParam(param_str, aggression);
+    if(failed){
+        error_str += param_str;
+        ROS_ERROR(error_str.c_str());
+        return !failed;
+    }
+    else{
+        debug_str += param_str;
+        debug_str += (boost::format(param_value_str) % max_angle).str();
+        ROS_INFO(debug_str.c_str());
+    }
+
+    radar_params = {max_distance, max_angle*swarm_tools::PI/180, aggression};
+
 }

@@ -1,50 +1,93 @@
-delta_time_secs : 0.1
+delta_time_secs : 0.2
 
 usv_params : {
   usv_1 : {
     sim_id : 1,
-    radius_buffer : 60,
+    radius_buffer : 50,
     init_state : {
-        x : 200,
-        y : 0,
+        x : 50,
+        y : 50,
         heading : 30,
         speed : 0
       },
     constraints : {
-      max_speed : 30,
-      max_delta_speed : 10,
-      max_delta_heading : 180
+      max_speed : 50,
+      max_delta_speed : 100,
+      max_delta_heading : 90
       },
     radar_parameters : {
-      max_distance : 100,
-      max_angle : 60
+      max_distance : 60,
+      max_angle : 60,
+      aggression : 0.7
       } 
     },
     
   usv_2 : {
     sim_id : 2,
-    radius_buffer : 60,
+    radius_buffer : 50,
     init_state : {
-        x : -200,
-        y : 100,
+        x : -50,
+        y : 50,
         heading : -30,
         speed : 0
         },
     constraints : {
-      max_speed : 45,
-      max_delta_speed : 10,
-      max_delta_heading : 180
+      max_speed : 50,
+      max_delta_speed : 100,
+      max_delta_heading : 90
       },
     radar_parameters : {
-      max_distance : 100,
-      max_angle : 60
+      max_distance : 60,
+      max_angle : 60,
+      aggression : 0.7
+      }
+    },
+  usv_3 : {
+    sim_id : 3,
+    radius_buffer : 50,
+    init_state : {
+        x : 50,
+        y : -50,
+        heading : 30,
+        speed : 0
+      },
+    constraints : {
+      max_speed : 50,
+      max_delta_speed : 100,
+      max_delta_heading : 90
+      },
+    radar_parameters : {
+      max_distance : 60,
+      max_angle : 60,
+      aggression : 0.7
+      } 
+    },
+    
+  usv_4 : {
+    sim_id : 4,
+    radius_buffer : 50,
+    init_state : {
+        x : -50,
+        y : -50,
+        heading : -30,
+        speed : 0
+        },
+    constraints : {
+      max_speed : 50,
+      max_delta_speed : 100,
+      max_delta_heading : 90
+      },
+    radar_parameters : {
+      max_distance : 60,
+      max_angle : 60,
+      aggression : 0.7
       }
     }
   }
 intruder_params : {
-  intruder_1 : {
+  intruder_101 : {
     sim_id : 101,
-    radius_buffer : 40,
+    radius_buffer : 50,
     init_state : {
         x : 800,
         y : 0,
@@ -53,18 +96,19 @@ intruder_params : {
       },
     constraints : {
       max_speed : 30,
-      max_delta_speed : 10,
-      max_delta_heading : 180
+      max_delta_speed : 100,
+      max_delta_heading : 45
       },
     radar_parameters : {
       max_distance : 100,
-      max_angle : 60
+      max_angle : 60,
+      aggression : 0.1
       } 
-    },
+    }
     
-  intruder_2 : {
+  ,intruder_102 : {
     sim_id : 102,
-    radius_buffer : 30,
+    radius_buffer : 50,
     init_state : {
         x : -800,
         y : 0,
@@ -72,13 +116,14 @@ intruder_params : {
         speed : 0
         },
     constraints : {
-      max_speed : 30,
-      max_delta_speed : 10,
-      max_delta_heading : 180
+      max_speed : 50,
+      max_delta_speed : 100,
+      max_delta_heading : 45
       },
     radar_parameters : {
       max_distance : 100,
-      max_angle : 60
+      max_angle : 60,
+      aggression : 0.1
       }
     }
   }

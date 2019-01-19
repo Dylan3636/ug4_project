@@ -68,4 +68,9 @@ swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(
     const agent::SwarmAssignment &swarm_assignment);
 swarm_msgs::agentAssignment convert_to_agent_assignment_msg(
     int sim_id, const agent::AgentAssignment &agent_assignment);
+
+bool get_agent_parameters(RosContainerPtr ros_container_ptr,
+                          std::string head_str,
+                          agent::AgentConstraints &constraints,
+                          agent::CollisionAvoidanceParameters &radar_params);
 #endif

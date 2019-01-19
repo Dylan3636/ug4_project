@@ -1,6 +1,7 @@
 #include "usv_swarm.h"
 #include "boost/format.hpp"
 #include <assert.h>
+#include "ros_swarm_tools.h"
 namespace agent{
 
     int USVSwarm::get_num_usvs() const{
@@ -111,8 +112,13 @@ namespace agent{
                                                   const AgentCommand &command,
                                                   double delta_time_secs){
         
-        intruder_map[intruder_id].command_agent_forward(command,
-                                                        delta_time_secs);
+        // ROS_INFO("DELTA TIME SEC %f", delta_time_secs);
+        // ROS_INFO("(%f, %f)", command.delta_speed, command.delta_heading);
+        auto &intruder = intruder_map[intruder_id];
+        // ROS_INFO("BEFORE: (x, y): (%f, %f)",intruder.get_x(), intruder.get_y());
+        intruder.command_agent_forward(command,
+                                       delta_time_secs);
+        // ROS_INFO("AFTER: (x, y): (%f, %f)",intruder.get_x(), intruder.get_y());
     }
 
 
@@ -212,6 +218,21 @@ namespace agent{
     }
     void USVSwarm::update_intruder_estimate(const IntruderAgent &intruder){
         intruder_map[intruder.get_sim_id()].copy(intruder);
+    }
+    bool USVSwarm::contains_usv(int usv_id){
+        return usv_map.find(usv_id) != usv_map.end();
+    }
+    bool USVSwarm::contains_intruder(int intruder_id){
+        return intruder_map.find(intruder_id) != intruder_map.end();
+    }
+    void USVSwarm::add_usv(const USVAgent &usv){
+        usv_map[usv.get_sim_id()] = USVAgent();
+        usv_map[usv.get_sim_id()].copy(usv);
+        assign_guard_task_to_usv(usv.get_sim_id());
+    }
+    void USVSwarm::add_intruder(IntruderAgent intruder){
+        intruder_map[intruder.get_sim_id()] = intruder;
+        assign_intruder_to_usv(intruder);
     }
     void USVSwarm::assign_intruder_to_usv(const IntruderAgent &intruder){
         std::vector<int> sorted_usv_ids = sort_usvs_by_distance_to_point(intruder.get_position());

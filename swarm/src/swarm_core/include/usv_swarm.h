@@ -12,13 +12,15 @@ namespace agent{
         AssetAgent asset;
 
         // private methods
-        void update_intruder_state_estimate(const AgentState &intruder_state);
         void update_intruder_estimate(const IntruderAgent &intruder);
-        void update_usv_state_estimate(const AgentState &usv_state);
         void update_usv_estimate(const USVAgent &usv);
 
         public:
+            void update_intruder_state_estimate(const AgentState &intruder_state);
+            void update_usv_state_estimate(const AgentState &usv_state);
             int get_num_usvs() const;
+            bool contains_usv(int usv_id);
+            bool contains_intruder(int intruder_id);
             IntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
             USVAgent get_usv_estimate_by_id(int usv_id) const;
             AssetAgent get_asset_estimate() const;
@@ -38,6 +40,8 @@ namespace agent{
             void command_intruder_forward_by_id(int intruder_id,
                                                           const AgentCommand &command,
                                                           double delta_time_secs);
+            void add_usv(const USVAgent &usv);
+            void add_intruder(IntruderAgent intruder);
             void update_swarm_assignment(const SwarmAssignment &swarm_assignment);
 
             void update_agent_assignment_by_id(int sim_id,

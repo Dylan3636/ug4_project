@@ -16,8 +16,12 @@ namespace swarm_task_manager{
                              int *other_usv_assignment_index){
         
         int temp_assignment = *main_usv_assignment_index;
-        *main_usv_assignment_index = *other_usv_assignment_index;
-        *other_usv_assignment_index = temp_assignment;
+        if(*main_usv_assignment_index == *other_usv_assignment_index){
+            *main_usv_assignment_index = -1;
+        }else{
+            *main_usv_assignment_index = *other_usv_assignment_index;
+            *other_usv_assignment_index = temp_assignment;
+        }
     }
 
     std::vector<agent::WeightedSwarmAssignment> generate_assignment_candidates(int sim_id,
@@ -34,6 +38,7 @@ namespace swarm_task_manager{
         std::vector<agent::WeightedSwarmAssignment> candidates={agent::WeightedSwarmAssignment(swarm_assignment, 0.0)};
         for (auto const &assignment_pair : swarm_assignment){
             if (sim_id==assignment_pair.first){
+                std::cout << sim_id << std::endl;
                 continue;
             }
 
@@ -45,8 +50,8 @@ namespace swarm_task_manager{
 
             swarm_assignment_copy[sim_id]=main_usv_assignment_copy;
             swarm_assignment_copy[assignment_pair.first] = other_usv_assignment_copy;
-            // std::cout << "MAIN USV : " << sim_id <<"GUARD ASSIGNMENT: " << main_usv_assignment_copy.guard_assignment_idx << "DELAY ASSINGMENT : " << main_usv_assignment_copy.delay_assignment_idx << std::endl;
-            // std::cout << "OTHER USV : " << assignment_pair.first <<"GUARD ASSIGNMENT: " << other_usv_assignment_copy.guard_assignment_idx << "DELAY ASSINGMENT : " << other_usv_assignment_copy.delay_assignment_idx << std::endl;
+            std::cout << "MAIN USV : " << sim_id <<"GUARD ASSIGNMENT: " << main_usv_assignment_copy.guard_assignment_idx << "DELAY ASSINGMENT : " << main_usv_assignment_copy.delay_assignment_idx << std::endl;
+            std::cout << "OTHER USV : " << assignment_pair.first <<"GUARD ASSIGNMENT: " << other_usv_assignment_copy.guard_assignment_idx << "DELAY ASSINGMENT : " << other_usv_assignment_copy.delay_assignment_idx << std::endl;
 
             candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
 
@@ -72,7 +77,7 @@ namespace swarm_task_manager{
             swarm_assignment_copy[assignment_pair.first] = other_usv_assignment_copy;
 
             candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
-        }
+       }
     return candidates;
     }
 
@@ -95,6 +100,8 @@ namespace swarm_task_manager{
 
         int timestep=0;
         double min_dist_to_asset=-1;
+        double dist_to_asset=-1;
+        double weight=0;
         ROS_INFO("Evaluating swarm assignment:");
         for (const auto &assignment : swarm_copy.get_swarm_assignment()){
             ROS_INFO("USV: %d DELAY ASSIGNMENT %d: GUARD ASSIGNMENT %d", assignment.first, assignment.second.delay_assignment_idx, assignment.second.guard_assignment_idx);
@@ -112,6 +119,7 @@ namespace swarm_task_manager{
                                                               guard_motion_goal,
                                                               delay_motion_goal,
                                                               command);
+                    // ROS_INFO("USV %d COMMAND (%f, %f)", sim_id, command.delta_heading, command.delta_speed);
                     swarm_copy.command_usv_forward_by_id(sim_id,
                                                          command,
                                                          delta_time_secs);
@@ -121,12 +129,25 @@ namespace swarm_task_manager{
                                                                    swarm_copy,
                                                                    intruder_motion_goal,
                                                                    command);
+                    // ROS_INFO("INTRUDER %d COMMAND (%f, %f)", sim_id, command.delta_heading, command.delta_speed);
                     swarm_copy.command_intruder_forward_by_id(sim_id,
                                                               command,
                                                               delta_time_secs);
                     agent::IntruderAgent intruder = swarm_copy.get_intruder_estimate_by_id(sim_id_type_pair.first);
-                    min_dist_to_asset = std::min(min_dist_to_asset, swarm_tools::euclidean_distance(intruder.get_state().get_position(),
-                                                                           swarm_copy.get_asset_estimate().get_position()));
+                    dist_to_asset = swarm_tools::euclidean_distance(intruder.get_state().get_position(),
+                                                                           swarm_copy.get_asset_estimate().get_position());
+                    if (min_dist_to_asset>dist_to_asset){
+                        min_dist_to_asset = dist_to_asset;
+                        weight = min_dist_to_asset/intruder.get_speed();
+                        //ROS_INFO("SPEED %f, DIST %f, WEIGHT %f", intruder.get_speed(), min_dist_to_asset, weight);
+                    }
+                    // ROS_INFO("Intruder %d STATE \nx=%f\ny=%f\nspeed=%f\nheading=%f",
+                    //                     sim_id,
+                    //                     intruder.get_x(),
+                    //                     intruder.get_y(),
+                    //                     intruder.get_speed(),
+                    //                     intruder.get_heading());
+
                     if(min_dist_to_asset<threshold){
                         terminated=true;
                         ROS_INFO("DISTANCE TO ASSET: %f", min_dist_to_asset);
@@ -136,8 +157,9 @@ namespace swarm_task_manager{
             if(terminated || timestep>num_timesteps){break;}
             timestep++;
         }
-        ROS_INFO("WEIGHT: %d", timestep);
-        return timestep;
+        ROS_INFO("WEIGHT: %f", weight);
+        ROS_INFO("DISTANCE TO ASSET: %f", min_dist_to_asset);
+        return weight;
     }
     void weight_candidate_swarm_assignments(const agent::USVSwarm swarm,
                                               int num_timesteps,

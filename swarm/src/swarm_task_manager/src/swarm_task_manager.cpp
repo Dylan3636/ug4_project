@@ -14,9 +14,19 @@ void reallocate_tasks(){
     swarm_task_manager::modelPredictiveSimulation::Request res_msg;
     std::vector<agent::WeightedSwarmAssignment> weighted_assignments;
 
-    ros_container_ptr->nh.getParam("swarm_task_manager/delta_time_secs", srv.request.delta_time_secs);
-    srv.request.num_timesteps_lookahead=2000;
-    srv.request.threshold=75;
+    bool failed = !ros_container_ptr->nh.getParam("/task_manager/delta_time_secs", srv.request.delta_time_secs);
+    if(failed){
+        ROS_ERROR("delta_time_parameter NOT FOUND");
+    }
+    failed = !ros_container_ptr->nh.getParam("/task_manager/num_timesteps_lookahead", srv.request.num_timesteps_lookahead);
+    if(failed){
+        ROS_ERROR("num_time_steps_lookahead NOT FOUND");
+    }
+    failed = !ros_container_ptr->nh.getParam("/task_manager/dist_to_asset_threshold", srv.request.threshold);
+    if(failed){
+        ROS_ERROR("dist_to_asset_threshold NOT FOUND");
+    }
+
     agent::SwarmAssignment swarm_assignment_candidate;
     double weight;
     agent::WeightedSwarmAssignment weighted_candidate;
@@ -58,7 +68,7 @@ int main(int argc, char **argv){
         auto mp_name = boost::format("mp_simulation_service_%d") % usv_id;
         service_client_map[usv_id] = ros_container_ptr->nh.serviceClient<swarm_task_manager::modelPredictiveSimulation>(mp_name.str());
     }
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(0.1);
     while(ros::ok){
         reallocate_tasks();
         loop_rate.sleep();
