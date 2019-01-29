@@ -4,6 +4,7 @@ from collections import namedtuple
 from tkinter import *
 from time import sleep
 from threading import Lock
+from queue import Queue
 PlotObject = namedtuple('PlotObject',
                         ['x',
                          'y',
@@ -38,7 +39,9 @@ class LivePlot:
         self.canvas.pack()
         self.objects = {}
         self.markers = {}
+        self.lines = {}
         self.thread_lock = Lock()
+        self.queue = Queue()
 
     def create_object(self, sim_obj):
         sim_id = sim_obj.sim_id
@@ -66,6 +69,9 @@ class LivePlot:
                np.transpose(triangle_shape)).T
         return xy
 
+    def offset_object_position(self, x, y):
+        return (x +center[0], -y + center[1])
+
     def update_object(self, obj, sim_obj):
         sim_id = sim_obj.sim_id
         x = sim_obj.x + center[0]
@@ -88,13 +94,34 @@ class LivePlot:
             self.objects[sim_id] = obj
 
     def update_world_state(self, sim_objects):
-        for sim_object in sim_objects:
+        # Update vessels
+        for sim_id, sim_object in sim_objects.items():
             if sim_object.sim_id in self.objects:
                 obj = self.objects[sim_object.sim_id]
             else:
                 obj = self.create_object(sim_object)
             self.update_object(obj, sim_object)
         self.thread_lock.acquire()
+        
+        # Update Lines
+        for sim_id, line in self.lines.items():
+            if sim_id not in self.objects:
+                start_obj = sim_objects[line.start_id]
+                end_obj = sim_objects[line.end_id]
+                start_xy = self.offset_object_position(start_obj.x, start_obj.y) 
+                end_xy = self.offset_object_position(end_obj.x, end_obj.y) 
+                self.objects[sim_id] = self.canvas.create_line(*start_xy, *end_xy)
+            else:
+                start_obj = sim_objects[line.start_id]
+                end_obj = sim_objects[line.end_id]
+                start_xy = self.offset_object_position(start_obj.x, start_obj.y) 
+                end_xy = self.offset_object_position(end_obj.x, end_obj.y) 
+                self.canvas.coords(self.objects[sim_id],
+                                   *start_xy,
+                                   *end_xy)
+
+
+        # Update Markers
         for sim_id, marker in self.markers.items():
             if marker.sim_id not in self.objects:
                 self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill=marker.colour)
@@ -109,6 +136,19 @@ class LivePlot:
         self.thread_lock.release()
         self.canvas.update()
     
-    def marker_callback(self, marker):
+    def update_marker(self, marker):
         with self.thread_lock:
             self.markers[marker.sim_id] = marker
+    def update_lines(self, line_updates):
+        set_1 = set(self.lines.keys())
+        set_2 = set(line_updates.keys())
+        with self.thread_lock:
+            for sim_id in set_1.difference(set_2):
+                self.queue.put(sim_id)
+            self.lines = line_updates
+    def cull_objects(self):
+        while not self.queue.empty():
+            sim_id = self.queue.get()
+            with self.thread_lock:
+                self.canvas.delete(self.objects[sim_id])
+                self.objects[sim_id]=None

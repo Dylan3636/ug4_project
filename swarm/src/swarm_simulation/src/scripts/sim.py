@@ -6,6 +6,7 @@ from perception import perceive
 from planning import avoid
 from sim_objects import *
 
+SimLine = namedtuple("SimulationLine", ["sim_id", "start_id", "end_id"])
 
 class Simulation:
 
@@ -24,11 +25,24 @@ class Simulation:
 
     def command_by_object_id(self, sim_id, command):
         self.sim_objects[sim_id].command = command
+    
+    def update_task_lines(self, assignments):
+        line_updates={}
+        get_line_id = lambda sim_id, task_id : sim_id*500 + task_id
+        for tasks in assignments:
+            for (usv_id, task_type, task_id) in tasks:
+                if task_type==1 or task_id==-1:
+                    continue
+                line_id = get_line_id(usv_id, task_id)
+                line_updates[line_id] = SimLine(line_id, usv_id, task_id)
+
+        self.anim.update_lines(line_updates)
  
     def begin(self):
         while(self.OK):
             self.update_simulation_state()
-            self.anim.update_world_state(self.sim_objects.values())
+            self.anim.update_world_state(self.sim_objects)
+            self.anim.cull_objects()
             sleep(self.timeout)
 
     def kill(self):

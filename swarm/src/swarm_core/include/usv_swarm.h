@@ -7,8 +7,10 @@
 
 namespace agent{
     class USVSwarm{
+        int main_usv_id;
         std::map<int, USVAgent> usv_map;
         std::map<int, IntruderAgent> intruder_map;
+        ros::ServiceClient threat_detection_client;
         AssetAgent asset;
 
         // private methods
@@ -16,6 +18,16 @@ namespace agent{
         void update_usv_estimate(const USVAgent &usv);
 
         public:
+            void set_main_usv_id(int usv_id){
+                main_usv_id=usv_id;
+            }
+            int get_main_usv_id(){
+                return main_usv_id;
+            }
+            void set_threat_detection_client(const ros::ServiceClient &client){
+                threat_detection_client=client;
+            }
+            bool switch_observe_to_delay_task(int intruder_id);
             void update_intruder_state_estimate(const AgentState &intruder_state);
             void update_usv_state_estimate(const AgentState &usv_state);
             int get_num_usvs() const;
@@ -57,6 +69,7 @@ namespace agent{
                                       agent::AgentState> &usv_state_map);
             void update_intruder_estimates(const std::map<int,
                                            agent::AgentState> &intruder_state_map);
+            bool update_intruder_threat_estimate(const AgentState &intruder_state);
             void assign_intruder_to_usv(const IntruderAgent &intruder);
             void assign_guard_task_to_usv(int usv_id);
 

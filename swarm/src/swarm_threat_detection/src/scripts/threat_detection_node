@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+
+import rospy
+from basic_threat_detection import BasicThreatDetector
+from swarm_threat_detection.srv import ThreatDetection, ThreatDetectionResponse
+
+btd = BasicThreatDetector()
+
+def update_threat_estimate(req):
+    global btd
+    try:
+        alert, prob = btd.update_detector(req.intruder_id, req.dist_to_intruder)
+    except Exception as e:
+        rospy.loginfo(str(e.with_traceback()))
+        rospy.logerr(str(e.with_traceback()))
+        print(e.with_traceback())
+    resp = ThreatDetectionResponse()
+    resp.threat_alert=alert
+    resp.threat_probability=prob
+    return resp
+
+if __name__=="__main__":
+    rospy.init_node("BasicThreatDetection")
+    rospy.Service('ThreatDetection', ThreatDetection, update_threat_estimate)
+    rospy.loginfo("Initiating Threat Detection System")
+    rospy.spin()

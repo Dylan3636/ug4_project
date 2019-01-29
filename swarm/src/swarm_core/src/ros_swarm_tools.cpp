@@ -118,8 +118,30 @@ agent::CollisionAvoidanceParameters extract_from_ca_params_msg(const swarm_msgs:
                                                ca_params_msg.aggression};
 }
 
-agent::AgentAssignment extract_from_assignment_msg(const swarm_msgs::agentAssignment assignment_msg){
-    return agent::AgentAssignment(assignment_msg.delay_assignment, assignment_msg.guard_assignment);
+agent::AgentAssignment extract_from_assignment_msg(const swarm_msgs::agentAssignment &assignment_msg){
+
+    agent::AgentAssignment assignment;
+    for(const auto &task_msg : assignment_msg.tasks){
+        assignment.push_back(extract_from_task_msg(task_msg));
+    }
+    return assignment;
+}
+
+agent::AgentTask extract_from_task_msg(const swarm_msgs::agentTask &task_msg){
+    agent::AgentTask agent_task;
+    agent_task.task_idx = task_msg.task_idx;
+    switch(task_msg.task_type){
+        case swarm_msgs::taskType::OBSERVE:
+            agent_task.task_type=agent::TaskType::Observe;
+            break;
+        case swarm_msgs::taskType::GUARD:
+            agent_task.task_type=agent::TaskType::Guard;
+            break;
+        case swarm_msgs::taskType::DELAY:
+            agent_task.task_type=agent::TaskType::Delay;
+            break;
+    }
+    return agent_task;
 }
 
 agent::AgentCommand extract_from_command_msg(const swarm_msgs::agentCommand &command_msg){
@@ -148,10 +170,30 @@ swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(const agent::SwarmAs
 
 swarm_msgs::agentAssignment convert_to_agent_assignment_msg(int sim_id, const agent::AgentAssignment &agent_assignment){
     swarm_msgs::agentAssignment assignment_msg;
-    assignment_msg.delay_assignment= agent_assignment.delay_assignment_idx;
-    assignment_msg.guard_assignment= agent_assignment.guard_assignment_idx;
+    for(const auto &task : agent_assignment){
+        assignment_msg.tasks.push_back(convert_to_agent_task_msg(task));
+    }
     assignment_msg.sim_id = sim_id;
     return assignment_msg;
+}
+
+swarm_msgs::agentTask convert_to_agent_task_msg(const agent::AgentTask &task){
+    swarm_msgs::agentTask task_msg;
+    task_msg.task_idx = task.task_idx;
+    // ROS_INFO("CONVERTING TASK: %s TO MSG", task.to_string());
+    switch(task.task_type){
+        case agent::TaskType::Observe:
+            task_msg.task_type=swarm_msgs::taskType::OBSERVE;
+            break;
+        case agent::TaskType::Guard:
+            task_msg.task_type=swarm_msgs::taskType::GUARD;
+            break;
+        case agent::TaskType::Delay:
+            task_msg.task_type=swarm_msgs::taskType::DELAY;
+            break;
+    }
+    task_msg.task_idx = task.task_idx;
+    return task_msg;
 }
 
 bool get_agent_parameters(RosContainerPtr ros_container_ptr,

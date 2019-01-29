@@ -49,8 +49,8 @@ void reallocate_tasks(){
     }
     for (const auto &weighted_assignment : weighted_assignments){
         ROS_INFO("Weight: %f", weighted_assignment.second);
-        for (const auto &assignment : weighted_assignment.first){
-            ROS_INFO("USV: %d DELAY ASSIGNMENT %d: GUARD ASSIGNMENT %d", assignment.first, assignment.second.delay_assignment_idx, assignment.second.guard_assignment_idx);
+        for (const auto &assignment_pair : weighted_assignment.first){
+            ROS_INFO(agent::agent_assignment_to_string(assignment_pair.second).c_str());
         }
     }
     auto local_max_weighted_assignment = swarm_task_manager::max_weighted_swarm_assignment(weighted_assignments);

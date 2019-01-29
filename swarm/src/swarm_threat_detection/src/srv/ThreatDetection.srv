@@ -1,0 +1,5 @@
+int32 intruder_id
+int32 dist_to_intruder
+---------------
+bool threat_alert
+float32 threat_probability

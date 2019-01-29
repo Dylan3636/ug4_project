@@ -5,33 +5,30 @@
 #include "motion_goal_control.h"
 
 namespace swarm_control{
-    bool usv_delay_motion_goal(const agent::USVAgent &usv,
-                               const agent::IntruderAgent &intruder,
-                               const agent::AssetAgent &asset,
-                               agent::MotionGoal &motion_goal){
-
-        return usv_delay_motion_goal(usv.get_state(),
-                                     usv.get_constraints(),
-                                     intruder.get_state(),
-                                     intruder.get_constraints(),
-                                     asset.get_state(),
-                                     motion_goal);
-
-    }
     bool usv_delay_motion_goal(int usv_id,
                                int intruder_id,
                                agent::USVSwarm){
         
+        
     }
     bool usv_delay_motion_goal(
-        const agent::AgentState& usv_state,
-        const agent::AgentConstraints& usv_constraints,
-        const agent::AgentState& intruder_state,
-        const agent::AgentConstraints& intruder_constraints,
-        const agent::AgentState& asset_state,
+        int usv_id,
+        int intruder_id,
+        agent::USVSwarm swarm,
         agent::MotionGoal& motion_goal
     ){
-        // ROS_INFO("USV DELAY: ");
+        auto usv = swarm.get_usv_estimate_by_id(usv_id);
+        auto intruder = swarm.get_intruder_estimate_by_id(intruder_id);
+        auto asset = swarm.get_asset_estimate();
+
+        auto usv_state = usv.get_state();
+        auto usv_constraints = usv.get_constraints();
+
+        auto intruder_state = intruder.get_state();
+        auto intruder_constraints = intruder.get_constraints();
+
+        auto asset_state = asset.get_state();
+
         motion_goal.speed = intruder_state.speed;
         motion_goal.heading_rad = intruder_state.heading;
         swarm_tools::Point2D usv_position = usv_state.get_position();
@@ -54,13 +51,11 @@ namespace swarm_control{
         double C = d_norm*d_norm;
 
         double det = B*B -4*A*C;
-        // ROS_INFO("A: %f, B: %f, C: %f", A, B, C);
 
         if (det<0){
             // Not possible 
             motion_goal.x = asset_position.x;
             motion_goal.y = asset_position.y;
-            // ROS_INFO("ALPHA: NO SOLUTIONS FOUND");
             return false;
         } 
         else
@@ -77,8 +72,6 @@ namespace swarm_control{
                 alpha_minus = (-B-sqrt(det))/(2*A);
                 alpha_plus = (-B+sqrt(det))/(2*A);
             }
-            // ROS_INFO("ALPHA-: %f", alpha_minus);
-            // ROS_INFO("ALPHA+: %f", alpha_plus);
             swarm_tools::Point2D* intercept_1_ptr = nullptr;
             swarm_tools::Point2D* intercept_2_ptr = nullptr;
             swarm_tools::Point2D intercept_1;
@@ -99,21 +92,16 @@ namespace swarm_control{
                 if (det==0){
                         motion_goal.x = intercept_1_ptr->x;
                         motion_goal.y = intercept_1_ptr->y;
-                        // ROS_INFO("USING ALPHA-: %f", alpha_minus);
                     }
                 else{
-                        // swarm_tools::Point2D intercept_1 = *intercept_1_ptr;
-                        // swarm_tools::Point2D intercept_2 = *intercept_2_ptr;
                         double dist_1 = swarm_tools::euclidean_distance(intercept_1, usv_position); 
                         double dist_2 = swarm_tools::euclidean_distance(intercept_2, usv_position); 
 
                         if (dist_1 <=0){
                             motion_goal.x = intercept_1_ptr->x;
                             motion_goal.y = intercept_1_ptr->y;
-                            // ROS_INFO("USING ALPHA-: %f", alpha_minus);
                         }
                         else{
-                            // ROS_INFO("USING ALPHA+: %f", alpha_plus);
                             motion_goal.x = intercept_2_ptr->x;
                             motion_goal.y = intercept_2_ptr->y;
                         }
@@ -124,7 +112,6 @@ namespace swarm_control{
                 alpha_minus = C/B;
                 if (0<=alpha_minus && alpha_minus <= 1){
                     alpha_minus = std::max(alpha_minus, min_alpha);
-                    // ROS_INFO("USING ALPHA-: %f", alpha_minus);
                     intercept_1 = (intruder_position + (asset_position-intruder_position)*alpha_minus); 
                     motion_goal.x = intercept_1.x;
                     motion_goal.y = intercept_1.y;
@@ -139,14 +126,12 @@ namespace swarm_control{
             else if (intercept_1_ptr==nullptr){
                 motion_goal.x = intercept_2_ptr->x;
                 motion_goal.y = intercept_2_ptr->y;
-                // ROS_INFO("USING ALPHA+: %f", alpha_plus);
                 return true;
             }
 
             else if (intercept_2_ptr==nullptr){
                 motion_goal.x = intercept_1_ptr->x;
                 motion_goal.y = intercept_1_ptr->y;
-                // ROS_INFO("USING ALPHA-: %f", alpha_minus);
                 return true;
             }
 
@@ -195,15 +180,15 @@ namespace swarm_control{
         return true;
     }
 
-    bool usv_guard_motion_goal(const int& num_of_usvs,
-                               const int& usv_assignment,
-                               const double& radius,
+    bool usv_guard_motion_goal(int num_of_usvs,
+                               int guard_id,
+                               double asset_radius,
                                const agent::AgentState asset_state,
                                agent::MotionGoal& motion_goal
     ){
-        double angle = (usv_assignment/(double) num_of_usvs) * 2*swarm_tools::PI;
+        double angle = (guard_id/(double) num_of_usvs) * 2*swarm_tools::PI;
         swarm_tools::Point2D asset_location = asset_state.get_position();
-        swarm_tools::Point2D offset = {radius*std::cos(angle), radius*std::sin(angle)};
+        swarm_tools::Point2D offset = {asset_radius*std::cos(angle), asset_radius*std::sin(angle)};
         swarm_tools::Point2D guard_position = asset_location+offset;
 
         motion_goal.x=guard_position.x; 
@@ -223,8 +208,8 @@ namespace swarm_control{
         const agent::MotionGoal& motion_goal,
         agent::AgentCommand& command
     ){
-        double dist_param = 5;
-        double slow_param = 10; // Distance to MG in which the agent starts slowing
+        double dist_param = 20;
+        double slow_param = 50; // Distance to MG in which the agent starts slowing
         double angle_between = swarm_tools::absolute_angle_between_points(agent_state.get_position(),
                                                                           motion_goal.get_position());
         double distance = swarm_tools::euclidean_distance(agent_state.get_position(),
@@ -294,65 +279,55 @@ namespace swarm_control{
         weighted_motion_goal.heading_rad=weighted_heading;
         return true;
     }
-    bool get_motion_goals_from_assignment(int usv_id,
-                                          const agent::USVSwarm &swarm,
-                                          const agent::AssetAgent &asset,
-                                          agent::MotionGoal &delay_motion_goal,
-                                          agent::MotionGoal &guard_motion_goal,
-                                          agent::MotionGoal &motion_goal
-                                          ){
+    bool get_motion_goal_from_assignment(int usv_id,
+                                         const agent::USVSwarm &swarm,
+                                         agent::MotionGoal &motion_goal){
+        std::vector<agent::MotionGoal> motion_goals;
+        std::vector<double> weights;
+        agent::MotionGoal mg;
         agent::USVAgent usv = swarm.get_usv_estimate_by_id(usv_id);
-        int num_usvs = swarm.get_num_usvs();
         agent::AgentAssignment assignment = usv.get_current_assignment();
-        if (assignment.delay_assignment_idx != -1 && assignment.guard_assignment_idx != -1){
-            int guard_index = assignment.guard_assignment_idx;
-            int intruder_id = assignment.delay_assignment_idx;
-            // ROS_INFO("Assignment: Delay index: %d Guard index: %d", intruder_id, guard_index);
-            agent::IntruderAgent intruder = swarm.get_intruder_estimate_by_id(intruder_id);
-            
-            swarm_control::usv_delay_motion_goal(usv,
-                                                 intruder,
-                                                 asset,
-                                                 delay_motion_goal);
-            
-            swarm_control::usv_guard_motion_goal(num_usvs,
-                                                 guard_index,
-                                                 100,
-                                                 asset.get_state(),
-                                                 guard_motion_goal
-                                                 );
-            std::vector<agent::MotionGoal> mgs = {delay_motion_goal, guard_motion_goal};
-            double dist = swarm_tools::euclidean_distance(intruder.get_position(), asset.get_position());
-            double alpha = dist/3000;
-            if (dist>3000){
-                alpha = 0.5;
+        agent::AgentState asset_state;
+
+        int num_usvs = swarm.get_num_usvs();
+        int guard_radius = 100;
+        int guard_id;
+        int intruder_id;
+        for(const auto &task : assignment){
+            if(task.task_idx==-1) continue;
+            switch (task.task_type){
+                case agent::TaskType::Delay:
+                    intruder_id = task.task_idx;
+                    swarm_control::usv_delay_motion_goal(usv_id, intruder_id, swarm, motion_goal);
+                    return true;
+                case agent::TaskType::Guard:
+                    guard_id=task.task_idx;
+                    asset_state=swarm.get_asset_estimate().get_state();
+                    swarm_control::usv_guard_motion_goal(num_usvs, guard_id, guard_radius, asset_state, mg);
+                    motion_goals.push_back(mg);
+                    weights.push_back(1.0);
+                    break;
+                case agent::TaskType::Observe:
+                    intruder_id=task.task_idx;
+                    swarm_control::usv_observe_motion_goal(usv_id, intruder_id, swarm, mg);
+                    motion_goals.push_back(mg);
+                    weights.push_back(1.0);
+                    break;
+                default:
+                    break;
             }
-            std::vector<double> weights = {1, 0};
-            swarm_control::weighted_motion_goal(mgs,
-                                                weights,
-                                                motion_goal);
-            
-        }else if(assignment.guard_assignment_idx!=-1){
-            int guard_index = assignment.guard_assignment_idx;
-            // ROS_INFO("Assignment: Delay index: NULL Guard index %d", guard_index);
-            swarm_control::usv_guard_motion_goal(num_usvs,
-                                                 guard_index,
-                                                 100,
-                                                 asset.get_state(),
-                                                 motion_goal
-                                                 );
-        
-        
-        } else if(assignment.delay_assignment_idx != -1){
-            int intruder_id = assignment.delay_assignment_idx;
-            // ROS_INFO("Assignment: Delay index: %d Guard index: NULL", intruder_id);
-            agent::IntruderAgent intruder = swarm.get_intruder_estimate_by_id(intruder_id);
-            swarm_control::usv_delay_motion_goal(usv,
-                                                 intruder,
-                                                 asset,
-                                                 motion_goal);
         }
-           
+        weighted_motion_goal(motion_goals, weights, motion_goal);
         return true;
+    }
+    bool usv_observe_motion_goal(int usv_id,
+                                 int intruder_id,
+                                 const agent::USVSwarm &swarm,
+                                 agent::MotionGoal &motion_goal){
+        auto intruder_state = swarm.get_intruder_estimate_by_id(intruder_id).get_state();
+        motion_goal.x=intruder_state.x;
+        motion_goal.y=intruder_state.y;
+        motion_goal.speed=intruder_state.speed;
+        motion_goal.heading_rad=intruder_state.heading;
     }
 }

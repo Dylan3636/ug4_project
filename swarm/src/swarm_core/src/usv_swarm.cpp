@@ -2,6 +2,7 @@
 #include "boost/format.hpp"
 #include <assert.h>
 #include "ros_swarm_tools.h"
+#include "swarm_threat_detection/ThreatDetection.h"
 namespace agent{
 
     int USVSwarm::get_num_usvs() const{
@@ -121,6 +122,19 @@ namespace agent{
         // ROS_INFO("AFTER: (x, y): (%f, %f)",intruder.get_x(), intruder.get_y());
     }
 
+    bool USVSwarm::switch_observe_to_delay_task(int intruder_id){
+       auto sorted_usvs = sort_usvs_by_distance_to_point(get_intruder_estimate_by_id(intruder_id).get_position());
+       int result;
+       for(int usv_id : sorted_usvs){
+           result = usv_map[usv_id].switch_observe_to_delay_assignment(intruder_id);
+           if(result==1){
+               return true;
+           }else{
+               continue;
+           }
+       }
+       return false;
+    }
 
 
     void USVSwarm::update_intruder_estimates(const std::map<int,
@@ -133,8 +147,31 @@ namespace agent{
                 assign_intruder_to_usv(intruder_map[intruder_pair.first]);
             }else{
                 update_intruder_state_estimate(intruder_pair.second);
+               
             }
         }
+    }
+
+    bool USVSwarm::update_intruder_threat_estimate(const AgentState &intruder_state){
+        swarm_threat_detection::ThreatDetection srv;
+        double dist_to_intruder = swarm_tools::euclidean_distance(
+            get_usv_estimate_by_id(get_main_usv_id()).get_position(),
+            intruder_state.get_position());
+        srv.request.dist_to_intruder = dist_to_intruder;
+        srv.request.intruder_id = intruder_state.sim_id;
+
+        if(threat_detection_client.call(srv)){
+            ROS_INFO("Intruder Threat Detection Service Successful!");
+            ROS_INFO("For Intruder %d : (%d, %f)", intruder_state.sim_id, srv.response.threat_alert, srv.response.threat_probability);
+            bool new_threat = (!get_intruder_estimate_by_id(intruder_state.sim_id).is_threat() && srv.response.threat_alert);
+            ROS_INFO("New threat %d", new_threat);
+            intruder_map[intruder_state.sim_id].set_threat_estimate(srv.response.threat_alert, srv.response.threat_probability);
+            return new_threat;
+        }else{
+            ROS_INFO("Intruder Threat Detection Failed!");
+            return false;
+        }
+        
     }
 
     void USVSwarm::update_usv_estimates(const std::map<int,
@@ -215,6 +252,19 @@ namespace agent{
 
     void USVSwarm::update_intruder_state_estimate(const AgentState &intruder_state){
         intruder_map[intruder_state.sim_id].set_state(intruder_state);
+        bool new_threat_alert = update_intruder_threat_estimate(intruder_state);
+        if (new_threat_alert){
+            ROS_INFO("Switching Observe Task to Delay Task for Intruder %d", intruder_state.sim_id);
+            bool successful = switch_observe_to_delay_task(intruder_state.sim_id);
+            if(successful){
+                ROS_INFO("Switch successful!");
+                ROS_INFO(swarm_assignment_to_string(get_swarm_assignment()).c_str());
+            }else{
+                ROS_INFO("Switch failed!");
+            }
+
+        }
+
     }
     void USVSwarm::update_intruder_estimate(const IntruderAgent &intruder){
         intruder_map[intruder.get_sim_id()].copy(intruder);
@@ -237,11 +287,11 @@ namespace agent{
     void USVSwarm::assign_intruder_to_usv(const IntruderAgent &intruder){
         std::vector<int> sorted_usv_ids = sort_usvs_by_distance_to_point(intruder.get_position());
         for(const auto usv_id : sorted_usv_ids){
-            if(usv_map[usv_id].get_current_assignment().delay_assignment_idx!=-1){
+            if(usv_map[usv_id].has_delay_task()){
                 continue;
             }
             else{
-                usv_map[usv_id].set_delay_assignment(intruder.get_sim_id());
+                usv_map[usv_id].add_observe_task(intruder.get_sim_id());
                 return;
             }
         }

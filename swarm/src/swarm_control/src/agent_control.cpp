@@ -3,20 +3,15 @@ namespace swarm_control{
     void get_next_usv_command_by_id(int usv_id,
                                    const agent::USVSwarm &swarm,
                                    agent::MotionGoal &motion_goal,
-                                   agent::MotionGoal &guard_motion_goal,
-                                   agent::MotionGoal &delay_motion_goal,
                                    agent::AgentCommand &command){
 
         int num_usvs = swarm.get_num_usvs();
         agent::USVAgent usv = swarm.get_usv_estimate_by_id(usv_id);
         agent::AssetAgent asset = swarm.get_asset_estimate();
 
-        get_motion_goals_from_assignment(usv_id,
-                                         swarm,
-                                         asset,
-                                         delay_motion_goal,
-                                         guard_motion_goal,
-                                         motion_goal);
+        get_motion_goal_from_assignment(usv_id,
+                                        swarm,
+                                        motion_goal);
 
         get_command_from_motion_goal(usv.get_state(),
                                      usv.get_constraints(),

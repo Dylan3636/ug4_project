@@ -1,0 +1,3 @@
+int32 OBSERVE=0
+int32 GUARD=1
+int32 DELAY=2

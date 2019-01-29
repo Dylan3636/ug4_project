@@ -3,6 +3,7 @@ project(swarm_core)
 
 find_package(catkin REQUIRED COMPONENTS
   swarm_msgs
+  swarm_threat_detection
   cmake_modules
   roscpp
   std_msgs
@@ -16,12 +17,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 
 catkin_package(
   DEPENDS Boost
-  CATKIN_DEPENDS roscpp std_msgs swarm_msgs
+  CATKIN_DEPENDS roscpp std_msgs swarm_msgs swarm_threat_detection
   INCLUDE_DIRS ../include
   LIBRARIES agent usv_swarm swarm_tools ros_swarm_tools
 )
 
-include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eigen3_INCLUDE_DIRS})
+include_directories(../include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${Eigen3_INCLUDE_DIRS} ${swarm_threat_detection_INCLUDE_DIR})
 
 #install(DIRECTORY launch/
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch

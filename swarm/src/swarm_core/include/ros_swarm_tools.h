@@ -9,6 +9,7 @@
 #include "swarm_msgs/usvAgent.h"
 #include "swarm_msgs/intruderAgent.h"
 #include "swarm_msgs/swarmAssignment.h"
+#include "swarm_msgs/taskType.h"
 
 #ifndef SWARM_CORE_ROS_SWARM_TOOLS_H
 #define SWARM_CORE_ROS_SWARM_TOOLS_H
@@ -43,8 +44,11 @@ agent::AgentConstraints extract_from_constraints_msg(
 agent::CollisionAvoidanceParameters extract_from_ca_params_msg(
     const swarm_msgs::agentParam &ca_params_msg);
 
+agent::AgentTask extract_from_task_msg(
+    const swarm_msgs::agentTask &task_msg);
+
 agent::AgentAssignment extract_from_assignment_msg(
-    const swarm_msgs::agentAssignment assignment_msg);
+    const swarm_msgs::agentAssignment &assignment_msg);
 
 agent::AgentCommand extract_from_command_msg(
     const swarm_msgs::agentCommand &command_msg);
@@ -66,6 +70,10 @@ agent::SwarmAssignment extract_from_swarm_assignment_msg(
 
 swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(
     const agent::SwarmAssignment &swarm_assignment);
+
+swarm_msgs::agentTask convert_to_agent_task_msg(
+    const agent::AgentTask &task);
+
 swarm_msgs::agentAssignment convert_to_agent_assignment_msg(
     int sim_id, const agent::AgentAssignment &agent_assignment);
 

@@ -21,6 +21,8 @@ add_message_files(
   usvAgent.msg
   intruderAgent.msg
   simulationMarker.msg
+  taskType.msg
+  agentTask.msg
   swarmAssignment.msg
 )
 

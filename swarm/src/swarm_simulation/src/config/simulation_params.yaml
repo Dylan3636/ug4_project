@@ -1,5 +1,8 @@
 delta_time_secs : 0.2
-
+motion_goal_control : {
+  slowdown_distance : 50,
+  reached_mg_distance : 20
+}
 usv_params : {
   usv_1 : {
     sim_id : 1,
@@ -103,7 +106,8 @@ intruder_params : {
       max_distance : 100,
       max_angle : 60,
       aggression : 0.1
-      } 
+      }, 
+      is_threat : True
     }
     
   ,intruder_102 : {
@@ -124,7 +128,8 @@ intruder_params : {
       max_distance : 100,
       max_angle : 60,
       aggression : 0.1
-      }
+      },
+      is_threat : True
     }
   }
 

@@ -59,6 +59,8 @@ class SimObject:
     def to_plot_object(self):
         return PlotObject(self.state[0],
                           self.state[1])
+    def get_position(self):
+        return (self.x, self.y)
 
     @property
     def state(self):

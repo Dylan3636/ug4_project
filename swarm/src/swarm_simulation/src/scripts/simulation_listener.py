@@ -6,6 +6,7 @@ from swarm_msgs.msg import (agentState,
                             agentCommand,
                             agentType,
                             simulationMarker,
+                            swarmAssignment,
                             worldState)
 
 class SimulationNode:
@@ -16,7 +17,8 @@ class SimulationNode:
         self.sim.update_simulation_state = self.tick
         self.publisher = rospy.Publisher('Perception', worldState, queue_size=10)
         self.listener = rospy.Subscriber("Commands", agentCommand, self.command_callback)
-        self.marker_listener = rospy.Subscriber("Markers", simulationMarker, self.sim.anim.marker_callback)
+        self.marker_listener = rospy.Subscriber("Markers", simulationMarker, self.marker_callback)
+        self.task_allocation_listener = rospy.Subscriber("Task_Allocation", swarmAssignment, self.task_allocation_callback)
 
 
     def command_callback(self, msg):
@@ -24,6 +26,15 @@ class SimulationNode:
                           msg.delta_heading)
         self.sim.command_by_object_id(msg.sim_id,
                                       command)
+    def marker_callback(self, msg):
+        self.sim.anim.update_marker(msg)
+
+    def task_allocation_callback(self, msg):
+        new_task_assignments = [[(usv_assignment.sim_id, task.task_type, task.task_idx)
+                 for task in usv_assignment.tasks] \
+                    for usv_assignment in msg.usvAssignments]
+        rospy.loginfo(str([*new_task_assignments]))
+        self.sim.update_task_lines([*new_task_assignments])
     def tick(self):
         ws = worldState().worldState
         [ws.append(state_to_msg(sim_id, obj.update_state(self.sim.timeout))) for sim_id, obj in self.sim.sim_objects.items()]

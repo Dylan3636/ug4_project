@@ -1,4 +1,6 @@
 #include "swarm_tools.h"
+#include "ros/ros.h"
+#include <vector>
 #include <map>
 #ifndef AGENT_H
 #define AGENT_H
@@ -68,28 +70,92 @@ namespace agent{
         double max_delta_heading;
     };
 
-    struct AgentAssignment
-    {
-        int delay_assignment_idx;
-        int guard_assignment_idx;
+    enum TaskType{
+        Delay,
+        Guard,
+        Observe
+    };
 
-        void copy(const AgentAssignment &assignment){
-            delay_assignment_idx=assignment.delay_assignment_idx;
-            guard_assignment_idx=assignment.guard_assignment_idx;
-        }
+    struct AgentTask{
+        TaskType task_type;
+        int task_idx; // ID of intruder or guard position
 
-        AgentAssignment(){delay_assignment_idx=-1; guard_assignment_idx=-1;}
-        AgentAssignment(int delay_idx, int guard_idx){
-            delay_assignment_idx=delay_idx;
-            guard_assignment_idx=guard_idx;
+        void copy(const AgentTask &task){
+            task_idx = task.task_idx;
+            task_type = task.task_type;
         }
-        AgentAssignment(const AgentAssignment &assignment){
-            copy(assignment);
+        AgentTask(){
+            task_idx=-1;
+            task_type=Delay;
         }
-        AgentAssignment operator=(const AgentAssignment &assignment){
-            copy(assignment);
+        AgentTask(const AgentTask &task){
+            copy(task);
+        }
+        AgentTask(TaskType tt, int tidx){
+            task_type=tt;
+            task_idx=tidx;
+        }
+        bool operator==(const AgentTask &task) const{
+            return task_type==task.task_type && task_idx==task.task_idx;
+        }
+        std::string to_string()const{
+            std::string task_str="Task: ";
+            switch (task_type){
+                case Delay:
+                    task_str+="Delay";
+                    break;
+                case Guard:
+                    task_str+="Guard";
+                    break;
+                case Observe:
+                    task_str+="Observe";
+                    break;
+                default:
+                    task_str+="TASK NOT SET";
+                    break;
+            }
+            task_str += " Index: ";
+            task_str += std::to_string(task_idx);
+            task_str += "\n";
+            return task_str;
         }
     };
+    typedef std::vector<AgentTask> AgentAssignment;
+
+    std::string agent_assignment_to_string(const AgentAssignment &assignment){
+        std::string str;
+        for(const auto &task : assignment){
+            str += task.to_string();
+        }
+        return str;
+
+    }
+    // {
+    //     std::vector<Assignment> assignments;
+    //     // int delay_assignment_idx;
+    //     // int guard_assignment_idx;
+    // 
+    //     void copy(const AgentAssignment &agent_assignment){
+    //         assignments.clear();
+    //         for (const auto &assignment : agent_assignment){
+    //             assignments.push_back
+    //         }
+    //         delay_assignment_idx=assignment.delay_assignment_idx;
+    //         guard_assignment_idx=assignment.guard_assignment_idx;
+    //     }
+    // 
+    //     AgentAssignment(){delay_assignment_idx=-1; guard_assignment_idx=-1;}
+    //     AgentAssignment(int delay_idx, int guard_idx){
+    //         delay_assignment_idx=delay_idx;
+    //         guard_assignment_idx=guard_idx;
+    //     }
+    //     AgentAssignment(const AgentAssignment &assignment){
+    //         copy(assignment);
+    //     }
+    //     AgentAssignment operator=(const AgentAssignment &assignment){
+    //         copy(assignment);
+    //     }
+    // };
 
     struct CollisionAvoidanceParameters
     {
@@ -110,6 +176,17 @@ namespace agent{
 
     typedef std::map<int, AgentAssignment> SwarmAssignment;
     typedef std::pair<SwarmAssignment, double> WeightedSwarmAssignment;
+
+    std::string swarm_assignment_to_string(const SwarmAssignment swarm_assignment){
+        std::string str = "";
+        for(const auto &assignment_pair: swarm_assignment){
+            str += "USV ";
+            str += std::to_string(assignment_pair.first);
+            str += ":\n";
+            str += agent_assignment_to_string(assignment_pair.second);
+        }
+        return str;
+    }
 
     class BaseAgent
     {
@@ -215,12 +292,29 @@ namespace agent{
 
     class IntruderAgent : public BaseAgent
     {   
+        bool threat_classification;
+        double threat_probability;
+
         public:
+
+            void set_threat_estimate(bool alert, double probability){
+                threat_classification=alert;
+                threat_probability=probability;
+            }
+
+            double get_threat_probability(){
+                return threat_probability;
+            }
+            bool is_threat(){
+                return threat_classification;
+            }
+
             IntruderAgent(){}
             IntruderAgent(AgentState state,
-                        AgentConstraints constraints,
-                        CollisionAvoidanceParameters ca_params)
-                    : BaseAgent(state, constraints, ca_params, Intruder){}
+                          AgentConstraints constraints,
+                          CollisionAvoidanceParameters ca_params)
+                    : BaseAgent(state, constraints, ca_params, Intruder){
+            }
             IntruderAgent(const AgentState &state){
                 set_state(state);
                 set_constraints(AgentConstraints{35, 5, swarm_tools::PI/2});
@@ -249,11 +343,61 @@ namespace agent{
             void set_current_assignment(AgentAssignment assignment){
                 current_assignment=assignment;
             }
+            int switch_observe_to_delay_assignment(int intruder_id){
+                if(has_delay_task()) return -1;
+                bool had_observe_task = remove_observe_assignment(intruder_id);
+                if(had_observe_task){
+                    set_delay_assignment(intruder_id);
+                    return 1;
+                }else{
+                    return 0;
+                }
+            }
             void set_delay_assignment(int delay_assignment_idx){
-                current_assignment.delay_assignment_idx=delay_assignment_idx;
+                for(auto &task : current_assignment){
+                    if(task.task_type==Delay){
+                        task.task_idx=delay_assignment_idx;
+                        return;
+                    } else if(task.task_type==Observe && task.task_idx==delay_assignment_idx){
+                        task.task_idx=delay_assignment_idx;
+                        task.task_type=Delay;
+                        return;
+                        
+                    }
+                }
+                current_assignment.push_back(AgentTask(Delay, delay_assignment_idx));
+
             }
             void set_guard_assignment(int guard_assignment_idx){
-                current_assignment.guard_assignment_idx=guard_assignment_idx;
+                for(auto &task : current_assignment){
+                    if(task.task_type==Guard){
+                        task.task_idx=guard_assignment_idx;
+                        return;
+                    }
+                }
+                current_assignment.push_back(AgentTask(Guard, guard_assignment_idx));
+            }
+            
+            void add_observe_task(int observe_assignment_idx){
+                remove_observe_assignment(observe_assignment_idx);
+                current_assignment.push_back(AgentTask(Observe, observe_assignment_idx));
+            }
+            bool has_delay_task(){
+                for(const auto &task : current_assignment){
+                    if(task.task_type==Delay && task.task_idx!=-1) return true;
+                }
+                return false;
+            }
+            bool remove_observe_assignment(int observe_assignment_idx){
+                auto task2rem = AgentTask(Observe, observe_assignment_idx);
+                for(int i =0; i < current_assignment.size(); i++){
+                    if(current_assignment[i].task_type==Observe && current_assignment[i].task_idx==observe_assignment_idx){
+                        current_assignment[i]=current_assignment.back();
+                        current_assignment.pop_back();
+                        return true;
+                    }
+                }
+                return false;
             }
             void copy(const USVAgent &usv);
             USVAgent(){}

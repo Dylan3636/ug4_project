@@ -1,0 +1,6 @@
+
+<launch>
+    <node pkg="swarm_threat_detection" type="threat_detection_node" name="swarm_threat_detection" clear_params="true" required="true">
+        <!-- <rosparam file="$(find swarm_simulation)/config/simulation_params.yaml" command="load"/> -->
+    </node>
+</launch>
