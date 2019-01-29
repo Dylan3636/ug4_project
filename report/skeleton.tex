@@ -6,26 +6,13 @@
 
 \begin{document}
 
-\title{This is the Project Title}
+\title{Threat Response to an Anomaly Detection using a team of Unmanned Sea Vessels USVs }
 
-\author{Your Name}
+\author{Dylan Angus}
 
 % to choose your course
 % please un-comment just one of the following
-\course{Artificial Intelligence and Computer Science}
-%\course{Artificial Intelligence and Software Engineering}
 %\course{Artificial Intelligence and Mathematics}
-%\course{Artificial Intelligence and Psychology }   
-%\course{Artificial Intelligence with Psychology }   
-%\course{Linguistics and Artificial Intelligence}    
-%\course{Computer Science}
-%\course{Software Engineering}
-%\course{Computer Science and Electronics}    
-%\course{Electronics and Software Engineering}    
-%\course{Computer Science and Management Science}    
-%\course{Computer Science and Mathematics}
-%\course{Computer Science and Physics}  
-%\course{Computer Science and Statistics}    
 
 % to choose your report type
 % please un-comment just one of the following
@@ -36,21 +23,23 @@
 \date{\today}
 
 \abstract{
-This is an example of {\tt infthesis} style.
-The file {\tt skeleton.tex} generates this document and can be 
-used to get a ``skeleton'' for your thesis.
-The abstract should summarise your report and fit in the space on the 
-first page.
+In this project report, I demonstrate how a threat detection and response system for a team of Unmanned Sea Vessels guarding a fixed asset near a trade route can be designed. Using a simulated dataset of typical sea vessel travel in a trade route the system detects when an intruding vessel begins to depart from the normal route and alerts the team of USVs of the threat. The team of USVs already juggling tasks between delaying already detected threats, positioning itself in a distributed strategic position about the asset and observing potential threats will quickly react when alerted of another threat.  
+% This is an example of {\tt infthesis} style.
+% The file {\tt skeleton.tex} generates this document and can be 
+% used to get a ``skeleton'' for your thesis.
+% The abstract should summarise your report and fit in the space on the
+
+% first page.
 %
-You may, of course, use any other software to write your report,
-as long as you follow the same style. That means: producing a title
-page as given here, and including a table of contents and bibliography.
+% You may, of course, use any other software to write your report,
+% as long as you follow the same style. That means: producing a title
+% page as given here, and including a table of contents and bibliography.
 }
 
 \maketitle
 
-\section*{Acknowledgements}
-Acknowledgements go here. 
+% \section*{Acknowledgements}
+% I would like to acknowledge 
 
 \tableofcontents
 
@@ -58,68 +47,154 @@ Acknowledgements go here.
 
 
 \chapter{Introduction}
+\section{Motivation}
+Countries around the world have been investing resources in USVs that can operate autonomously in a marine environment \cite{usvcase}, especially for defence purposes.  Investing in this technology is important because they can save countries/companies not just money but also lives. Marine assets like oil tankers, cargo-ships and aircraft carriers are at risk due to being fairly non-maneuverable while carrying important cargo. This was unfortunately proven to be true on 12 October 2000, when the USS Cole guided-missile destroyer was the target of a terrorist attack while it was being refueled \cite{combs2009encyclopedia}. The attack was caused by a small fiberglass boat carrying C4 explosives approaching the destroyer and blowing a hole in the ships hull. Something that could have been avoided without putting any human life in danger by taking advantage of Unmanned Sea Vessels (USVs). 
 
-The document structure should include:
+\section{Context}
+Some developed countries have managed to develop systems that can perform various tasks patrolling a specified area, observing suspicious vessels and delaying intruders from an important asset. Performing these tasks alone is a difficult feat and present their own challenges \cite{usvcase}\cite{wolf2017caracas}\cite{raboin2013model}. However, juggling these tasks in tangent while maneuvering through a popular vessel route is a non-trivial task in itself. Though work has been put into deriving how to delay intruding vessels that may come close to an asset that's it's in charge of protecting \cite{raboin2013model} while avoiding obstacles \cite{gupta2015block}\cite{marzoughi2018collision}. It should only do this when it is absolutely sure that it poses a threat. Hence, there is a need for a system that allow the USVs to observe potentially threatening vessels while positioning themselves to react quickly if the vessels begin to exhibit abnormal behaviour.
+
+It should be noted that understanding maritime traffic patterns and modelling normal vessel behaviour on a trade route is an invested in and active area of research. This has been facilitated by the build-up of terrestrial networks and constellations of Automatic Identification System (AIS) receivers. Which allow for ship movement information in both coastal and open waters becoming available \cite{perez2009automatic}. AIS data has been analyzed and used to perform various tasks such as route detection, anomaly detection and motion prediction\cite{pallotta2013vessel} \cite{ristic2008statistical} \cite{kowalska2012maritime}.  
+Thus, it is reasonable to believe that a USV squad would have access to this historical data to model normal vessel movement for motion prediction and threat detection.
+
+
+\section{Problem Statement}
+\subsection{Approach}
+The goal of this project is to develop a threat detection and reaction system for a team of USVs guarding a fixed asset near a busy trade route
+This project is split into two main parts:
+\begin{enumerate}
+    \item Threat Detection
+    \item Threat Reaction
+\end{enumerate}
+
+\subsubsection{Threat Detection}
+The first part will focus on maritime awareness, specifically anomaly detection.
+
+This will require learning a model for normal boat behaviour. This model will be learned from simulated AIS data of boats travelling in a specified trade route.
+
+The learned model will then be used to distinguish between normal behaviour and threatening behaviour using hypothesis testing with the normal behavior as the null hypothesis and the non-normal behavior assumed to be threatening.
+
+\subsubsection{Threat Reaction}
+The second part of this project focuses on how to react to a threat using a team of autonomous USVs.
+After being alerted to the threat the team of USVs have to assign someone to intercept. They do this while attempting to balance other tasks with the hope of preparing for potential threats.
+These tasks are:
 \begin{itemize}
-\item
-The title page  in the format used above.
-\item
-An optional acknowledgements page.
-\item
-The table of contents.
-\item
-The report text divided into chapters as appropriate.
-\item
-The bibliography.
+    \item Observing vessels that could be potential threats
+    \item Maintaining advantageous positioning of USVs around the asset
+    \item Delaying any intruders classified as threats from reach the asset for as long as possible
 \end{itemize}
 
-Commands for generating the title page appear in the skeleton file and
-are self explanatory.
-The file also includes commands to choose your report type (project
-report, thesis or dissertation) and degree.
-These will be placed in the appropriate place in the title page. 
+They must do all these tasks while not disturbing non-threatening vessels in the trade route and avoiding collisions.
 
-The default behaviour of the documentclass is to produce documents typeset in
-12 point.  Regardless of the formatting system you use, 
-it is recommended that you submit your thesis printed (or copied) 
-double sided.
+\section{Challenges}
+As addressed in \cite{raboin2013model} the high-level task planning and behaviour optimization for a team of USVs guarding an asset is an instance of the MT-MR-TA (multi-task robots, multi-robot tasks, time extended allocation) variant of task allocation problems. I address this by using the market-based exchange strategy proposed in \cite{raboin2013model}. In which a local search is performed in the space of USV task assignments and assignments are evaluated using a model-predictive simulation. Each task will be executed like a corresponding parameterized behaviour like in \cite{raboin2013model}. However, they made the assumption of knowing the parameters of the intruder's which is not true in the general case. Thus, this project will have the additional challenge of estimating the parameters of the intruders while observing their behaviour.
 
-The report should be printed single-spaced.
-It should be 30 to 60 pages long, and preferably no shorter than 20 pages.
-Appendices are in addition to this and you should place detail
-here which may be too much or not strictly necessary when reading the relevant section.
+\section{Project Structure}
+In the upcoming sections I will contrast and compare similar topics in literature to that of my project. Then a full description of the algorithms used in the two main systems (i.e. threat detection and threat reaction). Following this I will describe the software architecture then the experimental set up. Lastly, I will discuss and evaluate the results from the experiments, summarize and conclude.
 
-\section{Using Sections}
+\chapter{Background}
 
-Divide your chapters into sub-parts as appropriate.
+\section{Related Work}
 
-\section{Citations}
+\subsection{Multi-Agent Pursuit-Evasion Games}
+The problem of guarding an asset using USV’s against other intruder vessels can be thought of a pursuit-evasion game where the evaders are trying to capture the asset which has been researched thoroughly. In the discrete case, agents are traversing on a graph where each agent occupies a single node on the graph and the edges are the reachable positions from a node. Pursuit-evasion games on graphs have been shown to have optimal policies to capture evaders with the minimum number of steps \cite{vieira2008optimal}. This could easily be adjusted suit our purposes by not allowing the pursuers to actually capture the evaders, but to just maximize the number of timesteps they can keep the evaders away from the asset. However, this does not generalize well to the real continuous world.
 
-Note that citations 
-(like \cite{P1} or \cite{P2})
-can be generated using {\tt BibTeX} or by using the
-{\tt thebibliography} environment. This makes sure that the
-table of contents includes an entry for the bibliography.
-Of course you may use any other method as well.
+\subsection{Differential Games}
+A closer approach to the problem addressed in this project is Issacs’ “Guarding a Territory” game \cite{isaacs1999differential}. In this game, a guard and an intruder start on separate parts of the map and the guard attempts to intercept an intruder as far as possible from the restricted territory while the intruder tries to get as close as possible to the territory. This game works on the continuous domain where the agents have constraints in the form of differential equations. For the single guard and intruder case with perfect information, an optimal solution can be found \cite{isaacs1999differential}. There have been several twists on this game investigated in the literature. In \cite{meng1999fuzzy} they introduced uncertainty over the agent’s and territory’s position. In \cite{raslan2016learning} the guard agents were taught an optimal policy to capture a superior intruder agent using Reinforcement Learning techniques.
 
-\section{Options}
+\subsection{Multi-Agent Asset Protection}
+\subsubsection{Interception Strategies}
+Moving on to studies that attempt to tackle the problem in a continuous space. A necessary and sufficient conditioned for the existence of decentralized motion control algorithm for a network if mobile robots to intercept an intruder on the boundary of a particular region was derived by \cite{marzoughi2018collision} and the algorithm proposed. 
 
-There are various documentclass options, see the documentation.  Here we are
-using an option ({\tt bsc} or {\tt minf}) to choose the degree type, plus:
-\begin{itemize}
-\item {\tt frontabs} (recommended) to put the abstract on the front page;
-\item {\tt twoside} (recommended) to format for two-sided printing, with
-  each chapter starting on a right-hand page;
-\item {\tt singlespacing} (required) for single-spaced formating; and
-\item {\tt parskip} (a matter of taste) which alters the paragraph formatting so that
-paragraphs are separated by a vertical space, and there is no
-indentation at the start of each paragraph.
-\end{itemize}
+\cite{gupta2015block} Investigated a set of different interception policies using a USVs as dynamic obstacles obstructing highly maneuverable threats from reaching a valuable naval asset. By applying a mirror transformation to the intruder's current state, \cite{gupta2015block} suggests a pursuit policy can be formed that always places the defending USV between the intruder and the asset. They also present a model-predictive method of calculating the motion goals for the defending USV and estimating the future intruder motions. Additionally, they showed how the predictive estimator is capable of generating a meta-model for the intruder's behavior and producing a probability distribution of the intruder's control actions based on a set of observable spatial features. 
 
-\chapter{The Real Thing}
+\cite{moundegue2017fields} tackled the same problem as \cite{gupta2015block} but modelled it using the potential fields. Assuming the intruders have a positive attraction to the asset and a negative charge towards the USVs. Additionally, USVs had a limited field of vision to which to detect intruders and a limited range of communication between each other. The USVs also balanced between escorting the asset and blocking intruders. However, once an intruder was blocked it would go into a \emph{standby mode} and move away from the asset.
 
-Of course
-you may want to use several chapters and much more text than here.
+The paper most similar to problem addressed in this project is \cite{raboin2013model}. They developed a behavior-based control architecture to control a fleet of USVs to perform tasks such as guarding the asset, observing potential threats and delaying intruders once they are classified as threats. Their focus however, was on their model-predictive task allocation algorithm. This algorithm would forward project the state of USVs and intruders and evaluate which assignment of behaviors performed the best. They found significant results with their algorithm vastly outperforming a heuristic task allocation baseline. 
+
+However, they used a toy threat detection system that would not generalize to the real world. Additionally, they made the assumption of knowing the correct model of the intruder which turns out to be very important as I will show later in this project.Thus, my contribution will be to integrating a threat detection system that would generalize to the real world and evaluating how their system is capable of protecting an asset near a busy trade route and estimating the models of intruders that are classified as threats.
+
+\subsection{Maritime Situational Awareness}
+As mentioned in the introduction, a lot of work has been done in the field of maritime surveillance. This is because nations who fail to invest in this risk unauthorized maritime arrivals, prohibited imports/exports, maritime pollution, piracy, and maritime terrorism \cite{ristic2008statistical} such as the case of the missile destroyer \cite{combs2009encyclopedia}. Additionally, many papers attribute the increase in research into maritime surveillance because of the increase in self-reporting systems. Though these systems were first introduced mainly for the purpose of safety in navigation and collision avoidance they have since become an abundant and inexpensive source of information for maritime surveillance  \cite{kde}. The main self-reporting system Automatic Identification System (AIS) was made compulsory by the International Convention of Safety of life and sea (SOLAS) compulsory for most commercial ships (cargo, passenger, tankers, tugboats, etc.). AIS provides a means for ships to electronically broadcast ship data at regular intervals including vessel identification, position, course, speed and vessel type amongst other data. Thus, it was the spawn of numerous studies attempting to process and extract as much information as they could from AIS datasets. 
+
+\cite{ristic2008statistical} used AIS data to extract motion patterns, using these patterns to construct motion anomaly detectors. They did this by using an \emph{adaptive kernel density estimator} (AKDE) to model normal vessel behavior by vessel class (if that information was available) and used that as the null hypothesis. Additionally, by using a particle filter with the weights for the particles given by the AKDE they were able to forward predict the motion of vessels based on their origin.
+
+Similar work was done by \cite{kowalska2012maritime} which used Gaussian Processes to design a nonparametric Bayesian model of normal vessel behavior.  Unlike the KDE mentioned above, they modeled the velocity of a vessel class given the latitude and longitude of the vessel.  Using this model they were able to perform motion prediction and using \emph{extreme value theory} anomaly detection.
+
+\cite{pallotta2013vessel} used route prediction to assist in their anomaly detection system. They first extracted marine traffic routes using unsupervised clustering techniques. Then they used the extracted historical knowledge to develop probability models. One of the models gave a probability for the observed track of the vessel of interest and the corresponding temporal sequence given the suspected route the vessel it's on using a Hidden Markov Model which used a Weibull distribution for the state transition probability model and a Kernel Density Estimator for the evidence probability model. They also developed a prior probability model over routes by averaging the number of vessels that took those routes in the dataset. Using these probability models they developed a hypothesis test for anomaly detection.
+
+% The document structure should include:
+% \begin{itemize}
+% \item
+% The title page  in the format used above.
+% \item
+% An optional acknowledgements page.
+% \item
+% The table of contents.
+% \item
+% The report text divided into chapters as appropriate.
+% \item
+% The bibliography.
+% \end{itemize}
+
+% Commands for generating the title page appear in the skeleton file and
+% are self explanatory.
+% The file also includes commands to choose your report type (project
+% report, thesis or dissertation) and degree.
+% These will be placed in the appropriate place in the title page. 
+
+% The default behaviour of the documentclass is to produce documents typeset in
+% 12 point.  Regardless of the formatting system you use, 
+% it is recommended that you submit your thesis printed (or copied) 
+% double sided.
+
+% The report should be printed single-spaced.
+% It should be 30 to 60 pages long, and preferably no shorter than 20 pages.
+% Appendices are in addition to this and you should place detail
+% here which may be too much or not strictly necessary when reading the relevant section.
+
+
+% Divide your chapters into sub-parts as appropriate.
+
+
+% Note that citations 
+% (like \cite{P1} or \cite{P2})
+% can be generated using {\tt BibTeX} or by using the
+% {\tt thebibliography} environment. This makes sure that the
+% table of contents includes an entry for the bibliography.
+% Of course you may use any other method as well.
+
+
+% There are various documentclass options, see the documentation.  Here we are
+% using an option ({\tt bsc} or {\tt minf}) to choose the degree type, plus:
+% \begin{itemize}
+% \item {\tt frontabs} (recommended) to put the abstract on the front page;
+% \item {\tt twoside} (recommended) to format for two-sided printing, with
+%   each chapter starting on a right-hand page;
+% \item {\tt singlespacing} (required) for single-spaced formating; and
+% \item {\tt parskip} (a matter of taste) which alters the paragraph formatting so that
+% paragraphs are separated by a vertical space, and there is no
+% indentation at the start of each paragraph.
+% \end{itemize}
+
+\chapter{Maritime Situational Awareness}
+\section{Kernel Density Estimation}
+\section{Anomaly Detection}
+\section{Motion Prediction}
+\chapter{Multi-Agent Asset Protection Algorithm}
+\section{Behaviours}
+\subsection{Defending USV Behaviours}
+\subsubsection{Observe Behaviour}
+\subsubsection{Delay Behaviour}
+\subsubsection{Guard Behaviour}
+\subsection{Intruder Behaviour}
+\section{Collision Avoidance}
+\subsection{Radar Approach}
+\subsection{Potential Fields}
+\section{Intruder Parameter Estimation}
+\section{Task Allocation Algorithm}
+\chapter{Experiment Setup}
+\chapter{Experiment Results}
+\chapter{Conclusion}
 
 % use the following and \cite{} as above if you use BibTeX
 % otherwise generate bibtem entries
