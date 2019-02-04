@@ -36,7 +36,7 @@ template<typename T> int collision_avoidance::correct_command(
 template int collision_avoidance::correct_command<agent::USVAgent>(const agent::USVAgent &agent,
                                                                    const std::vector<agent::AgentState> &obstacle_states,
                                                                    agent::AgentCommand &command);
-template int collision_avoidance::correct_command<agent::IntruderAgent>(const agent::IntruderAgent &agent,
+template int collision_avoidance::correct_command<agent::ObservedIntruderAgent>(const agent::ObservedIntruderAgent &agent,
                                                                         const std::vector<agent::AgentState> &obstacle_states,
                                                                         agent::AgentCommand &command);
 

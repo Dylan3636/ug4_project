@@ -69,7 +69,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         agent::CollisionAvoidanceParameters intruder_radar_params{};
         agent::AgentConstraints intruder_constraints{};
         get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints, intruder_radar_params);
-        auto intruder = agent::IntruderAgent(intruder_state, intruder_constraints, intruder_radar_params);
+        auto intruder = agent::ObservedIntruderAgent(intruder_state, intruder_constraints, intruder_radar_params);
 
         agent::AgentCommand command{};
         agent::MotionGoal motion_goal = {tanker.x, tanker.y};

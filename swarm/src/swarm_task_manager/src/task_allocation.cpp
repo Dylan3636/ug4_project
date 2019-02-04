@@ -8,7 +8,7 @@
 // typedef Eigen::Matrix<double, Eigen::Dynamic, 1> VectorXd;
 
 bool allocate_tasks(const std::vector<agent::USVAgent> &usvs,
-                    const std::vector<agent::IntruderAgent> &intruders,
+                    const std::vector<agent::ObservedIntruderAgent> &intruders,
                     const agent::AssetAgent &asset,
                     std::vector<int> &assignments)
 {

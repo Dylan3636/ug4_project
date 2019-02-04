@@ -67,16 +67,16 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
     }
 }
 
-std::map<int, agent::IntruderAgent> extract_from_intruder_msgs(const std::vector<swarm_msgs::intruderAgent> &intruder_msgs){
-    std::map<int, agent::IntruderAgent> intruder_map;
+std::map<int, agent::ObservedIntruderAgent> extract_from_intruder_msgs(const std::vector<swarm_msgs::intruderAgent> &intruder_msgs){
+    std::map<int, agent::ObservedIntruderAgent> intruder_map;
     for (auto const &intruder_msg : intruder_msgs){
         intruder_map[intruder_msg.state.sim_id]=extract_from_intruder_msg(intruder_msg);
     }
     return intruder_map;
 }
 
-agent::IntruderAgent extract_from_intruder_msg(const swarm_msgs::intruderAgent &intruder_msg){
-    return agent::IntruderAgent{extract_from_state_msg(intruder_msg.state),
+agent::ObservedIntruderAgent extract_from_intruder_msg(const swarm_msgs::intruderAgent &intruder_msg){
+    return agent::ObservedIntruderAgent{extract_from_state_msg(intruder_msg.state),
                                 extract_from_constraints_msg(intruder_msg.constraints),
                                 extract_from_ca_params_msg(intruder_msg.ca_params)};
 }

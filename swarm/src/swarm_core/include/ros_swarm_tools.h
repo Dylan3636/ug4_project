@@ -59,10 +59,10 @@ agent::USVAgent extract_from_usv_msg(
 std::map<int, agent::USVAgent> extract_from_usv_msgs(
     const std::vector<swarm_msgs::usvAgent> &usv_msgs);
 
-agent::IntruderAgent extract_from_intruder_msg(
+agent::ObservedIntruderAgent extract_from_intruder_msg(
     const swarm_msgs::intruderAgent &intruder_msg);
 
-std::map<int, agent::IntruderAgent> extract_from_intruder_msgs(
+std::map<int, agent::ObservedIntruderAgent> extract_from_intruder_msgs(
     const std::vector<swarm_msgs::intruderAgent> &intruder_msgs);
 
 agent::SwarmAssignment extract_from_swarm_assignment_msg(

@@ -272,7 +272,7 @@ namespace swarm_control{
         return delta_speed;
     }
 
-    bool get_observed_intruder_command_from_motion_goal(const agent::IntruderAgent& intruder,
+    bool get_observed_intruder_command_from_motion_goal(const agent::ObservedIntruderAgent& intruder,
                                                         const agent::MotionGoal &motion_goal,
                                                         agent::AgentCommand &command) {
 
@@ -395,7 +395,7 @@ namespace swarm_control{
         double dist_to_intruder;
         double threat_prob;
         double weight;
-        agent::IntruderAgent intruder;
+        agent::ObservedIntruderAgent intruder;
         for(const auto &task : assignment){
             if(task.task_idx==-1) continue;
             switch (task.task_type){

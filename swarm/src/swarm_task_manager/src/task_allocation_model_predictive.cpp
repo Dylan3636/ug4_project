@@ -172,7 +172,7 @@ namespace swarm_task_manager{
                     swarm_copy.command_intruder_forward_by_id(sim_id,
                                                               command,
                                                               delta_time_secs);
-                    agent::IntruderAgent intruder = swarm_copy.get_intruder_estimate_by_id(sim_id_type_pair.first);
+                    agent::ObservedIntruderAgent intruder = swarm_copy.get_intruder_estimate_by_id(sim_id_type_pair.first);
                     dist_to_asset = swarm_tools::euclidean_distance(intruder.get_state().get_position(),
                                                                            swarm_copy.get_asset_estimate().get_position());
                     if (min_dist_to_asset>dist_to_asset){

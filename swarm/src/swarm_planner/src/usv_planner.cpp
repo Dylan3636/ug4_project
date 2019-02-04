@@ -100,7 +100,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
             agent::AgentConstraints constraints;
             agent::CollisionAvoidanceParameters radar_params;
             get_agent_parameters(ros_container_ptr, intruder_head_str, constraints, radar_params);
-            swarm.add_intruder(agent::IntruderAgent(intruder_state_id_pair.second, constraints, radar_params));
+            swarm.add_intruder(agent::ObservedIntruderAgent(intruder_state_id_pair.second, constraints, radar_params));
         }
     }
 

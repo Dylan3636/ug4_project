@@ -10,7 +10,8 @@ namespace agent{
         USV,
         Intruder,
         Static,
-        Asset
+        Asset,
+        Base
     };
     struct AgentCommand
     {
@@ -49,11 +50,11 @@ namespace agent{
         }
 
         AgentState(double x,
-                double y,
-                double speed,
-                double heading,
-                double radius,
-                int sim_id){
+                   double y,
+                   double speed,
+                   double heading,
+                   double radius,
+                   int sim_id){
             this->x=x;
             this->y=y;
             this->speed=speed;
@@ -171,17 +172,15 @@ namespace agent{
         public:
             AgentType type;
 
-            BaseAgent(){}
+            BaseAgent(){state={}; constraints={}; ca_params={}; type=Base;};
 
             BaseAgent (const AgentState &state,
                        const AgentConstraints &constraints,
                        const CollisionAvoidanceParameters &ca_params,
-                       AgentType type){
-                set_state(state);
-                set_constraints(constraints);
-                set_collision_avoidance_params(ca_params);
-                set_agent_type(type);
-            }
+                       AgentType type) : state(state),
+                                         constraints(constraints),
+                                         ca_params(ca_params),
+                                         type(type){}
 
             void copy(const BaseAgent &agent){
                 set_state(agent.get_state());
@@ -276,7 +275,7 @@ namespace agent{
         }
     };
 
-    class IntruderAgent : public BaseAgent
+    class ObservedIntruderAgent : public BaseAgent
     {   
         bool threat_classification;
         double threat_probability;
@@ -295,17 +294,21 @@ namespace agent{
                 return threat_classification;
             }
 
-            IntruderAgent(){}
-            IntruderAgent(AgentState state,
-                          AgentConstraints constraints,
-                          CollisionAvoidanceParameters ca_params)
+            ObservedIntruderAgent(){}
+            ObservedIntruderAgent(const AgentState &state,
+                          const AgentConstraints &constraints,
+                          const CollisionAvoidanceParameters &ca_params)
                     : BaseAgent(state, constraints, ca_params, Intruder){
+                threat_classification=false;
+                threat_probability=0.05;
             }
-            IntruderAgent(const AgentState &state){
+            ObservedIntruderAgent(const AgentState &state){
                 set_state(state);
                 set_constraints(AgentConstraints{35, 5, swarm_tools::PI/2});
                 set_collision_avoidance_params(CollisionAvoidanceParameters{50, swarm_tools::PI, 0.5});
                 set_agent_type(Intruder);
+                threat_classification=false;
+                threat_probability=0.05;
             }
     };
 
