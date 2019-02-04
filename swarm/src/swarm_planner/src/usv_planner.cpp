@@ -120,10 +120,10 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
     publish_markers(motion_goal);
 
     agent::AgentCommand command;
-    swarm_control::get_command_from_motion_goal(usv.get_state(),
-                                                usv.get_constraints(),
-                                                motion_goal,
-                                                command);
+    swarm_control::get_usv_command_from_motion_goal(usv_id,
+                                                    swarm,
+                                                    motion_goal,
+                                                    command);
     ROS_INFO("DERSIRED COMMAND: (%f, %f)", command.delta_speed, command.delta_heading*180/swarm_tools::PI);
 
     std::vector<agent::AgentState> obstacle_states = swarm.get_obstacle_states();

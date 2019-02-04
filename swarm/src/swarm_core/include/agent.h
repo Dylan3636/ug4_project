@@ -130,32 +130,6 @@ namespace agent{
         return str;
 
     }
-    // {
-    //     std::vector<Assignment> assignments;
-    //     // int delay_assignment_idx;
-    //     // int guard_assignment_idx;
-    // 
-    //     void copy(const AgentAssignment &agent_assignment){
-    //         assignments.clear();
-    //         for (const auto &assignment : agent_assignment){
-    //             assignments.push_back
-    //         }
-    //         delay_assignment_idx=assignment.delay_assignment_idx;
-    //         guard_assignment_idx=assignment.guard_assignment_idx;
-    //     }
-    // 
-    //     AgentAssignment(){delay_assignment_idx=-1; guard_assignment_idx=-1;}
-    //     AgentAssignment(int delay_idx, int guard_idx){
-    //         delay_assignment_idx=delay_idx;
-    //         guard_assignment_idx=guard_idx;
-    //     }
-    //     AgentAssignment(const AgentAssignment &assignment){
-    //         copy(assignment);
-    //     }
-    //     AgentAssignment operator=(const AgentAssignment &assignment){
-    //         copy(assignment);
-    //     }
-    // };
 
     struct CollisionAvoidanceParameters
     {
@@ -200,9 +174,9 @@ namespace agent{
             BaseAgent(){}
 
             BaseAgent (const AgentState &state,
-                    const AgentConstraints &constraints,
-                    const CollisionAvoidanceParameters &ca_params,
-                    AgentType type){
+                       const AgentConstraints &constraints,
+                       const CollisionAvoidanceParameters &ca_params,
+                       AgentType type){
                 set_state(state);
                 set_constraints(constraints);
                 set_collision_avoidance_params(ca_params);
@@ -215,19 +189,19 @@ namespace agent{
                 set_collision_avoidance_params(agent.get_collision_avoidance_params());
             }
 
-            float get_x() const{
+            double get_x() const{
                 return state.x;
             }
 
-            float get_y() const{
+            double get_y() const{
                 return state.y;
             }
 
-            float get_speed() const{
+            double get_speed() const{
                 return state.speed;
             }
 
-            float get_heading() const{
+            double get_heading() const{
                 return state.heading;
             }
 
@@ -254,7 +228,24 @@ namespace agent{
             void set_state(const AgentState &new_state){
                 state = AgentState(new_state);
             }
-
+            double get_max_speed() const{
+                return constraints.max_speed;
+            }
+            double get_max_delta_speed() const{
+                return constraints.max_delta_speed;
+            }
+            double get_max_delta_heading() const{
+                return constraints.max_delta_heading;
+            }
+            double get_max_radar_distance() const{
+                return ca_params.max_radar_distance;
+            }
+            double get_max_radar_angle_rad() const{
+                return ca_params.max_radar_angle_rad;
+            }
+            double get_aggression() const{
+                return ca_params.aggression;
+            }
             AgentConstraints get_constraints() const{
                 return constraints;
             }
@@ -272,10 +263,6 @@ namespace agent{
                 ca_params=new_ca_params;
                 }
 
-            AgentState project_state_forward(int timesteps,
-                                            double delta_time_secs
-                                            );
-
             void command_agent_forward(const AgentCommand &command,
                                        double delta_time_secs){
 
@@ -286,7 +273,6 @@ namespace agent{
 
                 state.x += state.speed*cos(state.heading)*delta_time_secs;
                 state.y += state.speed*sin(state.heading)*delta_time_secs; 
-                // set_state(AgentState(x, y, speed, heading, state.radius, state.sim_id));
         }
     };
 
@@ -339,7 +325,15 @@ namespace agent{
         // private variables
         AgentAssignment current_assignment;
         public:
-            AgentAssignment get_current_assignment() const;
+            
+            void copy(const USVAgent &usv){
+                BaseAgent::copy(usv);
+                set_current_assignment(usv.get_current_assignment());
+            }
+            AgentAssignment get_current_assignment() const{
+                return current_assignment;
+            }
+
             void set_current_assignment(AgentAssignment assignment){
                 current_assignment=assignment;
             }
@@ -399,7 +393,6 @@ namespace agent{
                 }
                 return false;
             }
-            void copy(const USVAgent &usv);
             USVAgent(){}
             USVAgent(AgentState state,
                      AgentConstraints constraints,

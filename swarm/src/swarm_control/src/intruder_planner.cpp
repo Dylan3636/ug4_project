@@ -1,5 +1,6 @@
 #include <vector>
 #include <ros/ros.h>
+#include <boost/format.hpp>
 #include "agent.h"
 #include "collision_avoidance.h"
 #include "motion_goal_control.h"
@@ -19,7 +20,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 
     std::vector<agent::AgentState> intruders;
     agent::AgentState tanker;
-    for ( swarm_msgs::agentState agent_state : ws){
+    for ( const swarm_msgs::agentState &agent_state : ws){
         if (agent_state.agent_type == swarm_msgs::agentType::INTRUDER){
             int sim_id = agent_state.sim_id;
             double x = agent_state.x;
@@ -60,31 +61,24 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         }
     }
 
-    for (auto intruder : intruders){
-        int sim_id = intruder.sim_id;
-        double max_speed = 35;
-        double max_delta_speed = 5; 
-        double max_delta_heading =  swarm_tools::PI/2;
-        agent::AgentConstraints constraints;
-        constraints.max_speed = max_speed;
-        constraints.max_delta_speed = max_delta_speed;
-        constraints.max_delta_heading = max_delta_heading;
-        agent::AgentCommand command;
+    for (const auto &intruder_state : intruders){
 
-        agent::MotionGoal motion_goal = {tanker.x, tanker.y};
-        
-        ROS_INFO("Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
-
-        swarm_control::get_command_from_motion_goal(intruder,
-                                                    constraints,
-                                                    motion_goal,
-                                                    command);
+        int sim_id = intruder_state.sim_id;
 
         std::string intruder_head_str = (boost::format("/swarm_simulation/intruder_params/intruder_%d") % sim_id).str();
-        agent::AgentConstraints intruder_constraints;
-        agent::CollisionAvoidanceParameters intruder_radar_params;
+        agent::CollisionAvoidanceParameters intruder_radar_params{};
+        agent::AgentConstraints intruder_constraints{};
         get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints, intruder_radar_params);
-       
+        auto intruder = agent::IntruderAgent(intruder_state, intruder_constraints, intruder_radar_params);
+
+        agent::AgentCommand command{};
+        agent::MotionGoal motion_goal = {tanker.x, tanker.y};
+        
+        swarm_control::get_observed_intruder_command_from_motion_goal(intruder,
+                                                                      motion_goal,
+                                                                      command);
+
+
         swarm_control::CollisionAvoidance srv;
         
         // WorldState

@@ -18,26 +18,26 @@ int correct_command(
     agent::AgentCommand &command,
     const std::vector<swarm_tools::PointInterval> &edge_points,
     const agent::AgentConstraints &constraints,
-    const double &max_distance,
-    const double &max_angle_rad,
-    const double &aggression);
+    double max_distance,
+    double max_angle_rad,
+    double aggression);
 
 bool collision_check(
     const agent::AgentState &agent_state,
     const swarm_tools::Point2D &left,
     const swarm_tools::Point2D &right,
-    const double &max_distance,
-    const double &max_angle_rad,
+    double max_distance,
+    double max_angle_rad,
     double &l_theta_rad,
     double &r_theta_rad
 );
 
 bool in_fan(
-    const double &distance,
-    const double &l_theta_rad,
-    const double &r_theta_rad,
-    const double &max_distance,
-    const double &max_angle
+    double distance,
+    double l_theta_rad,
+    double r_theta_rad,
+    double max_distance,
+    double max_angle
 );
 
 bool check_angle(
@@ -53,15 +53,15 @@ bool is_command_safe(
 int largest_safe_interval(
     const std::vector<swarm_tools::AngleInterval>& safe_intervals);
 
-int nearest_safe_interval(
+long nearest_safe_interval(
     const std::vector<swarm_tools::AngleInterval>& safe_intervals,
     const double &delta_heading);
 
 int get_safe_intervals(
     const agent::AgentState& agent_state,
     const std::vector<swarm_tools::PointInterval>& edges,
-    const double& max_angle_rad,
-    const double& max_distance,
+    double max_distance,
+    double max_angle_rad,
     std::vector<swarm_tools::AngleInterval>& safe_intervals
 );
 }

@@ -6,6 +6,7 @@ from swarm_threat_detection.srv import ThreatDetection, ThreatDetectionResponse
 
 btd = BasicThreatDetector()
 
+
 def update_threat_estimate(req):
     global btd
     try:
@@ -15,11 +16,12 @@ def update_threat_estimate(req):
         rospy.logerr(str(e.with_traceback()))
         print(e.with_traceback())
     resp = ThreatDetectionResponse()
-    resp.threat_alert=alert
-    resp.threat_probability=prob
+    resp.threat_alert = alert
+    resp.threat_probability = prob
     return resp
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     rospy.init_node("BasicThreatDetection")
     rospy.Service('ThreatDetection', ThreatDetection, update_threat_estimate)
     rospy.loginfo("Initiating Threat Detection System")

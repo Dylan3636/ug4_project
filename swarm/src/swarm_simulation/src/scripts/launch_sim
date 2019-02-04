@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import rospy
 from simulation_listener import *
 
 if __name__ == "__main__":
@@ -27,10 +26,10 @@ if __name__ == "__main__":
         # Radius Buffer
         radius_buffer = params['radius_buffer']
         
-        usv=BasicUSV(sim_id=sim_id,
-                 initial_state=init_state,
-                 constraints=constraints,
-                 radius_buffer=radius_buffer)
+        usv = BasicUSV(sim_id=sim_id,
+                       initial_state=init_state,
+                       constraints=constraints,
+                       radius_buffer=radius_buffer)
         usvs.append(usv)
 
     intruder_params = rospy.get_param('swarm_simulation/intruder_params')

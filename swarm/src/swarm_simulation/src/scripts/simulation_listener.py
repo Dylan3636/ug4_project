@@ -67,4 +67,4 @@ if __name__ == "__main__":
     static_2 = StaticObject(101, [0, 75, 0, 0], radius_buffer=30)
     sn = SimulationNode([usv_1, usv_2, static_1, static_2])
     sn.sim.begin()
-    
+

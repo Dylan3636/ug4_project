@@ -1,8 +1,6 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from collections import namedtuple
 from tkinter import *
-from time import sleep
 from threading import Lock
 from queue import Queue
 PlotObject = namedtuple('PlotObject',
@@ -19,23 +17,24 @@ triangle_shape = [[20, 0],
 
 
 asset_shape = [[30, 0],
-                  [20, -20],
-                  [-30, -20],
-                  [-30, 20],
-                  [20, 20]]
+               [20, -20],
+               [-30, -20],
+               [-30, 20],
+               [20, 20]]
 
 oval_shape = [[-10, -10],
               [10, 10]]
 
 center = [1000, 500]
 
+
 class LivePlot:
     def __init__(self):
         self.window = Tk()
         self.window.geometry("2000x1000")
         self.canvas = Canvas(self.window,
-                             width=2000,#20*center[0],
-                             height=1000)#20*center[1])
+                             width=2000,
+                             height=1000)
         self.canvas.pack()
         self.objects = {}
         self.markers = {}
@@ -53,12 +52,13 @@ class LivePlot:
             self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="RED")
         elif sim_obj.object_type == "TANKER":
             self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="YELLOW")
-        elif som_obj.object_type == "ASSET":
+        elif sim_obj.object_type == "ASSET":
             self.objects[sim_id] = self.canvas.create_polygon(asset_shape)
 
         return self.objects[sim_id]
 
-    def rotated_triangle_coords(self, angle):
+    @staticmethod
+    def rotated_triangle_coords(angle):
         angle = -angle
 
         rotate_matrix = [[np.cos(angle),
@@ -66,11 +66,12 @@ class LivePlot:
                          [np.sin(angle),
                           np.cos(angle)]]
         xy = np.dot(rotate_matrix,
-               np.transpose(triangle_shape)).T
+                    np.transpose(triangle_shape)).T
         return xy
 
-    def offset_object_position(self, x, y):
-        return (x +center[0], -y + center[1])
+    @staticmethod
+    def offset_object_position(x, y):
+        return x + center[0], -y + center[1]
 
     def update_object(self, obj, sim_obj):
         sim_id = sim_obj.sim_id
@@ -87,7 +88,7 @@ class LivePlot:
                                oval_shape[1][1]+y)
         else:
 
-            xy = self.rotated_triangle_coords(heading) /( 2 if obj_type != "TANKER" else 1)
+            xy = self.rotated_triangle_coords(heading) / (2 if obj_type != "TANKER" else 1)
             xy = xy + np.array([[x, y]])
 
             self.canvas.coords(obj, *xy.flatten())
@@ -120,7 +121,6 @@ class LivePlot:
                                    *start_xy,
                                    *end_xy)
 
-
         # Update Markers
         for sim_id, marker in self.markers.items():
             if marker.sim_id not in self.objects:
@@ -139,6 +139,7 @@ class LivePlot:
     def update_marker(self, marker):
         with self.thread_lock:
             self.markers[marker.sim_id] = marker
+
     def update_lines(self, line_updates):
         set_1 = set(self.lines.keys())
         set_2 = set(line_updates.keys())
@@ -146,9 +147,10 @@ class LivePlot:
             for sim_id in set_1.difference(set_2):
                 self.queue.put(sim_id)
             self.lines = line_updates
+
     def cull_objects(self):
         while not self.queue.empty():
             sim_id = self.queue.get()
             with self.thread_lock:
                 self.canvas.delete(self.objects[sim_id])
-                self.objects[sim_id]=None
+                self.objects[sim_id] = None

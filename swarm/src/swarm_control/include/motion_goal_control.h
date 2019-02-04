@@ -8,7 +8,7 @@ namespace swarm_control{
     bool usv_delay_motion_goal(
         int usv_id,
         int intruder_id,
-        agent::USVSwarm swarm);
+        const agent::USVSwarm& swarm);
 
    bool usv_block_motion_goal(
         const agent::AgentState& usv_state,
@@ -18,32 +18,46 @@ namespace swarm_control{
         const agent::AgentConstraints& intruder_constraints,
         const double &intruder_radius,
         const agent::AgentState& asset_state,
-        agent::MotionGoal& motion_goal
-    );
+        agent::MotionGoal& motion_goal);
+
+    bool get_intruder_command_from_motion_goal(
+            const agent::IntruderAgent& intruder,
+            const agent::MotionGoal& motion_goal,
+            agent::AgentCommand& command);
+
+    bool get_observed_intruder_command_from_motion_goal(
+            const agent::IntruderAgent& intruder,
+            const agent::MotionGoal& motion_goal,
+            agent::AgentCommand& command);
+
+    bool get_usv_command_from_motion_goal(
+            int usv_id,
+            const agent::USVSwarm& swarm,
+            const agent::MotionGoal& motion_goal,
+            agent::AgentCommand &command);
 
     bool get_command_from_motion_goal(
         const agent::AgentState& agent_state,
         const agent::AgentConstraints& agent_constraints,
         const agent::MotionGoal& motion_goal,
-        agent::AgentCommand& command
-    );
+        agent::AgentCommand& command);
 
     bool weighted_motion_goal(
         const std::vector<agent::MotionGoal>& motion_goals,
         const std::vector<double>& weights,
-        agent::MotionGoal& weighted_motion_goal
-    );
+        agent::MotionGoal& weighted_motion_goal);
 
     bool usv_guard_motion_goal(int num_of_usvs,
                                int guard_id,
                                double asset_radius,
                                const agent::AgentState asset_state,
-                               agent::MotionGoal& motion_goal
-    );
+                               agent::MotionGoal& motion_goal);
+
     bool usv_observe_motion_goal(int usv_id,
                                  int intruder_id,
                                  const agent::USVSwarm &swarm,
                                  agent::MotionGoal &motion_goal);
+
     bool get_motion_goal_from_assignment(int usv_id,
                                          const agent::USVSwarm &swarm,
                                          agent::MotionGoal &motion_goal);

@@ -16,12 +16,12 @@ usv_params : {
     constraints : {
       max_speed : 50,
       max_delta_speed : 100,
-      max_delta_heading : 90
+      max_delta_heading : 180
       },
     radar_parameters : {
-      max_distance : 60,
-      max_angle : 60,
-      aggression : 0.7
+      max_distance : 100,
+      max_angle : 90,
+      aggression : 0.9
       } 
     },
     
@@ -37,12 +37,12 @@ usv_params : {
     constraints : {
       max_speed : 50,
       max_delta_speed : 100,
-      max_delta_heading : 90
+      max_delta_heading : 180
       },
     radar_parameters : {
-      max_distance : 60,
-      max_angle : 60,
-      aggression : 0.7
+      max_distance : 100,
+      max_angle : 90,
+      aggression : 0.9
       }
     },
   usv_3 : {
@@ -57,12 +57,12 @@ usv_params : {
     constraints : {
       max_speed : 50,
       max_delta_speed : 100,
-      max_delta_heading : 90
+      max_delta_heading : 135
       },
     radar_parameters : {
-      max_distance : 60,
-      max_angle : 60,
-      aggression : 0.7
+      max_distance : 100,
+      max_angle : 90,
+      aggression : 0.9
       } 
     },
     
@@ -78,12 +78,12 @@ usv_params : {
     constraints : {
       max_speed : 50,
       max_delta_speed : 100,
-      max_delta_heading : 90
+      max_delta_heading : 135
       },
     radar_parameters : {
-      max_distance : 60,
-      max_angle : 60,
-      aggression : 0.7
+      max_distance : 100,
+      max_angle : 90,
+      aggression : 0.9
       }
     }
   }
@@ -104,7 +104,7 @@ intruder_params : {
       },
     radar_parameters : {
       max_distance : 100,
-      max_angle : 60,
+      max_angle : 90,
       aggression : 0.1
       }, 
       is_threat : True
@@ -126,7 +126,7 @@ intruder_params : {
       },
     radar_parameters : {
       max_distance : 100,
-      max_angle : 60,
+      max_angle : 90,
       aggression : 0.1
       },
       is_threat : True

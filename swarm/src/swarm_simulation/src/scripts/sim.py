@@ -8,13 +8,15 @@ from sim_objects import *
 
 SimLine = namedtuple("SimulationLine", ["sim_id", "start_id", "end_id"])
 
+
 class Simulation:
 
     def __init__(self, sim_objects, timeout=0.1):
         self.sim_objects = dict([(obj.sim_id, obj) for obj in sim_objects])
         self.OK = True
         self.anim = LivePlot()
-        self.timeout=timeout
+        self.timeout = timeout
+        self._delta_t = timeout
 
     def update_simulation_state(self):
         readings = perceive(self.sim_objects)
@@ -25,13 +27,12 @@ class Simulation:
 
     def command_by_object_id(self, sim_id, command):
         self.sim_objects[sim_id].command = command
-    
+
     def update_task_lines(self, assignments):
-        line_updates={}
-        get_line_id = lambda sim_id, task_id : sim_id*500 + task_id
+        line_updates = {}
         for tasks in assignments:
             for (usv_id, task_type, task_id) in tasks:
-                if task_type==1 or task_id==-1:
+                if task_type == 1 or task_id == -1:
                     continue
                 line_id = get_line_id(usv_id, task_id)
                 line_updates[line_id] = SimLine(line_id, usv_id, task_id)
@@ -39,7 +40,7 @@ class Simulation:
         self.anim.update_lines(line_updates)
  
     def begin(self):
-        while(self.OK):
+        while self.OK:
             self.update_simulation_state()
             self.anim.update_world_state(self.sim_objects)
             self.anim.cull_objects()
@@ -57,27 +58,18 @@ class Simulation:
         self._delta_t = delta_t
 
 
-def simulation():
-    usv_1 = BasicUSV(0, [])
-    static_1 = StaticObject(100, [200, 100, 0, 0], 10)
-    static_2 = StaticObject(101, [250, 75, 0, 0], 10)
+def get_line_id(sim_id, task_id):
+    return sim_id*500 + task_id
 
-
-    lp = LivePlot()
-    for i in range (1000):
-        usv_1.update([static_1, static_2])
-        lp.update_world_state(
-                [usv_1, static_1, static_2])
-    return lp
 
 if __name__ == '__main__':
-    usv_1 = BasicUSV(0, [0,75,30,0], radius_buffer=40)
-    usv_2 = BasicUSV(1, [300,75,30,np.pi], radius_buffer=40)
+    usv_1 = BasicUSV(0, [0, 75, 30, 0], radius_buffer=40)
+    usv_2 = BasicUSV(1, [300, 75, 30, np.pi], radius_buffer=40)
     static_1 = StaticObject(100, [200, 100, 0, 0], radius_buffer=30)
     static_2 = StaticObject(101, [250, 75, 0, 0], radius_buffer=30)
 
-    sim=Simulation([usv_1, usv_2, static_1, static_2],
-                    0.1)
+    sim = Simulation([usv_1, usv_2, static_1, static_2],
+                     0.1)
 
     sim.begin()
     lp = sim.anim

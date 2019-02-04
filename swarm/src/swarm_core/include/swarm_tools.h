@@ -36,6 +36,8 @@ namespace swarm_tools{
     };
 
 
+    double radnorm(double rad);
+
     bool greater_ai(const AngleInterval &ai1, const AngleInterval &ai2);
 
     double clip(const double& x,
