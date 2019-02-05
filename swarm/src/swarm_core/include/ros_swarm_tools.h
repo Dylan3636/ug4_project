@@ -79,6 +79,6 @@ swarm_msgs::agentAssignment convert_to_agent_assignment_msg(
 
 bool get_agent_parameters(RosContainerPtr ros_container_ptr,
                           std::string head_str,
-                          agent::AgentConstraints &constraints,
-                          agent::CollisionAvoidanceParameters &radar_params);
+                          std::map<int, agent::AgentConstraints> &constraints_map,
+                          std::map<int, agent::CollisionAvoidanceParameters> &radar_params_map);
 #endif

@@ -1,19 +1,17 @@
+#include <map>
 #include <vector>
-#include <ros/ros.h>
-#include <boost/format.hpp>
 #include "agent.h"
 #include "collision_avoidance.h"
 #include "motion_goal_control.h"
 #include "ros_swarm_tools.h"
-#include "swarm_msgs/agentType.h"
-#include "swarm_msgs/agentState.h"
-#include "swarm_msgs/worldState.h"
-#include "swarm_msgs/agentCommand.h"
 #include "swarm_control/CollisionAvoidance.h"
 
 ros::Publisher command_pub;
 ros::ServiceClient client;
 RosContainerPtr ros_container_ptr;
+std::map<int, agent::IntruderAgent> intruder_map;
+std::map<int, agent::CollisionAvoidanceParameters> intruder_radar_params_map;
+std::map<int, agent::AgentConstraints> intruder_constraints_map;
 
 void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     auto ws = world_state->worldState;
@@ -38,8 +36,28 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                     radius
                     );
 
-            agent::AgentState intruder {x, y, speed, heading, radius, sim_id}; 
-            intruders.push_back(intruder);
+            if (intruder_map.find(sim_id)!=intruder_map.end()){
+                ROS_INFO("Updating Intruder %d", sim_id);
+                intruder_map[sim_id].update_state(x, y, speed, heading);
+            }
+            else{
+                ROS_INFO("Adding Intruder %d", sim_id);
+
+                // Get Intruder Parameters
+                agent::AgentState intruder_state {x, y, speed, heading, radius, sim_id};
+
+                // Get Intruder Motion Goals
+                std::vector<agent::MotionGoal> motion_goals;
+                // threat=get_intruder_motion_goals(ros_container_ptr, intruder_head_str, motion_goals);
+
+                auto intruder = agent::IntruderAgent(
+                        true,
+                        intruder_state,
+                        intruder_constraints_map[sim_id],
+                        intruder_radar_params_map[sim_id]);
+                intruder_map[sim_id] = intruder;
+            }
+
         }
         if (agent_state.agent_type == swarm_msgs::agentType::TANKER){
             int sim_id = agent_state.sim_id;
@@ -61,22 +79,18 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         }
     }
 
-    for (const auto &intruder_state : intruders){
+    for (const auto &intruder_pair : intruder_map){
 
-        int sim_id = intruder_state.sim_id;
-
-        std::string intruder_head_str = (boost::format("/swarm_simulation/intruder_params/intruder_%d") % sim_id).str();
-        agent::CollisionAvoidanceParameters intruder_radar_params{};
-        agent::AgentConstraints intruder_constraints{};
-        get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints, intruder_radar_params);
-        auto intruder = agent::ObservedIntruderAgent(intruder_state, intruder_constraints, intruder_radar_params);
+        int sim_id = intruder_pair.first;
+        auto intruder = intruder_pair.second;
 
         agent::AgentCommand command{};
-        agent::MotionGoal motion_goal = {tanker.x, tanker.y};
+        agent::MotionGoal motion_goal;
+        intruder.get_motion_goal(&motion_goal);
         
-        swarm_control::get_observed_intruder_command_from_motion_goal(intruder,
-                                                                      motion_goal,
-                                                                      command);
+//        swarm_control::get_intruder_command_from_motion_goal(intruder,
+//                                                             motion_goal,
+//                                                             command);
 
 
         swarm_control::CollisionAvoidance srv;
@@ -91,15 +105,15 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         
         // Constraints
         srv.request.agent_constraints.sim_id=sim_id;
-        srv.request.agent_constraints.max_speed=intruder_constraints.max_speed;
-        srv.request.agent_constraints.max_delta_speed=intruder_constraints.max_delta_speed;
-        srv.request.agent_constraints.max_delta_heading=intruder_constraints.max_delta_heading;
+        srv.request.agent_constraints.max_speed=intruder.get_max_speed();
+        srv.request.agent_constraints.max_delta_speed=intruder.get_max_delta_speed();
+        srv.request.agent_constraints.max_delta_heading=intruder.get_max_delta_heading();
 
         // Parameters
         srv.request.agent_params.sim_id=sim_id;
-        srv.request.agent_params.max_distance=intruder_radar_params.max_radar_distance;
-        srv.request.agent_params.max_angle=intruder_radar_params.max_radar_angle_rad;
-        srv.request.agent_params.aggression=intruder_radar_params.aggression;
+        srv.request.agent_params.max_distance=intruder.get_max_radar_distance();
+        srv.request.agent_params.max_angle=intruder.get_max_radar_angle_rad();
+        srv.request.agent_params.aggression=intruder.get_aggression();
 
         ROS_INFO("Correcting command for intruder [%d]", sim_id);
         ROS_INFO("Recommended command ([%f], [%f])",
@@ -122,6 +136,12 @@ int main(int argc, char **argv){
     command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
     ros::Subscriber sub = ros_container_ptr->nh.subscribe("Perception", 1000, callback);
     client = ros_container_ptr->nh.serviceClient<swarm_control::CollisionAvoidance>("collision_avoidance");
+    std::string intruder_head_str = "/swarm_simulation/intruder_params/";
+    get_agent_parameters(ros_container_ptr,
+            intruder_head_str,
+            intruder_constraints_map,
+            intruder_radar_params_map);
+
     ros::spin();
     return 0;
 }

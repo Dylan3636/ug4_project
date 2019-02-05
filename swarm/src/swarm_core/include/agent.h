@@ -81,16 +81,13 @@ namespace agent{
         TaskType task_type;
         int task_idx; // ID of intruder or guard position
 
-        void copy(const AgentTask &task){
-            task_idx = task.task_idx;
-            task_type = task.task_type;
-        }
         AgentTask(){
             task_idx=-1;
             task_type=Delay;
         }
         AgentTask(const AgentTask &task){
-            copy(task);
+            task_idx=task.task_idx;
+            task_type=task.task_type;
         }
         AgentTask(TaskType tt, int tidx){
             task_type=tt;
@@ -134,26 +131,52 @@ namespace agent{
 
     struct CollisionAvoidanceParameters
     {
-        double max_radar_distance;
-        double max_radar_angle_rad;
-        double aggression;
+        double max_radar_distance{100};
+        double max_radar_angle_rad{swarm_tools::PI/2};
+        double aggression{0.5};
+        CollisionAvoidanceParameters()= default;
+        CollisionAvoidanceParameters(double max_radar_distance, double max_radar_angle_rad, double aggression)
+                :max_radar_distance(max_radar_distance), max_radar_angle_rad(max_radar_angle_rad),
+                 aggression(aggression) {}
     };
 
     struct MotionGoal{
-        double x;   
-        double y;
-        double speed;
-        double heading_rad;
+        double x{0};
+        double y{0};
+        double speed{0};
+        double heading_rad{0};
         swarm_tools::Point2D get_position() const{
-            return swarm_tools::Point2D{this->x, this->y};
+            return swarm_tools::Point2D{x, y};
         }
+
+        MotionGoal() = default;
+
+        MotionGoal(double x, double y) : x(x), y(y){
+            speed = 0;
+            heading_rad = 0;
+        }
+
+        explicit MotionGoal(const swarm_tools::Point2D &position){
+            x = position.x;
+            y = position.y;
+            speed = 0;
+            heading_rad = 0;
+        }
+
+        MotionGoal(double x,
+                   double y,
+                   double speed,
+                   double heading_rad) : x(x), y(y),
+                                         speed(speed),
+                                         heading_rad(heading_rad) {}
+
     };
 
     typedef std::map<int, AgentAssignment> SwarmAssignment;
     typedef std::pair<SwarmAssignment, double> WeightedSwarmAssignment;
 
     std::string swarm_assignment_to_string(const SwarmAssignment swarm_assignment){
-        std::string str = "";
+        std::string str;
         for(const auto &assignment_pair: swarm_assignment){
             str += "USV ";
             str += std::to_string(assignment_pair.first);
@@ -165,15 +188,19 @@ namespace agent{
 
     class BaseAgent
     {
-            AgentState state;
-            AgentConstraints constraints;
-            CollisionAvoidanceParameters ca_params;
+            AgentState state{};
+            AgentConstraints constraints{};
+            CollisionAvoidanceParameters ca_params{};
+            AgentType type{Base};
 
         public:
-            AgentType type;
 
-            BaseAgent(){state={}; constraints={}; ca_params={}; type=Base;};
+            BaseAgent() = default;
 
+            BaseAgent (const AgentState &state, AgentType type) : state(state), type(type){
+                constraints={};
+                ca_params={};
+            }
             BaseAgent (const AgentState &state,
                        const AgentConstraints &constraints,
                        const CollisionAvoidanceParameters &ca_params,
@@ -186,6 +213,10 @@ namespace agent{
                 set_state(agent.get_state());
                 set_constraints(agent.get_constraints());
                 set_collision_avoidance_params(agent.get_collision_avoidance_params());
+            }
+
+            double get_radius() const{
+                return state.radius;
             }
 
             double get_x() const{
@@ -226,6 +257,9 @@ namespace agent{
 
             void set_state(const AgentState &new_state){
                 state = AgentState(new_state);
+            }
+            void update_state(double x, double y, double speed, double heading){
+                set_state(AgentState{x, y, speed, heading, get_radius(), get_sim_id()});
             }
             double get_max_speed() const{
                 return constraints.max_speed;
@@ -273,6 +307,89 @@ namespace agent{
                 state.x += state.speed*cos(state.heading)*delta_time_secs;
                 state.y += state.speed*sin(state.heading)*delta_time_secs; 
         }
+    };
+    class IntruderAgent : public BaseAgent{
+        bool threat;
+        std::vector<MotionGoal> motion_goals;
+        int current_motion_goal_idx;
+        double distance_threshold{50};
+        public:
+
+            bool is_threat(){
+                return threat;
+            }
+
+            IntruderAgent() = default;
+            IntruderAgent(bool threat, const AgentState &initial_state) : threat(threat),
+                                                                             BaseAgent(initial_state, Intruder){
+                if(threat){
+                    current_motion_goal_idx=0;
+                    motion_goals.emplace_back(0,0);
+                }else{
+                    current_motion_goal_idx=-1;
+                }
+            }
+
+            IntruderAgent(bool is_threat,
+                          const AgentState &initial_state,
+                          const AgentConstraints &constraints,
+                          const CollisionAvoidanceParameters &ca_params) : threat(is_threat),
+                                                                           BaseAgent(initial_state,
+                                                                                     constraints,
+                                                                                     ca_params,
+                                                                                     Intruder){
+                if(threat){
+                    current_motion_goal_idx=0;
+                    motion_goals.emplace_back(0,0);
+                }else{
+                    current_motion_goal_idx=-1;
+                }
+            }
+
+            bool get_motion_goal(MotionGoal* mg_ptr){
+                if(threat){
+                    // Return position of asset
+                    mg_ptr->x=0;
+                    mg_ptr->y=0;
+                    return true;
+                }
+                auto current_motion_goal = motion_goals[current_motion_goal_idx];
+                auto current_position = get_position();
+                double dist_to_mg = swarm_tools::euclidean_distance(current_position,
+                                                                    current_motion_goal.get_position());
+                if(dist_to_mg<distance_threshold){
+                    // Reached acceptable distance of motion goal
+
+                    // No more motion goals
+                    if(motion_goals.size()<=1) return false;
+
+                    // Erase current motion goal
+                    motion_goals.erase(motion_goals.begin()+current_motion_goal_idx);
+
+                    // Find next nearest motion goal.
+                    double min_dist=1000000;
+                    current_motion_goal_idx=-1;
+                    for(int i=0; i<motion_goals.size(); i++){
+                        auto mg = motion_goals[i];
+                        double dist = swarm_tools::euclidean_distance(current_position, mg.get_position());
+                        if(dist<min_dist){
+                            min_dist = dist;
+                            current_motion_goal_idx=i;
+                        }
+                    }
+                    assert(current_motion_goal_idx!=-1 && "Did not find new motion goal!");
+                    *mg_ptr = motion_goals[current_motion_goal_idx];
+                    return true;
+                }else{
+                    *mg_ptr = current_motion_goal;
+                    return true;
+                }
+            }
+
+            void add_motion_goal(const MotionGoal &motion_goal){
+                motion_goals.push_back(motion_goal);
+            }
+
     };
 
     class ObservedIntruderAgent : public BaseAgent

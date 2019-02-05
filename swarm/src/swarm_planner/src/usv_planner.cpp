@@ -28,29 +28,17 @@ std::map<int, ros::ServiceClient> usv_sync_service_map;
 std::map<int, bool> usv_communication_map;
 std::map<int, bool> usv_sync_map;
 std::map<int, agent::AgentState> usv_state_map;
+std::map<int, agent::AgentConstraints> usv_constraints_map;
+std::map<int, agent::CollisionAvoidanceParameters> usv_radar_params_map;
 std::map<int, agent::AgentState> intruder_state_map;
+std::map<int, agent::AgentConstraints> intruder_constraints_map;
+std::map<int, agent::CollisionAvoidanceParameters> intruder_radar_params_map;
 agent::AgentState asset_state;
 
 std::mutex mtx;
 
 void publish_markers(const agent::MotionGoal &motion_goal){
     // Motion Goal 
-    // ROS_INFO("Publishing Delay Motion Goal ([%f], [%f])", delay_motion_goal.x, delay_motion_goal.y);
-    // swarm_msgs::simulationMarker delay_marker;
-    // delay_marker.x = delay_motion_goal.x;
-    // delay_marker.y = delay_motion_goal.y;
-    // delay_marker.sim_id = usv_id+400;
-    // delay_marker.colour = "GREEN";
-    // marker_pub.publish(delay_marker);
-
-    // ROS_INFO("Publishing Guard Motion Goal ([%f], [%f])", guard_motion_goal.x, guard_motion_goal.y);
-    // swarm_msgs::simulationMarker guard_marker;
-    // guard_marker.x = guard_motion_goal.x;
-    // guard_marker.y = guard_motion_goal.y;
-    // guard_marker.sim_id = usv_id+500;
-    // guard_marker.colour = "YELLOW";
-    // marker_pub.publish(guard_marker);
-
     ROS_INFO("Publishing Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
     swarm_msgs::simulationMarker marker;
     marker.x = motion_goal.x;
@@ -81,10 +69,10 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
             ROS_INFO("Adding new usv %d to swarm", usv_state_id_pair.first);
 
             std::string usv_head_str = (boost::format("/swarm_simulation/usv_params/usv_%d") % usv_state_id_pair.first).str();
-            agent::AgentConstraints constraints;
-            agent::CollisionAvoidanceParameters radar_params;
-            get_agent_parameters(ros_container_ptr, usv_head_str, constraints, radar_params);
-            swarm.add_usv(agent::USVAgent(usv_state_id_pair.second, constraints, radar_params, agent::AgentAssignment()));
+           swarm.add_usv(agent::USVAgent(usv_state_id_pair.second,
+                   usv_constraints_map[usv_state_id_pair.first],
+                   usv_radar_params_map[usv_state_id_pair.first],
+                   agent::AgentAssignment()));
         }
     }
 
@@ -95,12 +83,9 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
         }
         else{
             ROS_INFO("Adding new intruder %d", intruder_state_id_pair.first);
-
-            std::string intruder_head_str = (boost::format("/swarm_simulation/intruder_params/intruder_%d") % intruder_state_id_pair.first).str();
-            agent::AgentConstraints constraints;
-            agent::CollisionAvoidanceParameters radar_params;
-            get_agent_parameters(ros_container_ptr, intruder_head_str, constraints, radar_params);
-            swarm.add_intruder(agent::ObservedIntruderAgent(intruder_state_id_pair.second, constraints, radar_params));
+           swarm.add_intruder(agent::ObservedIntruderAgent(intruder_state_id_pair.second,
+                   intruder_constraints_map[intruder_state_id_pair.first],
+                   intruder_radar_params_map[intruder_state_id_pair.first]));
         }
     }
 
@@ -221,6 +206,14 @@ int main(int argc, char **argv){
     auto sync_name = boost::format("sync_service_%d") % usv_id;
     auto mp_name = boost::format("mp_simulation_service_%d") % usv_id;
     ros::ServiceServer mp_service = ros_container_ptr->nh.advertiseService(mp_name.str(), model_predictive_response);
+
+    // Get USV Parameters
+    std::string usv_head_str = "/swarm_simulation/usv_params";
+    get_agent_parameters(ros_container_ptr, usv_head_str, usv_constraints_map, usv_radar_params_map);
+
+    // Get Intruder Parameters
+    std::string intruder_head_str = "/swarm_simulation/intruder_params";
+    get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints_map, intruder_radar_params_map);
     ros::spin();
 
     return 0;

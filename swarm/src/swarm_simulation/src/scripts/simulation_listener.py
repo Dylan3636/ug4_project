@@ -9,6 +9,7 @@ from swarm_msgs.msg import (agentState,
                             swarmAssignment,
                             worldState)
 
+
 class SimulationNode:
 
     def __init__(self, sim_objects, delta_t=0.1):
@@ -39,8 +40,7 @@ class SimulationNode:
         ws = worldState().worldState
         [ws.append(state_to_msg(sim_id, obj.update_state(self.sim.timeout))) for sim_id, obj in self.sim.sim_objects.items()]
         self.publisher.publish(ws)
-    
-    
+
 
 def state_to_msg(sim_id, sim_state):
     msg = agentState()
@@ -59,6 +59,7 @@ def state_to_msg(sim_id, sim_state):
     else:
         msg.agent_type = agentType().STATIC
     return msg
+
 
 if __name__ == "__main__":
     usv_1 = BasicUSV(0, [-300,75,30,0], radius_buffer=40)

@@ -1,5 +1,5 @@
 #include "ros_swarm_tools.h"
-
+#include <ros/xmlrpc_manager.h>
 void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                             std::map<int, agent::AgentState> &usv_state_map,
                             std::map<int, agent::AgentState> &intruder_state_map,
@@ -198,118 +198,72 @@ swarm_msgs::agentTask convert_to_agent_task_msg(const agent::AgentTask &task){
 
 bool get_agent_parameters(RosContainerPtr ros_container_ptr,
                           std::string head_str,
-                          agent::AgentConstraints &constraints,
-                          agent::CollisionAvoidanceParameters &radar_params){
-    std::string error_str = "COULD NOT FIND PARAMETER ";
-    std::string debug_str = "LOADED PARAMETER ";
-    std::string param_value_str = "\nAS VALUE %f";
+                          std::vector<agent::MotionGoal> motion_goals){
 
-    // constraints
-    double max_speed;
-    double max_delta_speed;
-    double max_delta_heading;
+}
+bool get_agent_parameters(RosContainerPtr ros_container_ptr,
+                          std::string head_str,
+                          std::map<int, agent::AgentConstraints> &constraints_map,
+                          std::map<int, agent::CollisionAvoidanceParameters> &radar_params_map){
+    XmlRpc::XmlRpcValue items;
+    bool failed = !ros_container_ptr->nh.getParam(head_str, items);
 
-    auto param_str = head_str;
-    param_str += "/constraints/max_speed";
-    bool failed = !ros_container_ptr->nh.getParam(param_str, max_speed);
     if(failed){
-        error_str += param_str;
-        ROS_ERROR(error_str.c_str());
+        ROS_INFO("COULD NOT LOAD PARAMETERS FROM %s", head_str.c_str());
         return !failed;
     }
     else{
-        debug_str += param_str;
-        debug_str += (boost::format(param_value_str) % max_speed).str();
-        ROS_INFO(debug_str.c_str());
-    }
+        for(int_fast32_t i=0; i<items.size() ; i++){
+            auto item = items[i];
+            ROS_ASSERT(item.hasMember("sim_id"));
+            int sim_id = static_cast<int>(item["sim_id"]);
 
-    param_str = head_str;
-    error_str = "COULD NOT FIND PARAMETER ";
-    debug_str = "LOADED PARAMETER ";
-    param_str += "/constraints/max_delta_speed";
-    failed = !ros_container_ptr->nh.getParam(param_str, max_delta_speed);
-    if(failed){
-        error_str += param_str;
-        ROS_ERROR(error_str.c_str());
-        return !failed;
-    }
-    else{
-        debug_str += param_str;
-        debug_str += (boost::format(param_value_str) % max_delta_speed).str();
-        ROS_INFO(debug_str.c_str());
-    }
+            agent::AgentConstraints constraints;
+            ROS_ASSERT(item.hasMember("constraints"));
+            auto constraints_branch = item["constraints"];
 
-    param_str = head_str;
-    error_str = "COULD NOT FIND PARAMETER ";
-    debug_str = "LOADED PARAMETER ";
-    param_str += "/constraints/max_delta_heading";
-    failed = !ros_container_ptr->nh.getParam(param_str, max_delta_heading);
-    if(failed){
-        error_str += param_str;
-        ROS_ERROR(error_str.c_str());
-        return !failed;
-    }
-    else{
-        debug_str += param_str;
-        debug_str += (boost::format(param_value_str) % max_delta_heading).str();
-        ROS_INFO(debug_str.c_str());
-    }
+            ROS_ASSERT(constraints_branch.hasMember("max_speed"));
+            auto max_speed_leaf = constraints_branch["max_speed"];
+            ROS_ASSERT(max_speed_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
+            constraints.max_speed = static_cast<double >(max_speed_leaf);
+            ROS_INFO("LOADED PARAMETER max_speed");
 
-    constraints = {max_speed, max_delta_speed, max_delta_heading*swarm_tools::PI/180};
+            ROS_ASSERT(constraints_branch.hasMember("max_delta_speed"));
+            auto max_delta_speed_leaf = constraints_branch["max_delta_speed"];
+            ROS_ASSERT(max_delta_speed_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
+            constraints.max_delta_speed = static_cast<double >(max_delta_speed_leaf);
+            ROS_INFO("LOADED PARAMETER max_delta_speed");
 
-    // radar parameters
-    double max_distance;
-    double max_angle;
-    double aggression;
+            ROS_ASSERT(constraints_branch.hasMember("max_delta_heading"));
+            auto max_delta_heading_leaf = constraints_branch["max_delta_heading"];
+            ROS_ASSERT(max_delta_heading_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
+            constraints.max_delta_heading = static_cast<double >(max_delta_heading_leaf);
+            ROS_INFO("LOADED PARAMETER max_delta_heading");
+            constraints_map[sim_id] = constraints;
 
-    param_str = head_str;
-    error_str = "COULD NOT FIND PARAMETER ";
-    debug_str = "LOADED PARAMETER ";
-    param_str += "/radar_parameters/max_distance";
-    failed = !ros_container_ptr->nh.getParam(param_str, max_distance);
-    if(failed){
-        error_str += param_str;
-        ROS_ERROR(error_str.c_str());
-        return !failed;
-    }
-    else{
-        debug_str += param_str;
-        debug_str += (boost::format(param_value_str) % max_distance).str();
-        ROS_INFO(debug_str.c_str());
-    }
+            agent::CollisionAvoidanceParameters radar_params;
+            ROS_ASSERT(item.hasMember("radar_parameters"));
+            auto radar_branch = item["radar_parameters"];
 
-    param_str = head_str;
-    error_str = "COULD NOT FIND PARAMETER ";
-    debug_str = "LOADED PARAMETER ";
-    param_str += "/radar_parameters/max_angle";
-    failed = !ros_container_ptr->nh.getParam(param_str, max_angle);
-    if(failed){
-        error_str += param_str;
-        ROS_ERROR(error_str.c_str());
-        return !failed;
-    }
-    else{
-        debug_str += param_str;
-        debug_str += (boost::format(param_value_str) % max_angle).str();
-        ROS_INFO(debug_str.c_str());
-    }
+            ROS_ASSERT(radar_branch.hasMember("max_distance"));
+            auto max_distance_leaf = radar_branch["max_distance"];
+            ROS_ASSERT(max_distance_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
+            radar_params.max_radar_distance = static_cast<double >(max_distance_leaf);
+            ROS_INFO("LOADED PARAMETER max_distance");
 
-    param_str = head_str;
-    error_str = "COULD NOT FIND PARAMETER ";
-    debug_str = "LOADED PARAMETER ";
-    param_str += "/radar_parameters/aggression";
-    failed = !ros_container_ptr->nh.getParam(param_str, aggression);
-    if(failed){
-        error_str += param_str;
-        ROS_ERROR(error_str.c_str());
-        return !failed;
-    }
-    else{
-        debug_str += param_str;
-        debug_str += (boost::format(param_value_str) % max_angle).str();
-        ROS_INFO(debug_str.c_str());
-    }
+            ROS_ASSERT(radar_branch.hasMember("max_angle"));
+            auto max_angle_leaf = radar_branch["max_angle"];
+            ROS_ASSERT(max_angle_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
+            radar_params.max_radar_angle_rad = static_cast<double >(max_angle_leaf);
+            ROS_INFO("LOADED PARAMETER max_angle");
 
-    radar_params = {max_distance, max_angle*swarm_tools::PI/180, aggression};
-
+            ROS_ASSERT(radar_branch.hasMember("aggression"));
+            auto aggression_leaf= radar_branch["aggression"];
+            ROS_ASSERT(aggression_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
+            radar_params.aggression = static_cast<double >(aggression_leaf);
+            ROS_INFO("LOADED PARAMETER aggression");
+            radar_params_map[sim_id] = radar_params;
+        }
+        return true;
+    }
 }

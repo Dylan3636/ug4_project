@@ -27,7 +27,8 @@ class BasicThreatDetector:
         with lock:
             if intruder_id not in self.intruders:
                 is_threat =\
-                    rospy.get_param('swarm_simulation/intruder_params/intruder_{}/is_threat'.format(intruder_id))
+                    [param['is_threat'] for param in rospy.get_param('swarm_simulation/intruder_params/')
+                     if param['sim_id'] == intruder_id][0]
                 self.intruders[intruder_id] = IntruderThreat(is_threat, 0.0)
             if dist_to_intruder < self.max_dist_to_observe_threat:
                 noise = np.random.randn()*(0.1*self.intruders[intruder_id].threat_evidence)

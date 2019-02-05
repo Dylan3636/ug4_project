@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     usv_params = rospy.get_param('swarm_simulation/usv_params')
     usvs = []
-    for key, params in usv_params.items():
+    for params in usv_params:
         
         sim_id = params['sim_id']
         # Initial State
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     intruder_params = rospy.get_param('swarm_simulation/intruder_params')
     intruders = []
 
-    for sim_id, params in intruder_params.items():
+    for params in intruder_params:
 
         sim_id = params['sim_id']
         # Initial State
