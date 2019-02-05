@@ -12,6 +12,7 @@ RosContainerPtr ros_container_ptr;
 std::map<int, agent::IntruderAgent> intruder_map;
 std::map<int, agent::CollisionAvoidanceParameters> intruder_radar_params_map;
 std::map<int, agent::AgentConstraints> intruder_constraints_map;
+std::string intruder_head_str = "/swarm_simulation/intruder_params";
 
 void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     auto ws = world_state->worldState;
@@ -45,16 +46,21 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 
                 // Get Intruder Parameters
                 agent::AgentState intruder_state {x, y, speed, heading, radius, sim_id};
-
-                // Get Intruder Motion Goals
-                std::vector<agent::MotionGoal> motion_goals;
-                // threat=get_intruder_motion_goals(ros_container_ptr, intruder_head_str, motion_goals);
-
                 auto intruder = agent::IntruderAgent(
                         true,
                         intruder_state,
                         intruder_constraints_map[sim_id],
                         intruder_radar_params_map[sim_id]);
+
+                // Get Intruder Motion Goals
+                bool threat=false;
+                auto mgs = intruder.get_motion_goals_ref();
+                bool successful=get_intruder_motion_goals(
+                        ros_container_ptr,
+                        intruder_head_str,
+                        sim_id, threat,
+                        mgs);
+
                 intruder_map[sim_id] = intruder;
             }
 
@@ -86,11 +92,12 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 
         agent::AgentCommand command{};
         agent::MotionGoal motion_goal;
-        intruder.get_motion_goal(&motion_goal);
+        bool end = !intruder.get_motion_goal(&motion_goal);
+        ROS_ASSERT(!end);
         
-//        swarm_control::get_intruder_command_from_motion_goal(intruder,
-//                                                             motion_goal,
-//                                                             command);
+        swarm_control::get_intruder_command_from_motion_goal(intruder,
+                                                             motion_goal,
+                                                             command);
 
 
         swarm_control::CollisionAvoidance srv;
@@ -136,7 +143,8 @@ int main(int argc, char **argv){
     command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
     ros::Subscriber sub = ros_container_ptr->nh.subscribe("Perception", 1000, callback);
     client = ros_container_ptr->nh.serviceClient<swarm_control::CollisionAvoidance>("collision_avoidance");
-    std::string intruder_head_str = "/swarm_simulation/intruder_params/";
+
+    // Load Parameters
     get_agent_parameters(ros_container_ptr,
             intruder_head_str,
             intruder_constraints_map,

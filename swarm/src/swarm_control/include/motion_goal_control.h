@@ -21,7 +21,7 @@ namespace swarm_control{
         agent::MotionGoal& motion_goal);
 
     bool get_intruder_command_from_motion_goal(
-            const agent::ObservedIntruderAgent& intruder,
+            const agent::IntruderAgent& intruder,
             const agent::MotionGoal& motion_goal,
             agent::AgentCommand& command);
 

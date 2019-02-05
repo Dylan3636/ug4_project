@@ -37,6 +37,8 @@ namespace swarm_tools{
 
 
     double radnorm(double rad);
+    double deg2rad(double rad);
+    double rad2deg(double deg);
 
     bool greater_ai(const AngleInterval &ai1, const AngleInterval &ai2);
 

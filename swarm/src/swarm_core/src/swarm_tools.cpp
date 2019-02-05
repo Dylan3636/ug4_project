@@ -137,4 +137,10 @@ namespace swarm_tools{
         while (rad<-PI){rad+=2*PI;}
         return rad;
     }
+    double rad2deg(double rad){
+        return rad*180/PI;
+    }
+    double deg2rad(double deg){
+        return deg*PI/180;
+    }
 }

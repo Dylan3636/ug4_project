@@ -311,7 +311,7 @@ namespace agent{
     class IntruderAgent : public BaseAgent{
         bool threat;
         std::vector<MotionGoal> motion_goals;
-        int current_motion_goal_idx;
+        int current_motion_goal_idx{0};
         double distance_threshold{50};
         public:
 
@@ -349,8 +349,8 @@ namespace agent{
             bool get_motion_goal(MotionGoal* mg_ptr){
                 if(threat){
                     // Return position of asset
-                    mg_ptr->x=0;
-                    mg_ptr->y=0;
+                    auto mg = MotionGoal(0,0);
+                    *mg_ptr = mg;
                     return true;
                 }
                 auto current_motion_goal = motion_goals[current_motion_goal_idx];
@@ -384,6 +384,9 @@ namespace agent{
                     *mg_ptr = current_motion_goal;
                     return true;
                 }
+            }
+            std::vector<MotionGoal>& get_motion_goals_ref(){
+                return motion_goals;
             }
 
             void add_motion_goal(const MotionGoal &motion_goal){

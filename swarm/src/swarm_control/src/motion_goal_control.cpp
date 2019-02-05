@@ -272,6 +272,39 @@ namespace swarm_control{
         return delta_speed;
     }
 
+    bool get_intruder_command_from_motion_goal(const agent::IntruderAgent& intruder,
+            const agent::MotionGoal &motion_goal,
+            agent::AgentCommand &command) {
+
+        swarm_tools::Point2D intruder_position = intruder.get_position();
+        swarm_tools::Point2D mg_position = motion_goal.get_position();
+        double heading_goal = swarm_tools::absolute_angle_between_points(intruder_position,
+                                                                         mg_position);
+        double distance_to_mg = swarm_tools::euclidean_distance(intruder_position,
+                                                                mg_position);
+        double near_mg_dist=50;
+        double accepted_mg_dist=20;
+        double speed_goal = get_speed_goal(distance_to_mg,
+                                           intruder.get_max_speed(),
+                                           near_mg_dist,
+                                           accepted_mg_dist);
+
+        double left_turn;
+        double right_turn;
+        double current_heading = intruder.get_heading();
+
+        get_left_and_right_turns(heading_goal, current_heading, left_turn, right_turn);
+        double delta_heading = get_smallest_delta_heading(left_turn,
+                                                          right_turn,
+                                                          current_heading,
+                                                          intruder.get_max_delta_heading());
+        double delta_speed = get_delta_speed(speed_goal,
+                                             intruder.get_speed(),
+                                             intruder.get_max_delta_speed());
+        command.delta_speed=delta_speed;
+        command.delta_heading=delta_heading;
+    }
+
     bool get_observed_intruder_command_from_motion_goal(const agent::ObservedIntruderAgent& intruder,
                                                         const agent::MotionGoal &motion_goal,
                                                         agent::AgentCommand &command) {
