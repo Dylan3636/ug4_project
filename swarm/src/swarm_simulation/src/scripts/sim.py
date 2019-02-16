@@ -1,24 +1,28 @@
-import numpy as np
 from time import sleep
-from plot import LivePlot, PlotObject
-from helper_tools import *
 from perception import perceive
 from planning import avoid
 from sim_objects import *
+from time import time
+from plot import LivePlot
 
 SimLine = namedtuple("SimulationLine", ["sim_id", "start_id", "end_id"])
 
 
 class Simulation:
 
-    def __init__(self, sim_objects, timeout=0.1):
+    def __init__(self, sim_objects, timeout=0.1, delta_time_secs=None, use_gui=True, threshold=None):
         self.sim_objects = dict([(obj.sim_id, obj) for obj in sim_objects])
         self.OK = True
+        self.use_gui = use_gui
         self.anim = LivePlot()
         self.timeout = timeout
-        self._delta_t = timeout
+        self.delta_t = timeout if delta_time_secs is None else delta_time_secs
+        self.start_time = time()
+        self.end_time = None
+        self.threshold = threshold
 
     def update_simulation_state(self):
+        # Overridden in simulation node
         readings = perceive(self.sim_objects)
         for sim_id, obj in self.sim_objects.items():
             if obj.object_type != "STATIC":
@@ -41,21 +45,40 @@ class Simulation:
  
     def begin(self):
         while self.OK:
+
             self.update_simulation_state()
-            self.anim.update_world_state(self.sim_objects)
-            self.anim.cull_objects()
-            sleep(self.timeout)
+
+            start = time()
+            if self.use_gui:
+                # Visualisation
+                self.anim.update_world_state(self.sim_objects)
+                self.anim.cull_objects()
+                self.anim.update_threat_color()
+
+            # Termination check
+            terminate = self.termination_check()
+            if terminate:
+                self.kill()
+            end = time()
+            # Timeout
+            sleep(max(self.timeout-(end-start), 0))
+
+    def termination_check(self):
+        if self.threshold is None:
+            return False
+        terminate = False
+        tanker = list(filter(lambda x: type(x) == Tanker, self.sim_objects))[0]
+        intruders = filter(lambda x: type(x) == Intruder, self.sim_objects)
+
+        for obj in intruders:
+            dist = euclidean_distance(obj.position, tanker.position)
+            terminate |= dist < self.threshold
+        return terminate
 
     def kill(self):
+        assert not self.OK, "SIMULATION IS ALREADY DEAD"
         self.OK = False
-
-    @property
-    def delta_t(self):
-        return self._delta_t
-
-    @delta_t.setter
-    def delta_t(self, delta_t):
-        self._delta_t = delta_t
+        self.end_time = time()
 
 
 def get_line_id(sim_id, task_id):
@@ -72,5 +95,5 @@ if __name__ == '__main__':
                      0.1)
 
     sim.begin()
-    lp = sim.anim
-    lp.canvas.mainloop()
+    sim.anim.canvas.mainloop()
+

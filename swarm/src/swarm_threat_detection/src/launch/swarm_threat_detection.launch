@@ -1,6 +1,9 @@
 
 <launch>
     <node pkg="swarm_threat_detection" type="threat_detection_node" name="swarm_threat_detection" clear_params="true" required="true">
-        <!-- <rosparam file="$(find swarm_simulation)/config/simulation_params.yaml" command="load"/> -->
+        <param name="lr" value="0.1"/>
+        <param name="w_dist" value="800"/>
+        <param name="noise_sigma" value="0.05"/>
+        <param name="alert_threshold" value="0.7"/>
     </node>
 </launch>

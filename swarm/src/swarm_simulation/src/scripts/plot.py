@@ -22,10 +22,32 @@ asset_shape = [[30, 0],
                [-30, 20],
                [20, 20]]
 
-oval_shape = [[-10, -10],
-              [10, 10]]
+oval_shape = [[-5, -5],
+              [5, 5]]
 
 center = [1000, 500]
+
+
+def rgb_to_hexa(*args):
+    """
+    Convert RGB(A) color to hexadecimal.
+    ref: tkcolorpicker
+    """
+    print(args)
+    if len(args) == 3:
+        return ("#{:02x}{:02x}{:02x}".format(*args)).upper()
+    elif len(args) == 4:
+        return ("#{:02x}{:02x}{:02x}{:02x}".format(*tuple(args))).upper()
+    else:
+        raise ValueError("Wrong number of arguments.")
+
+
+def threat_prob_to_hex_color(p):
+    r = round(255*p)
+    g = round(255*(1-p))
+    hex_col = rgb_to_hexa(r, g, 0)
+    print("HEX: ", hex_col)
+    return hex_col
 
 
 class LivePlot:
@@ -34,13 +56,41 @@ class LivePlot:
         self.window.geometry("2000x1000")
         self.canvas = Canvas(self.window,
                              width=2000,
-                             height=1000)
-        self.canvas.pack()
+                             height=1000, bg='white')
+        # self.scale = Scale(self.window, orient=HORIZONTAL, length=1000, from_=0, to=1000)
+        # self.scale.pack()
+        self.canvas.pack(fill=BOTH, expand=True)
+        self.canvas.bind('<Configure>', self.create_grid)
         self.objects = {}
         self.markers = {}
         self.lines = {}
         self.thread_lock = Lock()
         self.queue = Queue()
+        self.threat_queue = Queue()
+
+    def threat_color_callback(self, msg):
+        self.threat_queue.put(msg)
+
+    def update_threat_color(self):
+        while not self.threat_queue.empty():
+            with self.thread_lock:
+                obj = self.threat_queue.get()
+                print(obj)
+                self.canvas.itemconfig(self.objects[obj.intruder_id],
+                                       fill=threat_prob_to_hex_color(obj.threat_probability))
+
+    def create_grid(self, event=None):
+        w = self.canvas.winfo_width() # Get current width of canvas
+        h = self.canvas.winfo_height() # Get current height of canvas
+        self.canvas.delete('grid_line') # Will only remove the grid_line
+
+        # Creates all vertical lines at intevals of 100
+        for i in range(0, w, 100):
+            self.canvas.create_line(i, 0, i, h, tag='grid_line')
+
+        # Creates all horizontal lines at intevals of 100
+        for i in range(0, h, 100):
+            self.canvas.create_line(0, i, w, i, tag='grid_line')
 
     def create_object(self, sim_obj):
         sim_id = sim_obj.sim_id
@@ -49,7 +99,7 @@ class LivePlot:
         elif sim_obj.object_type == "USV":
             self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="BLUE")
         elif sim_obj.object_type == "INTRUDER":
-            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="RED")
+            self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill=threat_prob_to_hex_color(0))
         elif sim_obj.object_type == "TANKER":
             self.objects[sim_id] = self.canvas.create_polygon(triangle_shape, fill="YELLOW")
         elif sim_obj.object_type == "ASSET":
@@ -153,4 +203,4 @@ class LivePlot:
             sim_id = self.queue.get()
             with self.thread_lock:
                 self.canvas.delete(self.objects[sim_id])
-                self.objects[sim_id] = None
+                del self.objects[sim_id]

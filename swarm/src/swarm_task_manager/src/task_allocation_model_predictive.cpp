@@ -137,8 +137,6 @@ namespace swarm_task_manager{
         auto agent_sim_id_map = swarm.get_agent_sim_id_map();
         agent::AgentCommand command;
         agent::MotionGoal usv_motion_goal;
-        agent::MotionGoal delay_motion_goal;
-        agent::MotionGoal guard_motion_goal;
         agent::MotionGoal intruder_motion_goal;
 
         int timestep=0;

@@ -1,7 +1,8 @@
 import numpy as np
 from threading import Lock
 from helper_tools import *
-from plot import *
+from plot import PlotObject
+
 
 class SimObject:
 
@@ -15,13 +16,14 @@ class SimObject:
 
         self.sim_id = sim_id
         self.command = None
-        self._state = [0, 0, 0, 0] if initial_state is None else initial_state
+        self._state = [0, 0, 0, 0] if initial_state is None else list(initial_state)
         self.constraints = [10, 2, np.pi/4] \
                 if constraints is None else constraints       
         self.radius = radius_buffer
         self.noise = None
         self.object_type = object_type
         self.lock = Lock()
+        self.active = False if object_type == "INTRUDER" else True
         assert type(sim_id) == int, "sim_id must be of type integer"
         assert len(self._state) == 4, "State must be 4 dimensional"
         assert len(self.constraints) == 3, "Constraints must be 3 dimensional"
@@ -202,9 +204,10 @@ class Intruder(SimObject):
                  sim_id,
                  initial_state=None,
                  constraints=None,
+                 activate_time=0,
                  radius_buffer=100,
                  noise=None):
-    
+        self.activate_time = activate_time
         super().__init__(sim_id,
                          initial_state,
                          constraints,

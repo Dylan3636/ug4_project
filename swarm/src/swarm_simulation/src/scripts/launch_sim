@@ -71,5 +71,5 @@ if __name__ == "__main__":
     tanker=Tanker(sim_id=asset_sim_id, initial_state=asset_init_state, radius_buffer=asset_radius_buffer)
 
     sim_node = SimulationNode([*intruders, *usvs, tanker])
-    sim_node.sim.begin()
+    sim_node.begin()
 

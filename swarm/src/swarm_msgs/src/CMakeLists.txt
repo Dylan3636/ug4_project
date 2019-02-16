@@ -24,6 +24,7 @@ add_message_files(
   taskType.msg
   agentTask.msg
   swarmAssignment.msg
+  threatStatistics.msg
 )
 
 generate_messages(DEPENDENCIES

@@ -11,6 +11,7 @@ namespace swarm_control{
         const agent::USVSwarm &swarm,
         agent::MotionGoal& motion_goal
     ){
+        int delay_position = swarm.get_delay_position(usv_id, intruder_id);
         auto usv = swarm.get_usv_estimate_by_id(usv_id);
         auto intruder = swarm.get_intruder_estimate_by_id(intruder_id);
         auto asset = swarm.get_asset_estimate();
@@ -22,13 +23,15 @@ namespace swarm_control{
         auto intruder_constraints = intruder.get_constraints();
 
         auto asset_state = asset.get_state();
+        double capture_radius = 30;
+        double w_delayed = 10;
 
-        motion_goal.speed = intruder_state.speed;
+        motion_goal.speed = std::max(intruder_state.speed -delay_position*w_delayed, 0.0);
         motion_goal.heading_rad = intruder_state.heading;
         swarm_tools::Point2D usv_position = usv_state.get_position();
         swarm_tools::Point2D intruder_position = intruder_state.get_position();
-        intruder_position.x += 30*std::cos(intruder_state.heading);
-        intruder_position.y += 30*std::sin(intruder_state.heading);
+        intruder_position.x += capture_radius*std::cos(intruder_state.heading);
+        intruder_position.y += capture_radius*std::sin(intruder_state.heading);
         swarm_tools::Point2D asset_position = asset_state.get_position();
 
         double usv_max_speed = usv_constraints.max_speed;// Remember this
@@ -47,7 +50,7 @@ namespace swarm_control{
         double det = B*B -4*A*C;
 
         if (det<0){
-            // Not possible 
+            // Not solutions
             motion_goal.x = asset_position.x;
             motion_goal.y = asset_position.y;
             return false;
@@ -56,7 +59,6 @@ namespace swarm_control{
         {
             double alpha_minus;
             double alpha_plus;
-            double capture_radius = 30;
             double min_alpha = std::min(capture_radius/o_norm, 1.0);
 
             if (A==0){
@@ -91,7 +93,7 @@ namespace swarm_control{
                         double dist_1 = swarm_tools::euclidean_distance(intercept_1, usv_position); 
                         double dist_2 = swarm_tools::euclidean_distance(intercept_2, usv_position); 
 
-                        if (dist_1 <=0){
+                        if (dist_1 <=dist_2){
                             motion_goal.x = intercept_1_ptr->x;
                             motion_goal.y = intercept_1_ptr->y;
                         }
@@ -110,7 +112,7 @@ namespace swarm_control{
                     motion_goal.x = intercept_1.x;
                     motion_goal.y = intercept_1.y;
                 }else{
-                    intercept_1 = (intruder_position + (asset_position-intruder_position)*0.1); 
+                    intercept_1 = (intruder_position + (asset_position-intruder_position)*min_alpha);
                     motion_goal.x = intercept_1.x;
                     motion_goal.y = intercept_1.y;
                 }
@@ -128,10 +130,6 @@ namespace swarm_control{
                 motion_goal.y = intercept_1_ptr->y;
                 return true;
             }
-
-            
-
-            
             return true;
         }
         return true;
@@ -265,7 +263,7 @@ namespace swarm_control{
     double get_delta_speed(double speed_goal,
                            double current_speed,
                            double max_delta_speed){
-        double delta_speed = speed_goal-current_speed;
+        double delta_speed = (speed_goal-current_speed)/0.1;
         delta_speed = swarm_tools::clip(delta_speed,
                                         -max_delta_speed,
                                         max_delta_speed);
@@ -423,10 +421,11 @@ namespace swarm_control{
         int guard_radius = 100;
         int guard_id;
         int intruder_id;
-        double guard_weight = 10;
-        double observation_weight = 10;
-        double dist_to_intruder;
-        double threat_prob;
+        double w_guard = 100;
+        double w_obs = 300;
+        double w_dist =1000;
+        double dist_to_asset;
+        double p_threat;
         double weight;
         agent::ObservedIntruderAgent intruder;
         for(const auto &task : assignment){
@@ -441,19 +440,19 @@ namespace swarm_control{
                     asset_state=swarm.get_asset_estimate().get_state();
                     swarm_control::usv_guard_motion_goal(num_usvs, guard_id, guard_radius, asset_state, mg);
                     motion_goals.push_back(mg);
-                    weights.push_back(guard_weight);
+                    weights.push_back(w_guard);
                     break;
                 case agent::TaskType::Observe:
                     intruder_id=task.task_idx;
                     swarm_control::usv_observe_motion_goal(usv_id, intruder_id, swarm, mg);
                     motion_goals.push_back(mg);
                     intruder = swarm.get_intruder_estimate_by_id(intruder_id);
-                    usv = swarm.get_usv_estimate_by_id(usv_id);
-                    dist_to_intruder = swarm_tools::euclidean_distance(usv.get_position(), intruder.get_position());
-                    threat_prob = intruder.get_threat_probability();
-                    weight = observation_weight*threat_prob*(1+500/dist_to_intruder);
+//                    usv = swarm.get_usv_estimate_by_id(usv_id);
+                    dist_to_asset = swarm_tools::euclidean_distance(swarm.get_asset_estimate().get_position(), intruder.get_position());
+                    p_threat = intruder.get_threat_probability();
+                    weight = w_obs*p_threat*(1+w_dist/dist_to_asset);
                     weights.push_back(weight);
-                    ROS_INFO("Distance %f, Probability %f, Weight %f", dist_to_intruder, threat_prob, weight);
+                    ROS_INFO("Distance %f, Probability %f, Weight %f", dist_to_asset, p_threat, weight);
                     break;
                 default:
                     break;

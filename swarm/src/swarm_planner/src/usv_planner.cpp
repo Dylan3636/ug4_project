@@ -7,6 +7,7 @@
 #include "collision_avoidance.h"
 #include "ros_swarm_tools.h"
 #include "swarm_msgs/simulationMarker.h"
+#include "swarm_msgs/threatStatistics.h"
 #include "task_allocation.h"
 #include "swarm_threat_detection/ThreatDetection.h"
 #include "swarm_task_manager/modelPredictiveSimulation.h"
@@ -22,6 +23,7 @@ agent::USVSwarm swarm;
 RosContainerPtr ros_container_ptr;
 ros::Publisher command_pub;
 ros::Publisher marker_pub;
+ros::Publisher threat_pub;
 ros::ServiceClient client;
 
 std::map<int, ros::ServiceClient> usv_sync_service_map;
@@ -48,9 +50,17 @@ void publish_markers(const agent::MotionGoal &motion_goal){
     marker_pub.publish(marker);
 }
 
+void publish_threat_statistics(int intruder_id, double probability, bool classification){
+    swarm_msgs::threatStatistics stats;
+    stats.intruder_id=intruder_id;
+    stats.threat_probability = probability;
+    stats.threat_classification =classification;
+    threat_pub.publish(stats);
+}
+
 void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
 
-    ROS_INFO("USV Callback");
+    ROS_INFO("USV CALLBACK");
     usv_state_map.clear();
     intruder_state_map.clear();
 
@@ -69,7 +79,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
             ROS_INFO("Adding new usv %d to swarm", usv_state_id_pair.first);
 
             std::string usv_head_str = (boost::format("/swarm_simulation/usv_params/usv_%d") % usv_state_id_pair.first).str();
-           swarm.add_usv(agent::USVAgent(usv_state_id_pair.second,
+            swarm.add_usv(agent::USVAgent(usv_state_id_pair.second,
                    usv_constraints_map[usv_state_id_pair.first],
                    usv_radar_params_map[usv_state_id_pair.first],
                    agent::AgentAssignment()));
@@ -86,6 +96,15 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
            swarm.add_intruder(agent::ObservedIntruderAgent(intruder_state_id_pair.second,
                    intruder_constraints_map[intruder_state_id_pair.first],
                    intruder_radar_params_map[intruder_state_id_pair.first]));
+        }
+    }
+
+    for (const auto &task : swarm.get_swarm_assignment()[usv_id]){
+        if (task.task_type != agent::TaskType::Guard && task.task_idx!=-1 && task.task_idx>100){
+            const auto intruder = swarm.get_intruder_estimate_by_id(task.task_idx);
+            double probability = intruder.get_threat_probability();
+            bool classification = intruder.is_threat();
+            publish_threat_statistics(task.task_idx, probability, classification);
         }
     }
 
@@ -125,14 +144,14 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr){
 } // callback
 
 
-void task_allocator_callback(swarm_msgs::swarmAssignment::ConstPtr swarm_task_assignment_ptr){
+void task_allocator_callback(const swarm_msgs::swarmAssignment::ConstPtr &swarm_task_assignment_ptr){
     ROS_INFO("Setting new task allocation!");
     agent::SwarmAssignment swarm_assignment = extract_from_swarm_assignment_msg(*swarm_task_assignment_ptr);
-    ROS_INFO(agent::swarm_assignment_to_string(swarm_assignment).c_str());
+    ROS_INFO("%s", agent::swarm_assignment_to_string(swarm_assignment).c_str());
     mtx.lock();
     try{
         swarm.update_swarm_assignment(swarm_assignment);
-    }catch(std::exception e){
+    }catch(std::exception &e){
         throw "Task Allocation Failed.";
     }
     mtx.unlock();
@@ -176,12 +195,12 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
     return true;
 }
 
+void reset_callback(){
+    initialized=false;
+}
 
 
 int main(int argc, char **argv){
-
-    usv_communication_map[1]=true;
-    usv_communication_map[2]=true;
 
     ros_container_ptr.reset(new RosContainer(argc, argv, "usv_planner"));
     ros::NodeHandle nh_priv("~");
@@ -197,7 +216,8 @@ int main(int argc, char **argv){
     // Command and motion goal marker publisher
     command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
     marker_pub = ros_container_ptr->nh.advertise<swarm_msgs::simulationMarker>("Markers", 1000);
-    
+    threat_pub = ros_container_ptr->nh.advertise<swarm_msgs::threatStatistics>("threatStatistics", 1000);
+
     // Perception Subscriber
     ros::Subscriber perc_sub = ros_container_ptr->nh.subscribe("Perception", 1000, callback);
     ros::Subscriber task_sub = ros_container_ptr->nh.subscribe("Task_Allocation", 1000, task_allocator_callback);

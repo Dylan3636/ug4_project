@@ -18,42 +18,61 @@ namespace agent{
         void update_usv_estimate(const USVAgent &usv);
 
         public:
-            void set_main_usv_id(int usv_id){
-                main_usv_id=usv_id;
-            }
+            bool switch_observe_to_delay_task(int intruder_id);
+
+            // Contains
+            bool contains_usv(int usv_id);
+            bool contains_intruder(int intruder_id);
+
+            /* Getters*/
+            // USV
             int get_main_usv_id(){
                 return main_usv_id;
+            }
+            int get_num_usvs() const;
+            USVAgent get_usv_estimate_by_id(int usv_id) const;
+            std::vector<USVAgent> get_usv_estimates() const;
+            std::vector<int> get_usv_ids() const;
+            int get_delay_position(int usv_id, int intruder_id) const;
+
+            // Intruders
+            ObservedIntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
+            std::vector<ObservedIntruderAgent> get_intruder_estimates() const;
+
+            // Asset
+            AssetAgent get_asset_estimate() const;
+
+            // Agents
+            std::map<int, AgentType> get_agent_sim_id_map() const;
+            std::vector<AgentState> get_obstacle_states() const;
+            SwarmAssignment get_swarm_assignment() const;
+
+
+            // Setters
+            void set_main_usv_id(int usv_id){
+                main_usv_id=usv_id;
             }
             void set_threat_detection_client(const ros::ServiceClient &client){
                 threat_detection_client=client;
             }
-            bool switch_observe_to_delay_task(int intruder_id);
-            void update_intruder_state_estimate(const AgentState &intruder_state);
-            void update_usv_state_estimate(const AgentState &usv_state);
-            int get_num_usvs() const;
-            bool contains_usv(int usv_id);
-            bool contains_intruder(int intruder_id);
-            ObservedIntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
-            USVAgent get_usv_estimate_by_id(int usv_id) const;
-            AssetAgent get_asset_estimate() const;
-            std::map<int, AgentType> get_agent_sim_id_map() const;
 
-            std::vector<USVAgent> get_usv_estimates() const;
-            std::vector<ObservedIntruderAgent> get_intruder_estimates() const;
-            std::vector<AgentState> get_obstacle_states() const;
-            std::vector<int> get_usv_ids() const;
-
-            SwarmAssignment get_swarm_assignment() const;
-
-
+            // Command agents monitored by swarm
             void command_usv_forward_by_id(int usv_id,
                                            const AgentCommand &command,
                                            double delta_time_secs);
             void command_intruder_forward_by_id(int intruder_id,
                                                           const AgentCommand &command,
                                                           double delta_time_secs);
+
+            // Adders
             void add_usv(const USVAgent &usv);
             void add_intruder(ObservedIntruderAgent intruder);
+
+            // Update
+            void update_intruder_state_estimate(const AgentState &intruder_state);
+
+            void update_usv_state_estimate(const AgentState &usv_state);
+
             void update_swarm_assignment(const SwarmAssignment &swarm_assignment);
 
             void update_agent_assignment_by_id(int sim_id,
@@ -70,13 +89,16 @@ namespace agent{
             void update_intruder_estimates(const std::map<int,
                                            agent::AgentState> &intruder_state_map);
             bool update_intruder_threat_estimate(const AgentState &intruder_state);
+
+            // Assign
             void assign_intruder_to_usv(const ObservedIntruderAgent &intruder);
             void assign_guard_task_to_usv(int usv_id);
 
-            std::vector<double> evaluate_swarm_assignment(const SwarmAssignment &swarm_assignment,
-                                                          int timesteps,
-                                                          double delta_time_secs);
-            std::vector<int> sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point);
+            // Sort
+            std::vector<int> sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point) const;
+            std::vector<int> sort_usvs_by_distance_to_point(
+                    const std::vector<USVAgent> &usv,
+                    const swarm_tools::Point2D &point) const;
     };
 
 

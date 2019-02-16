@@ -198,11 +198,18 @@ namespace agent{
         update_intruder_estimates(intruder_state_map);
     }
 
-    std::vector<int> USVSwarm::sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point){
+    std::vector<int> USVSwarm::sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point) const{
+        return sort_usvs_by_distance_to_point(get_usv_estimates(), point);
+
+    }
+    std::vector<int> USVSwarm::sort_usvs_by_distance_to_point(
+            const std::vector<USVAgent> &usvs,
+            const swarm_tools::Point2D &point) const{
+
         std::vector<std::pair<int, double>> usv_distance_id_pairs;
-        for (const auto &usv_pair : usv_map){
-            double distance = swarm_tools::euclidean_distance(usv_pair.second.get_position(), point);
-            usv_distance_id_pairs.push_back({usv_pair.first, distance});
+        for (const auto &usv : usvs){
+            double distance = swarm_tools::euclidean_distance(usv.get_position(), point);
+            usv_distance_id_pairs.emplace_back(usv.get_sim_id(), distance);
         }
         std::sort(usv_distance_id_pairs.begin(),
                   usv_distance_id_pairs.end(),
@@ -215,6 +222,23 @@ namespace agent{
             sorted_usv_ids.push_back(distance_pair.first);
         }
         return sorted_usv_ids;
+    }
+    int USVSwarm::get_delay_position(int usv_id, int intruder_id) const{
+        std::vector<USVAgent> usvs_w_delay_task;
+        for(const auto &usv_pair: usv_map){
+            if(usv_pair.second.has_delay_task(intruder_id)){
+                usvs_w_delay_task.push_back(usv_pair.second);
+            }
+        }
+        assert(!usvs_w_delay_task.empty() && (boost::format("USV %d IS NOT DELAYING INTRUDER %d") % usv_id, intruder_id));
+        if(usvs_w_delay_task.size()==1) return 0;
+
+        auto usv_ids = sort_usvs_by_distance_to_point(usvs_w_delay_task, get_intruder_estimate_by_id(intruder_id).get_position());
+        uint8_t count = 0;
+        for(int id : usv_ids){
+            if(usv_id==id) return count;
+            count++;
+        }
     }
 
     void USVSwarm::update_estimates(const std::map<int,

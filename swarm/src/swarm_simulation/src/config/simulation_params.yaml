@@ -1,4 +1,5 @@
-delta_time_secs : 0.2
+delta_time_secs : 0.1
+num_usvs : 4
 motion_goal_control : {
   slowdown_distance : 50,
   reached_mg_distance : 20
@@ -20,7 +21,7 @@ usv_params :
     radar_parameters : {
      max_distance : 100.0,
      max_angle : 90.0,
-     aggression : 0.9
+     aggression : 1.0
     }
   - sim_id : 2
     radius_buffer : 50.0
@@ -38,7 +39,7 @@ usv_params :
     radar_parameters : {
       max_distance : 100.0,
       max_angle : 90.0,
-      aggression : 0.9
+      aggression : 1.0
     }
   - sim_id : 3
     radius_buffer : 50.0
@@ -56,7 +57,7 @@ usv_params :
     radar_parameters: {
       max_distance : 100.0,
       max_angle : 90.0,
-      aggression : 0.9
+      aggression : 1.0
     }
 
   - sim_id : 4
@@ -75,7 +76,7 @@ usv_params :
     radar_parameters : {
       max_distance : 100.0,
       max_angle : 90.0,
-      aggression : 0.9
+      aggression : 1.0
     }
 
 intruder_params :
@@ -93,9 +94,9 @@ intruder_params :
      max_delta_heading : 45.0
      }
     radar_parameters : {
-     max_distance : 100.0,
+     max_distance : 200.0,
      max_angle : 90.0,
-     aggression : 0.1
+     aggression : 0.0
      }
     is_threat : True
     motion_goals :
@@ -119,9 +120,9 @@ intruder_params :
       max_delta_heading : 45.0
       }
     radar_parameters : {
-      max_distance : 100.0,
+      max_distance : 200.0,
       max_angle : 90.0,
-      aggression : 0.1
+      aggression : 0.0
       }
     is_threat : True
 

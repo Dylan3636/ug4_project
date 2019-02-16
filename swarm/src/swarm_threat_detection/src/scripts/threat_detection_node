@@ -4,7 +4,6 @@ import rospy
 from basic_threat_detection import BasicThreatDetector
 from swarm_threat_detection.srv import ThreatDetection, ThreatDetectionResponse
 
-btd = BasicThreatDetector()
 
 
 def update_threat_estimate(req):
@@ -23,6 +22,14 @@ def update_threat_estimate(req):
 
 if __name__ == "__main__":
     rospy.init_node("BasicThreatDetection")
+    threshold = rospy.get_param('swarm_threat_detection/alert_threshold')
+    lr = rospy.get_param('swarm_threat_detection/lr')
+    w_dist = rospy.get_param('swarm_threat_detection/w_dist')
+    noise_sigma = rospy.get_param('swarm_threat_detection/noise_sigma')
+    btd = BasicThreatDetector(p_alert=threshold,
+                              learning_rate=lr,
+                              max_dist_to_observe_threat=w_dist,
+                              noise_sigma=noise_sigma)
     rospy.Service('ThreatDetection', ThreatDetection, update_threat_estimate)
     rospy.loginfo("Initiating Threat Detection System")
     rospy.spin()

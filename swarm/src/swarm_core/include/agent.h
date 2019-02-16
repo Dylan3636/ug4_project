@@ -407,10 +407,10 @@ namespace agent{
                 threat_probability=probability;
             }
 
-            double get_threat_probability(){
+            double get_threat_probability() const{
                 return threat_probability;
             }
-            bool is_threat(){
+            bool is_threat() const{
                 return threat_classification;
             }
 
@@ -457,7 +457,7 @@ namespace agent{
                 return current_assignment;
             }
 
-            void set_current_assignment(AgentAssignment assignment){
+            void set_current_assignment(const AgentAssignment &assignment){
                 current_assignment=assignment;
             }
             int switch_observe_to_delay_assignment(int intruder_id){
@@ -499,12 +499,19 @@ namespace agent{
                 remove_observe_assignment(observe_assignment_idx);
                 current_assignment.push_back(AgentTask(Observe, observe_assignment_idx));
             }
-            bool has_delay_task(){
+            bool has_delay_task() const{
                 for(const auto &task : current_assignment){
                     if(task.task_type==Delay && task.task_idx!=-1) return true;
                 }
                 return false;
             }
+            bool has_delay_task(int intruder_id) const{
+                for (const auto &task : current_assignment) {
+                    if (task.task_type == Delay && task.task_idx == intruder_id) return true;
+                }
+                return false;
+            }
+
             bool remove_observe_assignment(int observe_assignment_idx){
                 auto task2rem = AgentTask(Observe, observe_assignment_idx);
                 for(int i =0; i < current_assignment.size(); i++){
