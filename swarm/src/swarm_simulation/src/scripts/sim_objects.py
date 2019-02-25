@@ -32,7 +32,8 @@ class SimObject:
         return PlotObject(self.state[0],
                           self.state[1])
 
-    def get_position(self):
+    @property
+    def position(self):
         return self.x, self.y
 
     @property
@@ -73,9 +74,9 @@ class SimObject:
 
     @heading.setter
     def heading(self, new_heading):
-        if new_heading > 2*np.pi:
+        while new_heading > 2*np.pi:
             new_heading -= 2*np.pi
-        if new_heading < 0:
+        while new_heading < 0:
             new_heading += 2*np.pi
         self._state[3] = new_heading 
 
@@ -98,8 +99,7 @@ class SimObject:
         command.delta_heading = clip(command.delta_heading,
                                      -max_delta_heading,
                                      max_delta_heading)
-        print("Command: ", np.rad2deg(command.delta_heading))
- 
+
         self.lock.acquire()
         self._command = command
         self.lock.release()

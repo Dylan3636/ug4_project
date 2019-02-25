@@ -2,9 +2,13 @@
 
 import rospy
 import numpy as np
+from plot import LivePlot
 from simulation_listener import SimulationNode
 from sim_objects import Intruder, BasicUSV, Tanker
 from numpy.random import RandomState
+from swarm_msgs.msg import resetSystem
+from time import time
+import os
 
 
 class Sampler:
@@ -21,7 +25,7 @@ class ConstantSampler(Sampler):
         super().__init__(randomstate)
 
     def sample(self, num_samples=1):
-        return self.constant
+        return float(self.constant)
 
 
 class UniformSampler(Sampler):
@@ -65,11 +69,10 @@ class InitialStateSampler:
         self.heading_sampler = heading_sampler
 
     def sample(self, num_samples=1):
-        print(self.x_sampler)
         x = self.x_sampler.sample(num_samples)
         y = self.y_sampler.sample(num_samples)
         speed = self.speed_sampler.sample(num_samples)
-        heading = self.heading_sampler.sample(num_samples)
+        heading = float(np.deg2rad(self.heading_sampler.sample(num_samples)))
         return x, y, speed, heading
 
 
@@ -84,6 +87,7 @@ class ConstraintSampler:
     def sample(self, num_samples=1):
         max_speed = self.max_speed_sampler.sample(num_samples)
         max_delta_heading = self.max_delta_heading_sampler.sample(num_samples)
+        max_delta_heading = float(np.deg2rad(max_delta_heading))
         max_delta_speed = self.max_delta_speed_sampler.sample(num_samples)
         return max_speed, max_delta_speed, max_delta_heading
 
@@ -99,7 +103,7 @@ class RadarConstraintSampler:
 
     def sample(self, num_samples=1):
         max_distance = self.max_distance_sampler.sample(num_samples)
-        max_angle = self.max_angle_sampler.sample(num_samples)
+        max_angle = float(np.deg2rad(self.max_angle_sampler.sample(num_samples)))
         aggression = self.aggression_sampler.sample(num_samples)
         return max_distance, max_angle, aggression
 
@@ -119,7 +123,7 @@ class USVSampler:
 
 
 class IntruderSampler:
-    def __init__(self, initial_state_sampler, constraint_sampler, radar_constraint_sampler):
+    def __init__(self, initial_state_sampler: InitialStateSampler, constraint_sampler: ConstraintSampler, radar_constraint_sampler: RadarConstraintSampler):
         self.initial_state_sampler = initial_state_sampler
         self.constraint_sampler = constraint_sampler
         self.radar_constraint_sampler = radar_constraint_sampler
@@ -217,7 +221,7 @@ def constraints_to_params(constraints):
     config = dict()
     config['max_speed'] = constraints[0]
     config['max_delta_speed'] = constraints[1]
-    config['max_delta_heading'] = constraints[2]
+    config['max_delta_heading'] = float(np.rad2deg(constraints[2]))
     return config
 
 
@@ -225,7 +229,7 @@ def radar_constraints_to_params(radar_constraints):
     assert(len(radar_constraints) == 3)
     config = dict()
     config['max_distance'] = radar_constraints[0]
-    config['max_angle'] = radar_constraints[1]
+    config['max_angle'] = float(np.rad2deg(radar_constraints[1]))
     config['aggression'] = radar_constraints[2]
     return config
 
@@ -256,6 +260,10 @@ class SimulationSampler(Sampler):
         self.num_usvs = None
         self.radius_buffer = self.config['radius_buffer']
         self.delta_time_secs = self.config['delta_time_secs']
+        self.threshold = self.config['threshold']
+        self.visualize = self.config['visualize']
+        self.anim = LivePlot() if self.visualize else None
+        self.reset_pub = rospy.Publisher('SystemReset', resetSystem, queue_size=100)
         rospy.set_param('/swarm_simulation/delta_time_secs', self.delta_time_secs)
 
     def sample_usvs(self):
@@ -302,11 +310,29 @@ class SimulationSampler(Sampler):
         usvs = self.sample_usvs()
         intruders = self.sample_intruders()
 
-        node = SimulationNode([*intruders, *usvs, tanker], delta_t=self.delta_time_secs)
+        node = SimulationNode([*intruders, *usvs, tanker],
+                              use_gui=self.visualize,
+                              anim=self.anim,
+                              threshold=self.threshold,
+                              delta_t=self.delta_time_secs,
+                              initialize=False)
         return node
 
     def reset(self):
+        os.system('rosparam delete /swarm_simulation/{}'.format('usv_params'))
+        os.system('rosparam delete /swarm_simulation/{}'.format('intruder_params'))
+        # rospy.delete_param('/swarm_simulation/usv_params')
+        # rospy.delete_param('/swarm_simulation/intruder_params')
+        rospy.loginfo("Sending Reset Message")
         self.num_usvs = None
+        msg = resetSystem()
+        rate = rospy.Rate(10)
+        t = time()
+        dt = time()-t
+        while dt < 3:
+            self.reset_pub.publish(msg)
+            rate.sleep()
+            dt = time()-t
 
     @staticmethod
     def _sample_usvs(usv_sampler: USVSampler, min_num_usvs, max_num_usvs, randomstate: RandomState, radius=50):
@@ -317,7 +343,7 @@ class SimulationSampler(Sampler):
 
         usv_configs = []
         usvs = []
-        for sim_id in range(num_usvs):
+        for sim_id in range(1, num_usvs+1):
 
             # Sample usv
             usv, radar_params = usv_sampler.sample(sim_id, radius)
@@ -346,10 +372,12 @@ class SimulationSampler(Sampler):
         max_num_threats = min(num_usvs, num_intruders)
         min_num_threats = min(min_num_threats, max_num_threats)
         num_threats = randomstate.random_integers(min_num_threats, max_num_threats)
+        print(min_num_threats, max_num_threats, num_threats, num_usvs)
 
         # Sample time between intruders (secs)
-        delta_times = randomstate.exponential(1/time_between_intruders_mean, num_intruders)
+        delta_times = randomstate.exponential(time_between_intruders_mean, num_intruders)
         activate_times = np.cumsum(delta_times)
+        print(delta_times)
 
         # Get sim ids
         intruder_ids = [100 + j for j in range(1, num_intruders+1)]
@@ -367,6 +395,7 @@ class SimulationSampler(Sampler):
 
             # Get config dictionary
             intruder_configs.append(intruder_to_params(intruder, radar_params, intruder_id in threat_ids))
+            print(intruder_id, intruder_id in threat_ids)
 
         # Set configs to ROS param server
         rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
@@ -374,12 +403,15 @@ class SimulationSampler(Sampler):
 
 
 if __name__ == "__main__":
+    rospy.init_node("RandomSimulation", anonymous=True)
     SEED = rospy.get_param('/random_simulation/seed')
     NUM_SIMS = rospy.get_param('/random_simulation/num_simulations')
     rs = np.random.RandomState(seed=SEED)
     simulation_sampler = SimulationSampler(rs)
-    for i in range(NUM_SIMS):
-        print("STARTING SIMULATION {}".format(i))
-        sim_node = simulation_sampler.sample_simulation()
-        result = sim_node.begin()
-        simulation_sampler.reset()
+    while not rospy.is_shutdown():
+        for i in range(NUM_SIMS):
+            print("STARTING SIMULATION {}".format(i))
+            sim_node = simulation_sampler.sample_simulation()
+            result = sim_node.begin()
+            simulation_sampler.reset()
+            sim_node.unregister()

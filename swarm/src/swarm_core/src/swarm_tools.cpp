@@ -138,9 +138,9 @@ namespace swarm_tools{
         return rad;
     }
     double rad2deg(double rad){
-        return rad*180/PI;
+        return rad*180.0/PI;
     }
     double deg2rad(double deg){
-        return deg*PI/180;
+        return deg*PI/180.0;
     }
 }

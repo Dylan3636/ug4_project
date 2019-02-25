@@ -10,11 +10,17 @@ SimLine = namedtuple("SimulationLine", ["sim_id", "start_id", "end_id"])
 
 class Simulation:
 
-    def __init__(self, sim_objects, timeout=0.1, delta_time_secs=None, use_gui=True, threshold=None):
+    def __init__(self,
+                 sim_objects,
+                 timeout=0.1,
+                 delta_time_secs=None,
+                 anim=None,
+                 use_gui=True,
+                 threshold=None):
         self.sim_objects = dict([(obj.sim_id, obj) for obj in sim_objects])
         self.OK = True
         self.use_gui = use_gui
-        self.anim = LivePlot()
+        self.anim = LivePlot() if anim is None else anim
         self.timeout = timeout
         self.delta_t = timeout if delta_time_secs is None else delta_time_secs
         self.start_time = time()
@@ -67,8 +73,8 @@ class Simulation:
         if self.threshold is None:
             return False
         terminate = False
-        tanker = list(filter(lambda x: type(x) == Tanker, self.sim_objects))[0]
-        intruders = filter(lambda x: type(x) == Intruder, self.sim_objects)
+        tanker = list(filter(lambda x: type(x) is Tanker, self.sim_objects.values()))[0]
+        intruders = filter(lambda x: type(x) is Intruder, self.sim_objects.values())
 
         for obj in intruders:
             dist = euclidean_distance(obj.position, tanker.position)
@@ -76,9 +82,9 @@ class Simulation:
         return terminate
 
     def kill(self):
-        assert not self.OK, "SIMULATION IS ALREADY DEAD"
-        self.OK = False
+        assert self.OK, "SIMULATION IS ALREADY DEAD"
         self.end_time = time()
+        self.OK = False
 
 
 def get_line_id(sim_id, task_id):

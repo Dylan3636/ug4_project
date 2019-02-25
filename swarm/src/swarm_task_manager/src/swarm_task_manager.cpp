@@ -40,7 +40,6 @@ void reallocate_tasks(){
         }
         else{
             ROS_INFO("Model Prediction Failed for usv %d", i);
-            continue;
         }
     }
     if (weighted_assignments.empty()){
@@ -69,8 +68,8 @@ int main(int argc, char **argv){
         auto mp_name = boost::format("mp_simulation_service_%d") % usv_id;
         service_client_map[usv_id] = ros_container_ptr->nh.serviceClient<swarm_task_manager::modelPredictiveSimulation>(mp_name.str());
     }
-    ros::Rate loop_rate(0.05);
-    while(ros::ok){
+    ros::Rate loop_rate(2);
+    while(ros::ok()){
         reallocate_tasks();
         loop_rate.sleep();
     }

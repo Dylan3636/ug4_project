@@ -193,6 +193,20 @@ namespace swarm_control{
 
         motion_goal = {asset.x, asset.y};
     }
+    bool observed_intruder_motion_goal(
+            int intruder_id,
+            agent::USVSwarm swarm,
+            agent::MotionGoal &motion_goal){
+        auto intruder = swarm.get_intruder_estimate_by_id(intruder_id);
+        auto asset = swarm.get_asset_estimate();
+        if(intruder.is_threat()){
+            return intruder_motion_goal(asset.get_state(), motion_goal);
+        }else{
+            motion_goal.x=100;
+            motion_goal.y=100;
+            return true;
+        }
+    }
 
     double get_speed_goal(double distance_to_mg,
                           double agent_max_speed,
@@ -352,8 +366,8 @@ namespace swarm_control{
         double speed_goal;
 
         if (usv.has_delay_task()){
-            double near_mg_dist=20;
-            double accepted_mg_dist=5;
+            double near_mg_dist=40;
+            double accepted_mg_dist=10;
             speed_goal = get_speed_goal(distance_to_mg, usv.get_max_speed(), near_mg_dist, accepted_mg_dist);
         }else{
             double near_mg_dist=70;
@@ -376,6 +390,7 @@ namespace swarm_control{
                                              usv.get_speed(),
                                              usv.get_max_delta_speed());
 
+        // ROS_INFO("%f, %f, %f, %f, %f, %f", delta_speed, delta_heading, speed_goal, heading_goal, usv.get_max_speed(), usv.get_max_delta_heading());
         command.delta_speed=delta_speed;
         command.delta_heading=delta_heading;
         }
@@ -452,7 +467,7 @@ namespace swarm_control{
                     p_threat = intruder.get_threat_probability();
                     weight = w_obs*p_threat*(1+w_dist/dist_to_asset);
                     weights.push_back(weight);
-                    ROS_INFO("Distance %f, Probability %f, Weight %f", dist_to_asset, p_threat, weight);
+                    // ROS_INFO("Distance %f, Probability %f, Weight %f", dist_to_asset, p_threat, weight);
                     break;
                 default:
                     break;

@@ -13,11 +13,13 @@ namespace agent{
         ros::ServiceClient threat_detection_client;
         AssetAgent asset;
 
-        // private methods
+        // private  methods
         void update_intruder_estimate(const ObservedIntruderAgent &intruder);
         void update_usv_estimate(const USVAgent &usv);
 
         public:
+            bool block_next_task_allocation=false;
+            void reset();
             bool switch_observe_to_delay_task(int intruder_id);
 
             // Contains
@@ -34,10 +36,12 @@ namespace agent{
             std::vector<USVAgent> get_usv_estimates() const;
             std::vector<int> get_usv_ids() const;
             int get_delay_position(int usv_id, int intruder_id) const;
+            AgentAssignment get_assignment_by_id(int usv_id) const;
 
             // Intruders
             ObservedIntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
             std::vector<ObservedIntruderAgent> get_intruder_estimates() const;
+            void sample_intruders();
 
             // Asset
             AssetAgent get_asset_estimate() const;
@@ -98,6 +102,11 @@ namespace agent{
             std::vector<int> sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point) const;
             std::vector<int> sort_usvs_by_distance_to_point(
                     const std::vector<USVAgent> &usv,
+                    const swarm_tools::Point2D &point) const;
+
+            std::vector<int> sort_usvs_by_weighted_distance_to_point(const swarm_tools::Point2D &point) const;
+            std::vector<int> sort_usvs_by_weighted_distance_to_point(
+                    const std::vector<USVAgent> &usvs,
                     const swarm_tools::Point2D &point) const;
     };
 

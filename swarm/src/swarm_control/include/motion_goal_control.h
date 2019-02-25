@@ -64,5 +64,10 @@ namespace swarm_control{
 
     bool intruder_motion_goal(const agent::AgentState &asset_state,
                               agent::MotionGoal &motion_goal);
+
+    bool observed_intruder_motion_goal(
+            int intruder_id,
+            agent::USVSwarm swarm,
+            agent::MotionGoal &motion_goal);
 }
 #endif

@@ -4,8 +4,11 @@
 #include "collision_avoidance.h"
 #include "motion_goal_control.h"
 #include "ros_swarm_tools.h"
+#include "swarm_msgs/resetSystem.h"
+#include "swarm_msgs/initializeSystem.h"
 #include "swarm_control/CollisionAvoidance.h"
 
+bool initialized=false;
 ros::Publisher command_pub;
 ros::ServiceClient client;
 RosContainerPtr ros_container_ptr;
@@ -14,7 +17,23 @@ std::map<int, agent::CollisionAvoidanceParameters> intruder_radar_params_map;
 std::map<int, agent::AgentConstraints> intruder_constraints_map;
 std::string intruder_head_str = "/swarm_simulation/intruder_params";
 
+void initialize_callback(const swarm_msgs::initializeSystem &msg){
+    if(initialized) return;
+    initialized = true;
+    ROS_INFO("Initialized Intruders");
+}
+
+void reset_callback(const swarm_msgs::resetSystem &msg){
+    if (!initialized) return;
+    intruder_map.clear();
+    intruder_constraints_map.clear();
+    intruder_radar_params_map.clear();
+    initialized = false;
+    ROS_INFO("Reset Intruders");
+}
+
 void callback(const swarm_msgs::worldState::ConstPtr& world_state){
+    if(!initialized) return;
     auto ws = world_state->worldState;
 
     std::vector<agent::AgentState> intruders;
@@ -60,7 +79,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                         intruder_head_str,
                         sim_id, threat,
                         mgs);
-
+                intruder.set_threat(threat);
                 intruder_map[sim_id] = intruder;
             }
 
@@ -85,15 +104,20 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         }
     }
 
-    for (const auto &intruder_pair : intruder_map){
+    for (auto &intruder_pair : intruder_map){
 
         int sim_id = intruder_pair.first;
-        auto intruder = intruder_pair.second;
+        auto &intruder = intruder_pair.second;
 
         agent::AgentCommand command{};
         agent::MotionGoal motion_goal;
         bool end = !intruder.get_motion_goal(&motion_goal);
-        ROS_ASSERT(!end);
+        ROS_INFO("Intruder %d, %d", intruder_pair.first, intruder.is_threat());
+        if(!intruder.is_threat()){
+            motion_goal.x=1000;
+            motion_goal.y=1000;
+        }
+        //       ROS_ASSERT(!end);
         
         swarm_control::get_intruder_command_from_motion_goal(intruder,
                                                              motion_goal,
@@ -141,15 +165,28 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 int main(int argc, char **argv){
     ros_container_ptr.reset(new RosContainer(argc, argv, "intruder_control"));
     command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
+    ROS_INFO("Starting Intruder Control Node");
     ros::Subscriber sub = ros_container_ptr->nh.subscribe("Perception", 1000, callback);
+    ros::Subscriber reset_sub = ros_container_ptr->nh.subscribe("SystemReset", 100, reset_callback);
+    ros::Subscriber init_sub = ros_container_ptr->nh.subscribe("SystemStart", 100, initialize_callback);
     client = ros_container_ptr->nh.serviceClient<swarm_control::CollisionAvoidance>("collision_avoidance");
 
-    // Load Parameters
-    get_agent_parameters(ros_container_ptr,
-            intruder_head_str,
-            intruder_constraints_map,
-            intruder_radar_params_map);
-
-    ros::spin();
+    // Spin until initialized
+    ros::Rate loop_rate(20);
+    while(ros::ok()) {
+        ros::spinOnce();
+        if(!initialized){
+            continue;
+        }else{
+            if(intruder_constraints_map.empty()){
+                // Load Parameters
+                get_agent_parameters(ros_container_ptr,
+                                     intruder_head_str,
+                                     intruder_constraints_map,
+                                     intruder_radar_params_map);
+            }
+        }
+        loop_rate.sleep();
+    }
     return 0;
 }

@@ -201,7 +201,7 @@ bool get_complex_parameters(const RosContainerPtr &ros_container_ptr,
                             XmlRpc::XmlRpcValue &items){
     bool failed = !ros_container_ptr->nh.getParam(head_str, items);
     if(failed){
-        ROS_INFO("COULD NOT LOAD PARAMETERS FROM %s", head_str.c_str());
+        ROS_ERROR("COULD NOT LOAD PARAMETERS FROM %s", head_str.c_str());
     }else{
         ROS_ASSERT(items.getType()==XmlRpc::XmlRpcValue::TypeArray);
         ROS_INFO("LOADED PARAMETERS FROM %s", head_str.c_str());
@@ -243,7 +243,7 @@ bool get_intruder_motion_goals(
             threat = static_cast<bool>(is_threat_leaf);
             ROS_INFO("LOADED IS THREAT %d", threat);
             if(threat) return true;
-
+            return false;
             ROS_ASSERT(item.hasMember("motion_goals"));
             auto motion_goals_branch = item["motion_goals"];
             ROS_ASSERT(motion_goals_branch.getType()==XmlRpc::XmlRpcValue::TypeArray);
@@ -282,6 +282,8 @@ bool get_agent_parameters(RosContainerPtr ros_container_ptr,
         ROS_ASSERT(item.hasMember("sim_id"));
         int sim_id = static_cast<int>(item["sim_id"]);
 
+
+        // LOADING AGENT'S CONSTRAINTS
         agent::AgentConstraints constraints;
         ROS_ASSERT(item.hasMember("constraints"));
         auto constraints_branch = item["constraints"];
@@ -302,9 +304,10 @@ bool get_agent_parameters(RosContainerPtr ros_container_ptr,
         auto max_delta_heading_leaf = constraints_branch["max_delta_heading"];
         ROS_ASSERT(max_delta_heading_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
         constraints.max_delta_heading = swarm_tools::deg2rad(static_cast<double >(max_delta_heading_leaf));
-        ROS_INFO("LOADED PARAMETER max_delta_heading %f", constraints.max_delta_heading);
+        ROS_INFO("LOADED PARAMETER max_delta_heading %f", swarm_tools::rad2deg(constraints.max_delta_heading));
         constraints_map[sim_id] = constraints;
 
+        // LOADING AGENT'S RADAR PARAMETERS
         agent::CollisionAvoidanceParameters radar_params;
         ROS_ASSERT(item.hasMember("radar_parameters"));
         auto radar_branch = item["radar_parameters"];
@@ -319,7 +322,7 @@ bool get_agent_parameters(RosContainerPtr ros_container_ptr,
         auto max_angle_leaf = radar_branch["max_angle"];
         ROS_ASSERT(max_angle_leaf.getType()==XmlRpc::XmlRpcValue::TypeDouble);
         radar_params.max_radar_angle_rad = swarm_tools::deg2rad(static_cast<double >(max_angle_leaf));
-        ROS_INFO("LOADED PARAMETER max_angle %f", radar_params.max_radar_angle_rad);
+        ROS_INFO("LOADED PARAMETER max_angle %f", swarm_tools::rad2deg(radar_params.max_radar_angle_rad));
 
         ROS_ASSERT(radar_branch.hasMember("aggression"));
         auto aggression_leaf= radar_branch["aggression"];

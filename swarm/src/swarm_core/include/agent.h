@@ -2,6 +2,7 @@
 #include "ros/ros.h"
 #include <vector>
 #include <map>
+#include <random>
 #ifndef AGENT_H
 #define AGENT_H
 
@@ -79,7 +80,7 @@ namespace agent{
 
     struct AgentTask{
         TaskType task_type;
-        int task_idx; // ID of intruder or guard position
+        int task_idx=-1; // ID of intruder or guard position
 
         AgentTask(){
             task_idx=-1;
@@ -315,8 +316,11 @@ namespace agent{
         double distance_threshold{50};
         public:
 
-            bool is_threat(){
+            bool is_threat() const{
                 return threat;
+            }
+            void set_threat(bool thrt){
+                threat=thrt;
             }
 
             IntruderAgent() = default;
@@ -328,6 +332,12 @@ namespace agent{
                 }else{
                     current_motion_goal_idx=-1;
                 }
+            }
+            IntruderAgent(const IntruderAgent &agent){
+                set_state(agent.get_state());
+                set_constraints(agent.get_constraints());
+                set_collision_avoidance_params(agent.get_collision_avoidance_params());
+                threat=agent.is_threat();
             }
 
             IntruderAgent(bool is_threat,
@@ -406,12 +416,21 @@ namespace agent{
                 threat_classification=alert;
                 threat_probability=probability;
             }
-
+            bool get_threat_classification() const{
+                return threat_classification;
+            }
             double get_threat_probability() const{
                 return threat_probability;
             }
             bool is_threat() const{
                 return threat_classification;
+            }
+
+            bool sample(std::default_random_engine generator){
+                if (!threat_classification){
+                    std::bernoulli_distribution dist(this->threat_probability);
+                    threat_classification=dist(generator);
+                }
             }
 
             ObservedIntruderAgent(){}
@@ -421,6 +440,13 @@ namespace agent{
                     : BaseAgent(state, constraints, ca_params, Intruder){
                 threat_classification=false;
                 threat_probability=0.05;
+            }
+            ObservedIntruderAgent(const ObservedIntruderAgent &agent){
+                set_state(agent.get_state());
+                set_constraints(agent.get_constraints());
+                set_collision_avoidance_params(agent.get_collision_avoidance_params());
+                threat_classification=agent.get_threat_classification();
+                threat_probability=agent.get_threat_probability();
             }
             ObservedIntruderAgent(const AgentState &state){
                 set_state(state);
@@ -492,7 +518,7 @@ namespace agent{
                         return;
                     }
                 }
-                current_assignment.push_back(AgentTask(Guard, guard_assignment_idx));
+                current_assignment.emplace_back(Guard, guard_assignment_idx);
             }
             
             void add_observe_task(int observe_assignment_idx){

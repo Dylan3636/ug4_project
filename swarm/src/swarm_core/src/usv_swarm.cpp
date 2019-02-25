@@ -5,6 +5,10 @@
 #include "swarm_threat_detection/ThreatDetection.h"
 namespace agent{
 
+    void USVSwarm::reset(){
+        usv_map.clear();
+        intruder_map.clear();
+    }
     int USVSwarm::get_num_usvs() const{
         return usv_map.size();
     }
@@ -56,6 +60,11 @@ namespace agent{
             assignment_map[usv_pair.first] = usv_pair.second.get_current_assignment();
         }
         return assignment_map;
+    }
+    AgentAssignment USVSwarm::get_assignment_by_id(int usv_id) const{
+        auto str = boost::format("USV ID : %d NOT FOUND!") % usv_id;
+        assert(usv_map.find(usv_id)!=usv_map.end() && str.str().c_str());
+        return usv_map.at(usv_id).get_current_assignment();
     }
 
     std::vector<AgentState> USVSwarm::get_obstacle_states() const{
@@ -123,7 +132,7 @@ namespace agent{
     }
 
     bool USVSwarm::switch_observe_to_delay_task(int intruder_id){
-       auto sorted_usvs = sort_usvs_by_distance_to_point(get_intruder_estimate_by_id(intruder_id).get_position());
+       auto sorted_usvs = sort_usvs_by_weighted_distance_to_point(get_intruder_estimate_by_id(intruder_id).get_position());
        int result;
        for(int usv_id : sorted_usvs){
            result = usv_map[usv_id].switch_observe_to_delay_assignment(intruder_id);
@@ -200,8 +209,8 @@ namespace agent{
 
     std::vector<int> USVSwarm::sort_usvs_by_distance_to_point(const swarm_tools::Point2D &point) const{
         return sort_usvs_by_distance_to_point(get_usv_estimates(), point);
-
     }
+
     std::vector<int> USVSwarm::sort_usvs_by_distance_to_point(
             const std::vector<USVAgent> &usvs,
             const swarm_tools::Point2D &point) const{
@@ -223,6 +232,38 @@ namespace agent{
         }
         return sorted_usv_ids;
     }
+
+    std::vector<int> USVSwarm::sort_usvs_by_weighted_distance_to_point(const swarm_tools::Point2D &point) const{
+        return sort_usvs_by_weighted_distance_to_point(get_usv_estimates(), point);
+    }
+
+    std::vector<int> USVSwarm::sort_usvs_by_weighted_distance_to_point(
+            const std::vector<USVAgent> &usvs,
+            const swarm_tools::Point2D &point) const{
+
+        double occupied_param = 100;
+        double distance;
+        double occupation_bonus;
+        std::vector<std::pair<int, double>> usv_distance_id_pairs;
+        for (const auto &usv : usvs){
+            distance = swarm_tools::euclidean_distance(usv.get_position(), point);
+            occupation_bonus = std::max(0.0,  + occupied_param*(usv.get_current_assignment().size()-1));
+            distance += occupation_bonus;
+            usv_distance_id_pairs.emplace_back(usv.get_sim_id(), distance);
+        }
+        std::sort(usv_distance_id_pairs.begin(),
+                  usv_distance_id_pairs.end(),
+                  [](const std::pair<int, double> &usv_pair_1,
+                     const std::pair<int, double> &usv_pair_2){
+                        return usv_pair_1.second<usv_pair_2.second;
+                     } );
+        std::vector<int> sorted_usv_ids;
+        for (const auto &distance_pair : usv_distance_id_pairs){
+            sorted_usv_ids.push_back(distance_pair.first);
+        }
+        return sorted_usv_ids;
+    }
+
     int USVSwarm::get_delay_position(int usv_id, int intruder_id) const{
         std::vector<USVAgent> usvs_w_delay_task;
         for(const auto &usv_pair: usv_map){
@@ -282,7 +323,7 @@ namespace agent{
             bool successful = switch_observe_to_delay_task(intruder_state.sim_id);
             if(successful){
                 ROS_INFO("Switch successful!");
-                ROS_INFO(swarm_assignment_to_string(get_swarm_assignment()).c_str());
+                block_next_task_allocation=true;
             }else{
                 ROS_INFO("Switch failed!");
             }
@@ -309,7 +350,7 @@ namespace agent{
         assign_intruder_to_usv(intruder);
     }
     void USVSwarm::assign_intruder_to_usv(const ObservedIntruderAgent &intruder){
-        std::vector<int> sorted_usv_ids = sort_usvs_by_distance_to_point(intruder.get_position());
+        std::vector<int> sorted_usv_ids = sort_usvs_by_weighted_distance_to_point(intruder.get_position());
         for(const auto usv_id : sorted_usv_ids){
             if(usv_map[usv_id].has_delay_task()){
                 continue;
@@ -322,6 +363,12 @@ namespace agent{
     }
     void USVSwarm::assign_guard_task_to_usv(int usv_id){
         usv_map[usv_id].set_guard_assignment(get_num_usvs()-1);
+    }
+    void USVSwarm::sample_intruders(){
+        std::default_random_engine generator;
+        for(auto &intruder_pair : intruder_map){
+            intruder_pair.second.sample(generator);
+        }
     }
 
 }

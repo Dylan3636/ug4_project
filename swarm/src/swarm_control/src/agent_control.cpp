@@ -27,8 +27,10 @@ namespace swarm_control{
                                          agent::AgentCommand &command){
     
         agent::ObservedIntruderAgent intruder = swarm.get_intruder_estimate_by_id(intruder_id);
-        intruder_motion_goal(swarm.get_asset_estimate().get_state(),
-                             intruder_mg);
+        observed_intruder_motion_goal(
+                intruder_id,
+                swarm,
+                intruder_mg);
 
         get_observed_intruder_command_from_motion_goal(swarm.get_intruder_estimate_by_id(intruder_id),
                                                        intruder_mg,

@@ -33,7 +33,6 @@ def rgb_to_hexa(*args):
     Convert RGB(A) color to hexadecimal.
     ref: tkcolorpicker
     """
-    print(args)
     if len(args) == 3:
         return ("#{:02x}{:02x}{:02x}".format(*args)).upper()
     elif len(args) == 4:
@@ -46,7 +45,6 @@ def threat_prob_to_hex_color(p):
     r = round(255*p)
     g = round(255*(1-p))
     hex_col = rgb_to_hexa(r, g, 0)
-    print("HEX: ", hex_col)
     return hex_col
 
 
@@ -54,19 +52,36 @@ class LivePlot:
     def __init__(self):
         self.window = Tk()
         self.window.geometry("2000x1000")
-        self.canvas = Canvas(self.window,
-                             width=2000,
-                             height=1000, bg='white')
-        # self.scale = Scale(self.window, orient=HORIZONTAL, length=1000, from_=0, to=1000)
-        # self.scale.pack()
-        self.canvas.pack(fill=BOTH, expand=True)
-        self.canvas.bind('<Configure>', self.create_grid)
+        self.canvas = self.initiate_canvas()
         self.objects = {}
         self.markers = {}
         self.lines = {}
         self.thread_lock = Lock()
         self.queue = Queue()
         self.threat_queue = Queue()
+
+    def initiate_canvas(self):
+        canvas = Canvas(self.window,
+                        width=2000,
+                        height=1000,
+                        bg='white')
+        canvas.pack(fill=BOTH, expand=True)
+        canvas.bind('<Configure>', self.create_grid)
+        return canvas
+
+    def reset(self):
+        self.thread_lock.acquire()
+        self.canvas.delete("all")
+        self.objects.clear()
+        self.markers.clear()
+        self.lines.clear()
+        while not self.queue.empty():
+            self.queue.get()
+        while not self.threat_queue.empty():
+            self.threat_queue.get()
+        self.create_grid()
+        self.thread_lock.release()
+        print('ANIMATION RESET', self.objects, self.markers, self.lines)
 
     def threat_color_callback(self, msg):
         self.threat_queue.put(msg)
@@ -75,7 +90,6 @@ class LivePlot:
         while not self.threat_queue.empty():
             with self.thread_lock:
                 obj = self.threat_queue.get()
-                print(obj)
                 self.canvas.itemconfig(self.objects[obj.intruder_id],
                                        fill=threat_prob_to_hex_color(obj.threat_probability))
 

@@ -25,6 +25,8 @@ add_message_files(
   agentTask.msg
   swarmAssignment.msg
   threatStatistics.msg
+  resetSystem.msg
+  initializeSystem.msg
 )
 
 generate_messages(DEPENDENCIES
