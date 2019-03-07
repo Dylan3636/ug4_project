@@ -16,11 +16,13 @@ if __name__ == "__main__":
                         action="store",
                         type=str,
                         dest="graphlogdir",
+                        nargs="*",
                         default="graphlogs")
     parser.add_argument('-savedmodelsdir',
                         action="store",
                         type=str,
                         dest='models',
+                        nargs="*",
                         default="models")
 
     parser.add_argument('-num_epochs',
@@ -56,11 +58,15 @@ if __name__ == "__main__":
     print("Total number of fits {}".format(len(grid)))
     pbar = tqdm(len(grid))
     for params in grid:
-        command = "evaluate_ffnn_model -parsed_data {} -graphlogdir {} -savedmodelsdir {} -num_epochs {} ".format(
+        command = "evaluate_ffnn_model -parsed_data {} -num_epochs {} ".format(
             data_fp,
-            graphdir,
-            modelsdir,
             num_epochs)
+        graphstr = "-graphlogdir "
+        for part in graphdir:
+            graphdir += part + " "
+        modelsstr = "-savedmodelsdir "
+        for part in graphdir:
+            graphdir += part + " "
         if results.colab:
             command += "-colab "
             # command = "ipython -i " + command

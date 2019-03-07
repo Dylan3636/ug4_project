@@ -15,12 +15,14 @@ if __name__ == "__main__":
     parser.add_argument('-graphlogdir',
                         action="store",
                         type=str,
+                        nargs="*",
                         dest="graphlogdir",
                         default="graphlogs")
     parser.add_argument('-savedmodelsdir',
                         action="store",
                         type=str,
                         dest='models',
+                        nargs="*",
                         default="models")
     parser.add_argument('-save_path',
                         action="store",
@@ -57,9 +59,24 @@ if __name__ == "__main__":
                         default=False)
 
     results = parser.parse_args()
+    if type(results.graphlogdir) is str:
+        graphstr = results.graphlogdir
+    else:
+        graphstr=""
+        for p in results.graphlogdir:
+            graphstr += p + " "
+        graphstr = graphstr[0:-2]
+    if type(results.models) is str:
+        modelstr = results.models
+    else:
+        modelstr=""
+        for p in results.models:
+            graphstr += p + " "
+        modelstr = modelstr[0:-2]
+    print(graphstr, modelstr)
     train_ffnn(results.parsed_dataset_fp,
-               results.graphlogdir,
-               results.models,
+               graphstr,
+               modelstr,
                results.layers,
                results.optimizer,
                results.total_iters_per_period,
