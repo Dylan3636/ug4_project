@@ -82,7 +82,7 @@ def train_ffnn(datapath, graphdir, modelpath,
 
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
-                              modelpath+"/"+modelname,
+                              modelpath+"/"+modelname+".hd5",
                               total_iters_per_period=total_iters_per_period)
     # Construct model
     ffnnreg = create_ffnn_model(layers, optimizer)
