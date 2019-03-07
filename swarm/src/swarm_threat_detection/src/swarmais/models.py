@@ -86,7 +86,7 @@ def train_ffnn(datapath, graphdir, modelpath,
     # Model Name
     modelname = "ffnn_{}".format(batch_size)+'_'
     modelname += reduce(lambda x, y: x + y, ['{}_'.format(layer) for layer in layers])
-    modelname += "{}_{}".format(optimizer, total_iters_per_period)
+    modelname += "{}_{}_{}".format(optimizer, total_iters_per_period, seed)
 
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
