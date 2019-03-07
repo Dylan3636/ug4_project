@@ -52,6 +52,9 @@ if __name__ == "__main__":
                         action='store',
                         type=int,
                         default=0)
+    parser.add_argument('-colab',
+                        action='store_true',
+                        default=False)
 
     results = parser.parse_args()
     train_ffnn(results.parsed_dataset_fp,
@@ -62,4 +65,5 @@ if __name__ == "__main__":
                results.total_iters_per_period,
                results.batch_size,
                results.num_epochs,
-               results.seed)
+               results.seed,
+               results.colab)

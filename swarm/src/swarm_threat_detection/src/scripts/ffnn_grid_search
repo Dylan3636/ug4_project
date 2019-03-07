@@ -16,6 +16,9 @@ if __name__ == "__main__":
                         action='store',
                         type=int,
                         default=1000)
+    parser.add_argument('-colab',
+                        action='store_true',
+                        default=False)
     results = parser.parse_args()
     data_fp = results.parsed_dataset_fp
     num_epochs = results.num_epochs
@@ -41,6 +44,8 @@ if __name__ == "__main__":
     pbar = tqdm(len(grid))
     for params in grid:
         command = "evaluate_ffnn_model -parsed_data {} -num_epochs {} ".format(data_fp, num_epochs)
+        if parser.colab:
+            command += "-colab "
         for key, value in params.items():
             if key == "layers":
                 command += "-{} ".format(key)

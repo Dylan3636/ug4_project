@@ -6,6 +6,7 @@ from keras.optimizers import Adam, SGD
 from keras.regularizers import l2
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.callbacks import TensorBoard, ModelCheckpoint, LearningRateScheduler
+from tensorboardcolab import *
 from keras import backend as K
 from tensorflow import set_random_seed, Session
 
@@ -30,9 +31,13 @@ def coeff_determination(y_true, y_pred):
     return 1 - SS_res/(SS_tot + K.epsilon())
 
 
-def get_callbacks(tensorboardfp, modelcheckptfp, **schedulerkwparams):
+def get_callbacks(tensorboardfp, modelcheckptfp, colab=False, **schedulerkwparams):
     """Gets Callbacks to pass to model fit function"""
-    tensorboardcb = TensorBoard(log_dir=tensorboardfp, histogram_freq=0,
+    if colab:
+        tbc = TensorBoardColab(graph_path=tensorboardfp)
+        tensorboardcb = TensorBoardColabCallback(tbc)
+    else:
+        tensorboardcb = TensorBoard(log_dir=tensorboardfp, histogram_freq=0,
                                 write_graph=True, write_images=True)
     modelcheckptcb = ModelCheckpoint(modelcheckptfp, monitor='val_loss', save_best_only=True, verbose=0)
     scheduler = CosineAnnealingWithWarmRestarts(**schedulerkwparams)
@@ -71,7 +76,7 @@ def create_ffnn_model(layers: list, optimizer: str):
 def train_ffnn(datapath, graphdir, modelpath,
                layers, optimizer,
                total_iters_per_period,
-               batch_size, num_epochs=1000, seed=0):
+               batch_size, num_epochs=1000, seed=0, colab=False):
 
     set_random_seed(seed)
 
@@ -83,6 +88,7 @@ def train_ffnn(datapath, graphdir, modelpath,
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
                               modelpath+"/"+modelname+".hd5",
+                              colab=colab,
                               total_iters_per_period=total_iters_per_period)
     # Construct model
     ffnnreg = create_ffnn_model(layers, optimizer)
