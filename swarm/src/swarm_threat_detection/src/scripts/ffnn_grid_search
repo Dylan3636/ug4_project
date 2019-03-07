@@ -12,6 +12,17 @@ if __name__ == "__main__":
                         type=str,
                         dest="parsed_dataset_fp",
                         required=True)
+    parser.add_argument('-graphlogdir',
+                        action="store",
+                        type=str,
+                        dest="graphlogdir",
+                        default="graphlogs")
+    parser.add_argument('-savedmodelsdir',
+                        action="store",
+                        type=str,
+                        dest='models',
+                        default="models")
+
     parser.add_argument('-num_epochs',
                         action='store',
                         type=int,
@@ -21,6 +32,8 @@ if __name__ == "__main__":
                         default=False)
     results = parser.parse_args()
     data_fp = results.parsed_dataset_fp
+    graphdir = results.graphlogdir
+    modelsdir = results.savedmodelsdir
     num_epochs = results.num_epochs
     layers = [[256],
               [128, 64],
@@ -43,7 +56,11 @@ if __name__ == "__main__":
     print("Total number of fits {}".format(len(grid)))
     pbar = tqdm(len(grid))
     for params in grid:
-        command = "evaluate_ffnn_model -parsed_data {} -num_epochs {} ".format(data_fp, num_epochs)
+        command = "evaluate_ffnn_model -parsed_data {} -graphlogdir {} -savedmodelsdir {} -num_epochs {} ".format(
+            data_fp,
+            graphdir,
+            modelsdir,
+            num_epochs)
         if results.colab:
             command += "-colab "
             # command = "ipython -i " + command
