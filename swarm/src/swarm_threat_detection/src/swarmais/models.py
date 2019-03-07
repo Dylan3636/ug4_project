@@ -80,6 +80,9 @@ def train_ffnn(datapath, graphdir, modelpath,
 
     set_random_seed(seed)
 
+    if type(layers) == int:
+        layers = [layers]
+
     # Model Name
     modelname = "ffnn_{}".format(batch_size)+'_'
     modelname += reduce(lambda x, y: x + y, ['{}_'.format(layer) for layer in layers])
