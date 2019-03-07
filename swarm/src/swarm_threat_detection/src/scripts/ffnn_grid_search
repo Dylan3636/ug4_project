@@ -33,7 +33,7 @@ if __name__ == "__main__":
     results = parser.parse_args()
     data_fp = results.parsed_dataset_fp
     graphdir = results.graphlogdir
-    modelsdir = results.savedmodelsdir
+    modelsdir = results.models
     num_epochs = results.num_epochs
     layers = [[256],
               [128, 64],
