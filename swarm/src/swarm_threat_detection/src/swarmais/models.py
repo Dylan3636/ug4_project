@@ -86,7 +86,7 @@ def train_ffnn(datapath, graphdir, modelpath,
     # Model Name
     modelname = "ffnn_{}".format(batch_size)+'_'
     modelname += reduce(lambda x, y: x + y, ['{}_'.format(layer) for layer in layers])
-    modelname += "_{}_{}".format(optimizer, total_iters_per_period)
+    modelname += "{}_{}".format(optimizer, total_iters_per_period)
 
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
@@ -122,4 +122,15 @@ def train_ffnn(datapath, graphdir, modelpath,
                                X_val_norm,
                                y_val_norm,
                                num_epochs, batch_size, callbacks)
+    print("Completed Training!")
+    df = pd.DataFrame(index=["Train", "Val", "Test"], columns=["Loss", "R2_Score"])
+    print("Evaluating Network")
+    df.loc["Train", :] = ffnnreg.evaluate(X_train_norm, y_train_norm)
+    df.loc["Val", :] = ffnnreg.evaluate(X_val_norm, y_val_norm)
+    df.loc["Test", :] = ffnnreg.evaluate(X_test_norm, y_test_norm)
+
+    csv_file = modelpath+"/"+modelname+".csv"
+    df.to_csv(csv_file)
+    print("Saving evaluation results to {}".format(csv_file))
+
     return ffnnreg, results
