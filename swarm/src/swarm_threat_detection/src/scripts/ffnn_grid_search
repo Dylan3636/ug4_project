@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+from sklearn.model_selection import ParameterGrid
+from tqdm import tqdm
+from argparse import ArgumentParser
+import subprocess
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        description="Evaluates FFNNs over parameter grid"
+    )
+    parser.add_argument('-parsed_data',
+                        action="store",
+                        type=str,
+                        dest="parsed_dataset_fp",
+                        required=True)
+    parser.add_argument('-num_epochs',
+                        action='store',
+                        type=int,
+                        default=1000)
+    results = parser.parse_args()
+    data_fp = results.parsed_dataset_fp
+    num_epochs = results.num_epochs
+    layers = [[256],
+              [128, 64],
+              [256, 128]]
+    optimizers = ['Adam', 'RMSProp', 'SGD']
+    iters_per_period = [100, 250, 500]
+    batch_sizes = [128, 64]
+    seeds = [0, 1, 2]
+
+    grid = ParameterGrid(
+        {
+            'layers': layers,
+            'optimizer': optimizers,
+            'total_iters_per_period': iters_per_period,
+            'batch_size': batch_sizes,
+            'seed': seeds
+
+        }
+    )
+    print("Total number of fits {}".format(len(grid)))
+    pbar = tqdm(len(grid))
+    for params in grid:
+        command = "evaluate_ffnn_model -parsed_data {} -num_epochs {} ".format(data_fp, num_epochs)
+        for key, value in params.items():
+            if key == "layers":
+                command += "-{} ".format(key)
+                for layer in value:
+                    command += "{} ".format(layer)
+            else:
+                command += "-{} {} ".format(key, value)
+        pbar.set_description("Running command {}".format(command))
+        pbar.update(1)
+        print()
+        p = subprocess.Popen(command, shell=True)
+        p_status = p.wait()
