@@ -37,10 +37,9 @@ if __name__ == "__main__":
     graphdir = results.graphlogdir
     modelsdir = results.models
     num_epochs = results.num_epochs
-    num_units = [128,
-                 256]
+    num_units = [256]
     optimizers = ['Adam', 'RMSProp', 'SGD']
-    iters_per_period = [100, 500]
+    iters_per_period = [250]
     seq_lengths = [5, 10, 20]
     periods = [5]
     batch_sizes = [64]
