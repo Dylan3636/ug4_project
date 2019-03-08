@@ -159,6 +159,7 @@ def train_rnn(datapath,
     data = pd.read_csv(datapath)
     data = data.sort_values(by="BaseDateTime")
 
+    print("Constructing sequences")
     X_rec, y_rec = construct_timeseries_data(data, seq_length, periods)
 
     train_indicies_rec, test_indicies_rec = train_test_split(range(np.size(X_rec, 0)),
@@ -203,8 +204,8 @@ def train_rnn(datapath,
                                             seed)
 
     # Set up callbacks
-    callbacks = get_callbacks(graphdir+modelname,
-                              modelpath+modelname+'.hd5',
+    callbacks = get_callbacks(graphdir+"/"+modelname,
+                              modelpath+"/"+modelname+'.hd5',
                               total_iters_per_period=total_iters_per_period)
 
     print(seq_length, num_lstm_units, optimizer)
