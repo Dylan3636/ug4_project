@@ -65,14 +65,14 @@ if __name__ == "__main__":
         graphstr=""
         for p in results.graphlogdir:
             graphstr += p + " "
-        # graphstr = graphstr[0:-2]
+        graphstr = graphstr[0:-1]
     if type(results.models) is str:
         modelstr = results.models
     else:
         modelstr=""
         for p in results.models:
             modelstr += p + " "
-        # modelstr = modelstr[0:-2]
+        modelstr = modelstr[0:-1]
     print(graphstr, modelstr)
     train_ffnn(results.parsed_dataset_fp,
                graphstr,
