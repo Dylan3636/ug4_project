@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from functools import reduce
 from keras.models import Sequential
@@ -10,18 +11,15 @@ from tensorboardcolab import *
 from keras import backend as K
 from tensorflow import set_random_seed, Session
 
-from sklearn.model_selection import ParameterGrid
+from sklearn.model_selection import ParameterGrid, train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from swarmais.schedulers import *
 from swarmais.preprocessing import *
 
-# Directories for models and graphs
-rootgraphdir='../graphlogs/'
-rootmodeldir='../models/'
 
 # Set TensorFlow Session
-sess = Session()
-K.set_session(sess)
+# sess = Session()
+# K.set_session(sess)
 
 
 def coeff_determination(y_true, y_pred):
@@ -69,6 +67,15 @@ def create_ffnn_model(layers: list, optimizer: str):
     for num_neurons in layers[1::]:
         model.add(Dense(num_neurons, activation='relu'))
     model.add(Dense(2, activation = 'linear'))
+    model.compile(loss='mse', optimizer=optimizer, metrics=[coeff_determination])
+    return model
+
+
+def create_rnn_model(seq_length: int, num_lstm_units: int, optimizer: str):
+    model = Sequential()
+    model.add(InputLayer((seq_length, 2)))
+    model.add(LSTM(num_lstm_units))
+    model.add(Dense(2, activation='linear'))
     model.compile(loss='mse', optimizer=optimizer, metrics=[coeff_determination])
     return model
 
@@ -134,3 +141,93 @@ def train_ffnn(datapath, graphdir, modelpath,
     print("Saving evaluation results to {}".format(csv_file))
 
     return ffnnreg, results
+
+
+def train_rnn(datapath,
+              graphdir='graphlogs',
+              modelpath='models',
+              seq_length=10,
+              periods=5,
+              num_lstm_units=64,
+              optimizer='adam',
+              total_iters_per_period=100,
+              batch_size=32,
+              num_epochs=1000,
+              seed=0):
+
+    # Load parsed data
+    data = pd.read_csv(datapath)
+    data = data.sort_values(by="BaseDateTime")
+
+    X_rec, y_rec = construct_timeseries_data(data, seq_length, periods)
+
+    train_indicies_rec, test_indicies_rec = train_test_split(range(np.size(X_rec, 0)),
+                                                             random_state=seed,
+                                                             shuffle=True,
+                                                             train_size=0.7,
+                                                             test_size=0.3)
+    train_indicies_rec, val_indicies_rec = train_test_split(train_indicies_rec,
+                                                            random_state=seed,
+                                                            shuffle=True,
+                                                            train_size=0.7,
+                                                            test_size=0.3)
+
+    X_train_rec = X_rec[train_indicies_rec, :, :]
+    X_val_rec = X_rec[val_indicies_rec, :, :]
+    X_test_rec = X_rec[test_indicies_rec, :, :]
+
+    y_train_rec = y_rec[train_indicies_rec, :]
+    y_val_rec = y_rec[val_indicies_rec, :]
+    y_test_rec = y_rec[test_indicies_rec, :]
+
+
+    # Normalize data
+    result = normalize_data(X_train_rec.reshape(-1, 2), y_train_rec)
+    x_scaler, y_scaler = result['scalers']
+    X_train_norm_rec = result['data'][0].reshape(-1, seq_length, 2)
+    y_train_norm_rec = result['data'][1]
+
+    result = normalize_data(X_val_rec.reshape(-1, 2), y_val_rec, x_scaler, y_scaler)
+    X_val_norm_rec = result['data'][0].reshape(-1, seq_length, 2)
+    y_val_norm_rec = result['data'][1]
+
+    result = normalize_data(X_test_rec.reshape(-1, 2), y_test_rec, x_scaler, y_scaler)
+    X_test_norm_rec = result['data'][0].reshape(-1, seq_length, 2)
+    y_test_norm_rec = result['data'][1]
+
+    # Model name
+    modelname = 'rnn_{}_{}_{}_{}_{}'.format(batch_size,
+                                            num_lstm_units,
+                                            optimizer,
+                                            total_iters_per_period,
+                                            seed)
+
+    # Set up callbacks
+    callbacks = get_callbacks(graphdir+modelname,
+                              modelpath+modelname+'.hd5',
+                              total_iters_per_period=total_iters_per_period)
+
+    print(seq_length, num_lstm_units, optimizer)
+    rnnreg = create_rnn_model(seq_length, num_lstm_units, optimizer)
+    rnnreg.summary()
+    results = nn_holdout_score(rnnreg,
+                               X_train_norm_rec,
+                               y_train_norm_rec,
+                               X_val_norm_rec,
+                               y_val_norm_rec,
+                               num_epochs,
+                               batch_size,
+                               callbacks)
+
+    print("Completed Training!")
+    df = pd.DataFrame(index=["Train", "Val", "Test"], columns=["Loss", "R2_Score"])
+    print("Evaluating Network")
+    df.loc["Train", :] = rnnreg.evaluate(X_train_norm_rec, y_train_norm_rec)
+    df.loc["Val", :] = rnnreg.evaluate(X_val_norm_rec, y_val_norm_rec)
+    df.loc["Test", :] = rnnreg.evaluate(X_test_norm_rec, y_test_norm_rec)
+
+    csv_file = modelpath+"/"+modelname+".csv"
+    df.to_csv(csv_file)
+    print("Saving evaluation results to {}".format(csv_file))
+
+    return rnnreg, results

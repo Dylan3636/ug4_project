@@ -1,5 +1,8 @@
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
+import numpy as np
+import pandas as pd
 
 
 def train_val_test_split(data, seed=0):
@@ -37,11 +40,32 @@ def normalize_data(X, y, xscaler=None, yscaler=None):
         yscaler = StandardScaler()
         ynone = True
 
-    X_norm = X.copy()
-    X_norm.loc[:, :] = xscaler.fit_transform(X) if xnone else xscaler.transform(X)
+    if type(X) == pd.DataFrame:
+        X_norm = X.copy()
+        X_norm.loc[:, :] = xscaler.fit_transform(X) if xnone else xscaler.transform(X)
 
-    y_norm = y.copy()
-    y_norm.loc[:, :] = yscaler.fit_transform(y) if ynone else yscaler.transform(y)
+        y_norm = y.copy()
+        y_norm.loc[:, :] = yscaler.fit_transform(y) if ynone else yscaler.transform(y)
+    else:
+        X_norm = xscaler.fit_transform(X) if xnone else xscaler.transform(X)
+        y_norm = yscaler.fit_transform(y) if ynone else yscaler.transform(y)
 
     return {'scalers': (xscaler, yscaler), 'data': (X_norm, y_norm)}
 
+
+def construct_vessel_timeseries_data(vessel, seq_length, periods):
+    X = [vessel.loc[vessel.index[i*periods:i*periods+seq_length], ['Xcoord', 'Ycoord']].values
+         for i in range(int((len(vessel)-seq_length)/periods))]
+    y = [vessel.loc[vessel.index[i*periods+seq_length-1], ['SmoothedVectorXcoord', 'SmoothedVectorYcoord']].values
+         for i in range(int((len(vessel)-seq_length)/periods))]
+    return X, y
+
+
+def construct_timeseries_data(data, seq_length, periods):
+    X=[]
+    y=[]
+    for mmsi, vessel in tqdm(data.groupby("MMSI")):
+        vesselX, vesselY = construct_vessel_timeseries_data(vessel, seq_length, periods)
+        X += vesselX
+        y += vesselY
+    return np.reshape(X, (-1, seq_length, 2)), np.reshape(y, (-1, 2))
