@@ -61,12 +61,21 @@ if __name__ == "__main__":
         command = "evaluate_ffnn_model -parsed_data {} -num_epochs {} ".format(
             data_fp,
             num_epochs)
-        graphstr = "-graphlogdir "
-        for part in graphdir:
-            graphdir += part + " "
-        modelsstr = "-savedmodelsdir "
-        for part in graphdir:
-            graphdir += part + " "
+        if type(graphdir) is str:
+            graphstr = ""
+        else:
+            graphstr = "-graphlogdir "
+            for part in graphdir:
+                graphstr += part + " "
+        if type(modelsdir) is str:
+            modelstr = ""
+        else:
+            modelstr = "-savedmodelsdir "
+            for part in modelsdir:
+                modelstr += part + " "
+        command += graphstr + modelstr
+
+        print(command)
         if results.colab:
             command += "-colab "
             # command = "ipython -i " + command
