@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from functools import reduce
@@ -13,6 +14,8 @@ from tensorflow import set_random_seed, Session
 
 from sklearn.model_selection import ParameterGrid, train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+
+from sklearn.externals import joblib
 from swarmais.schedulers import *
 from swarmais.preprocessing import *
 
@@ -63,7 +66,7 @@ def nn_holdout_score(nnreg, trainX, trainY, valX, valY, num_epochs, batch_size, 
 def create_ffnn_model(layers: list, optimizer: str):
     """Feed-Forward Model Constructor"""
     model = Sequential()
-    model.add(Dense(layers[0], input_dim=2, activation='relu'))
+    model.add(Dense(layers[0], input_shape=(2,), activation='relu'))
     for num_neurons in layers[1::]:
         model.add(Dense(num_neurons, activation='relu'))
     model.add(Dense(2, activation = 'linear'))
@@ -74,11 +77,14 @@ def create_ffnn_model(layers: list, optimizer: str):
 def create_rnn_model(seq_length: int, num_lstm_units: int, optimizer: str):
     model = Sequential()
     model.add(InputLayer((seq_length, 2)))
-    model.add(LSTM(num_lstm_units))
+    model.add(LSTM(num_lstm_units, input_shape=(seq_length, 2)))
     model.add(Dense(2, activation='linear'))
     model.compile(loss='mse', optimizer=optimizer, metrics=[coeff_determination])
     return model
 
+def save_normalizers(modeldir, xnormalizer, ynormalizer):
+    joblib.dump(xnormalizer, modeldir+"/xnormalizer")
+    joblib.dump(ynormalizer, modeldir+"/ynormalizer")
 
 def train_ffnn(datapath, graphdir, modelpath,
                layers, optimizer,
@@ -95,9 +101,12 @@ def train_ffnn(datapath, graphdir, modelpath,
     modelname += reduce(lambda x, y: x + y, ['{}_'.format(layer) for layer in layers])
     modelname += "{}_{}_{}".format(optimizer, total_iters_per_period, seed)
 
+    modeldir = modelpath+"/"+modelname+"/"
+    os.makedirs(modeldir, exist_ok=True)
+
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
-                              modelpath+"/"+modelname+".hd5",
+                              modeldir + "/ffnn_{epoch:02d}-{val_loss:.2f}.hd5",
                               colab=colab,
                               total_iters_per_period=total_iters_per_period)
     # Construct model
@@ -123,12 +132,14 @@ def train_ffnn(datapath, graphdir, modelpath,
     result = normalize_data(X_test, y_test, x_scaler, y_scaler)
     X_test_norm, y_test_norm = result['data']
 
+
     results = nn_holdout_score(ffnnreg,
                                X_train_norm,
                                y_train_norm,
                                X_val_norm,
                                y_val_norm,
                                num_epochs, batch_size, callbacks)
+
     print("Completed Training!")
     df = pd.DataFrame(index=["Train", "Val", "Test"], columns=["Loss", "R2_Score"])
     print("Evaluating Network")
@@ -136,10 +147,11 @@ def train_ffnn(datapath, graphdir, modelpath,
     df.loc["Val", :] = ffnnreg.evaluate(X_val_norm, y_val_norm)
     df.loc["Test", :] = ffnnreg.evaluate(X_test_norm, y_test_norm)
 
-    csv_file = modelpath+"/"+modelname+".csv"
-    df.to_csv(csv_file)
+    csv_file = modeldir+"/results.csv"
+    print("Saving normalizerd to {}".format(modeldir))
+    save_normalizers(modeldir, x_scaler, y_scaler)
     print("Saving evaluation results to {}".format(csv_file))
-
+    df.to_csv(csv_file)
     return ffnnreg, results
 
 
@@ -202,10 +214,12 @@ def train_rnn(datapath,
                                             optimizer,
                                             total_iters_per_period,
                                             seed)
+    modeldir = modelpath+"/"+modelname+"/"
+    os.makedirs(modeldir, exist_ok=True)
 
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
-                              modelpath+"/"+modelname+'.hd5',
+                              'rnn_{.epoch}.hd5',
                               total_iters_per_period=total_iters_per_period)
 
     print(seq_length, num_lstm_units, optimizer)
@@ -227,8 +241,9 @@ def train_rnn(datapath,
     df.loc["Val", :] = rnnreg.evaluate(X_val_norm_rec, y_val_norm_rec)
     df.loc["Test", :] = rnnreg.evaluate(X_test_norm_rec, y_test_norm_rec)
 
-    csv_file = modelpath+"/"+modelname+".csv"
-    df.to_csv(csv_file)
+    csv_file = modeldir+"/results.csv"
+    print("Saving normalizerd to {}".format(modeldir))
+    save_normalizers(modeldir, x_scaler, y_scaler)
     print("Saving evaluation results to {}".format(csv_file))
-
+    df.to_csv(csv_file)
     return rnnreg, results

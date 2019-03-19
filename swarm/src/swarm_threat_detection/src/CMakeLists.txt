@@ -16,9 +16,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 roslaunch_add_file_check(launch)
 
 add_service_files(
-    FILES
-    ThreatDetection.srv
-    )
+        FILES
+        ThreatDetection.srv
+        batchIntruderCommands.srv
+)
 
 generate_messages(
     DEPENDENCIES std_msgs swarm_msgs

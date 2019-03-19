@@ -26,6 +26,7 @@ def update_threat_estimate(req):
         rospy.loginfo(str(e.with_traceback()))
         rospy.logerr(str(e.with_traceback()))
         print(e.with_traceback())
+        return None
     resp = ThreatDetectionResponse()
     resp.threat_alert = alert
     resp.threat_probability = prob

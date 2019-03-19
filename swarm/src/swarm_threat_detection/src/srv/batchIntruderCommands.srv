@@ -1,0 +1,3 @@
+swarm_msgs/batchIntruderPreviousStates batch_previous_states
+-------------
+swarm_msgs/agentCommand[] batch_intruder_commands

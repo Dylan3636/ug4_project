@@ -61,7 +61,7 @@ if __name__ == "__main__":
     num_units = [num_units] if type(num_units) == int else num_units
     optimizers = results.optimizers
     optimizers = [optimizers] if type(optimizers) == str else optimizers
-    iters_per_period = [250]
+    iters_per_period = [300]
     seq_lengths = results.seq_lengths
     seq_lengths = [seq_lengths] if type(seq_lengths) == int else seq_lengths
     periods = [5]
