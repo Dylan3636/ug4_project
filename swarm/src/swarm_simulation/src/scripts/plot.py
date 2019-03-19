@@ -9,21 +9,22 @@ PlotObject = namedtuple('PlotObject',
                          'heading',
                          'radius'])
 
-triangle_shape = [[20, 0],
-                  [10, -10],
-                  [-20, -10],
-                  [-20, 10],
-                  [10, 10]]
+scale = 2
+triangle_shape = [[20/scale, 0/scale],
+                  [10/scale, -10/scale],
+                  [-20/scale, -10/scale],
+                  [-20/scale, 10/scale],
+                  [10/scale, 10/scale]]
 
 
-asset_shape = [[30, 0],
-               [20, -20],
-               [-30, -20],
-               [-30, 20],
-               [20, 20]]
+asset_shape = [[30/scale, 0/scale],
+               [20/scale, -20/scale],
+               [-30/scale, -20/scale],
+               [-30/scale, 20/scale],
+               [20/scale, 20/scale]]
 
-oval_shape = [[-5, -5],
-              [5, 5]]
+oval_shape = [[-5/scale, -5/scale],
+              [5/scale, 5/scale]]
 
 center = [1000, 500]
 
@@ -135,12 +136,13 @@ class LivePlot:
 
     @staticmethod
     def offset_object_position(x, y):
-        return x + center[0], -y + center[1]
+        return x/(scale*2.5) + center[0], -y/(scale*2.5) + center[1]
 
     def update_object(self, obj, sim_obj):
         sim_id = sim_obj.sim_id
-        x = sim_obj.x + center[0]
-        y = -sim_obj.y + center[1]
+        #x = sim_obj.x + center[0]
+        #y = -sim_obj.y + center[1]
+        x, y = self.offset_object_position(sim_obj.x, sim_obj.y)
         heading = sim_obj.heading
         obj_type = sim_obj.object_type
 
@@ -190,8 +192,9 @@ class LivePlot:
             if marker.sim_id not in self.objects:
                 self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill=marker.colour)
             obj = self.objects[sim_id]
-            x = marker.x + center[0]
-            y = -marker.y + center[1]
+            # x = marker.x/scale + center[0]
+            # y = -marker.y/scale + center[1]
+            x, y = self.offset_object_position(marker.x, marker.y)
             self.canvas.coords(obj,
                                oval_shape[0][0]+x,
                                oval_shape[0][1]+y,

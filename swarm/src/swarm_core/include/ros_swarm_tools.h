@@ -10,6 +10,8 @@
 #include "swarm_msgs/intruderAgent.h"
 #include "swarm_msgs/swarmAssignment.h"
 #include "swarm_msgs/taskType.h"
+#include "swarm_msgs/intruderPreviousStates.h"
+#include "swarm_msgs/batchIntruderPreviousStates.h"
 
 #ifndef SWARM_CORE_ROS_SWARM_TOOLS_H
 #define SWARM_CORE_ROS_SWARM_TOOLS_H
@@ -77,6 +79,12 @@ swarm_msgs::agentTask convert_to_agent_task_msg(
 swarm_msgs::agentAssignment convert_to_agent_assignment_msg(
     int sim_id, const agent::AgentAssignment &agent_assignment);
 
+swarm_msgs::agentState convert_to_agent_state_msg(const agent::AgentState &state);
+
+void get_obstacle_states(
+        const swarm_msgs::worldStateConstPtr &world_state,
+        std::vector<agent::AgentState> &obstacle_states);
+
 bool get_agent_parameters(RosContainerPtr ros_container_ptr,
                           std::string head_str,
                           std::map<int, agent::AgentConstraints> &constraints_map,
@@ -87,4 +95,9 @@ bool get_intruder_motion_goals(
         int intruder_id,
         bool &threat,
         std::vector<agent::MotionGoal> &motion_goals);
+template<typename T> void get_intruder_previous_states_msg(const T &intruder,
+                                                           swarm_msgs::intruderPreviousStates &msg);
+template<typename T> void get_batch_intruder_previous_states_msg(
+        const std::vector<T> &intruders,
+        swarm_msgs::batchIntruderPreviousStates &prev_states_msg);
 #endif

@@ -2,7 +2,9 @@
 #include <iostream>
 #include <math.h>
 #include <assert.h>
+#include "ros_swarm_tools.h"
 #include "motion_goal_control.h"
+#include "swarm_threat_detection/batchIntruderCommands.h"
 
 namespace swarm_control{
     bool usv_delay_motion_goal(
@@ -195,7 +197,7 @@ namespace swarm_control{
     }
     bool observed_intruder_motion_goal(
             int intruder_id,
-            agent::USVSwarm swarm,
+            const agent::USVSwarm &swarm,
             agent::MotionGoal &motion_goal){
         auto intruder = swarm.get_intruder_estimate_by_id(intruder_id);
         auto asset = swarm.get_asset_estimate();
@@ -283,6 +285,38 @@ namespace swarm_control{
                                         max_delta_speed);
         return delta_speed;
     }
+
+    template<typename T> bool get_batch_intruder_commands_from_model(
+            const std::vector<T> &intruders,
+            std::map<int, agent::AgentCommand> &commands,
+            ros::ServiceClient &client){
+
+        swarm_threat_detection::batchIntruderCommands srv;
+        get_batch_intruder_previous_states_msg(intruders,
+                srv.request.batch_previous_states);
+        commands.clear();
+
+        if(client.call(srv)){
+            ROS_INFO("Batch Intruder Model Query Successful!");
+            for (const auto &command_msg : srv.response.batch_intruder_commands){
+                commands[command_msg.sim_id] = extract_from_command_msg(command_msg);
+            }
+            return true;
+
+        }else {
+            ROS_INFO("Batch Intruder Model Query Successful!");
+            ROS_ERROR("Batch Intruder Model Query Successful!");
+            return false;
+        }
+    }
+    template bool get_batch_intruder_commands_from_model(
+            const std::vector<agent::ObservedIntruderAgent> &intruders,
+            std::map<int, agent::AgentCommand> &commands,
+            ros::ServiceClient &client);
+    template bool get_batch_intruder_commands_from_model(
+            const std::vector<agent::IntruderAgent> &intruders,
+            std::map<int, agent::AgentCommand> &commands,
+            ros::ServiceClient &client);
 
     bool get_intruder_command_from_motion_goal(const agent::IntruderAgent& intruder,
             const agent::MotionGoal &motion_goal,
@@ -437,8 +471,8 @@ namespace swarm_control{
         int guard_id;
         int intruder_id;
         double w_guard = 100;
-        double w_obs = 300;
-        double w_dist =1000;
+        double w_obs = 1500;
+        double w_dist =5000;
         double dist_to_asset;
         double p_threat;
         double weight;

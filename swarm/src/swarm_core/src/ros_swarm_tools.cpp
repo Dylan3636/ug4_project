@@ -195,6 +195,17 @@ swarm_msgs::agentTask convert_to_agent_task_msg(const agent::AgentTask &task){
     task_msg.task_idx = task.task_idx;
     return task_msg;
 }
+swarm_msgs::agentState convert_to_agent_state_msg(const agent::AgentState &state){
+    swarm_msgs::agentState state_msg;
+    state_msg.sim_id=state.sim_id;
+    state_msg.x=state.x;
+    state_msg.y=state.y;
+    state_msg.heading=state.heading;
+    state_msg.speed=state.speed;
+    state_msg.radius=state.radius;
+    // TODO state_msg expects agent type
+    return state_msg;
+}
 
 bool get_complex_parameters(const RosContainerPtr &ros_container_ptr,
                             const std::string &head_str,
@@ -210,7 +221,42 @@ bool get_complex_parameters(const RosContainerPtr &ros_container_ptr,
     return !failed;
 }
 
+void get_obstacle_states(
+        const swarm_msgs::worldStateConstPtr &world_state,
+        std::vector<agent::AgentState> &obstacle_states
+        ){
+    obstacle_states.clear();
+    for(const auto agent_state : world_state->worldState){
+        obstacle_states.emplace_back(agent_state.x,
+                                      agent_state.y,
+                                      agent_state.heading,
+                                      agent_state.speed,
+                                      agent_state.radius,
+                                      agent_state.sim_id);
+    }
+}
+template<typename T> void get_intruder_previous_states_msg(const T &intruder,
+        swarm_msgs::intruderPreviousStates &msg){
+    for(const auto &state : intruder.previous_states){
+        msg.previous_states.push_back(convert_to_agent_state_msg(state));
+    }
+}
 
+
+template<typename T> void get_batch_intruder_previous_states_msg(const std::vector<T> &intruders,
+        swarm_msgs::batchIntruderPreviousStates &prev_states_msg){
+    prev_states_msg.batch_previous_states.clear();
+    for(const auto &intruder: intruders){
+        auto msg = swarm_msgs::intruderPreviousStates();
+        get_intruder_previous_states_msg(intruder, msg);
+        prev_states_msg.batch_previous_states.push_back(msg);
+    }
+}
+
+template void get_batch_intruder_previous_states_msg(const std::vector<agent::ObservedIntruderAgent> &intruders,
+        swarm_msgs::batchIntruderPreviousStates &prev_states_msg);
+template void get_batch_intruder_previous_states_msg(const std::vector<agent::IntruderAgent> &intruders,
+                                                     swarm_msgs::batchIntruderPreviousStates &prev_states_msg);
 bool get_intruder_motion_goals(
         const RosContainerPtr &ros_container_ptr,
         const std::string &head_str,

@@ -20,6 +20,11 @@ namespace swarm_control{
         const agent::AgentState& asset_state,
         agent::MotionGoal& motion_goal);
 
+    template<typename T> bool get_batch_intruder_commands_from_model(
+            const std::vector<T> &intruders,
+            std::map<int, agent::AgentCommand> &commands,
+            ros::ServiceClient &client);
+
     bool get_intruder_command_from_motion_goal(
             const agent::IntruderAgent& intruder,
             const agent::MotionGoal& motion_goal,
@@ -67,7 +72,7 @@ namespace swarm_control{
 
     bool observed_intruder_motion_goal(
             int intruder_id,
-            agent::USVSwarm swarm,
+            const agent::USVSwarm &swarm,
             agent::MotionGoal &motion_goal);
 }
 #endif

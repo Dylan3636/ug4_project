@@ -209,17 +209,18 @@ def train_rnn(datapath,
     y_test_norm_rec = result['data'][1]
 
     # Model name
-    modelname = 'rnn_{}_{}_{}_{}_{}'.format(batch_size,
-                                            num_lstm_units,
-                                            optimizer,
-                                            total_iters_per_period,
-                                            seed)
+    modelname = 'rnn_{}_{}_{}_{}_{}_{}'.format(batch_size,
+                                               num_lstm_units,
+                                               optimizer,
+                                               total_iters_per_period,
+                                               seq_length,
+                                               seed)
     modeldir = modelpath+"/"+modelname+"/"
     os.makedirs(modeldir, exist_ok=True)
 
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
-                               "/rnn_{epoch:02d}-{val_loss:.2f}.hd5",
+                              modeldir+"/rnn_{epoch:02d}-{val_loss:.2f}.hd5",
                               total_iters_per_period=total_iters_per_period)
 
     print(seq_length, num_lstm_units, optimizer)

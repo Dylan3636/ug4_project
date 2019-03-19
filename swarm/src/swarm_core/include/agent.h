@@ -1,6 +1,7 @@
 #include "swarm_tools.h"
 #include "ros/ros.h"
 #include <vector>
+#include <deque>
 #include <map>
 #include <random>
 #ifndef AGENT_H
@@ -215,6 +216,11 @@ namespace agent{
                 set_constraints(agent.get_constraints());
                 set_collision_avoidance_params(agent.get_collision_avoidance_params());
             }
+            BaseAgent(const BaseAgent &agent){
+                set_state(agent.get_state());
+                set_constraints(agent.get_constraints());
+                set_collision_avoidance_params(agent.get_collision_avoidance_params());
+            }
 
             double get_radius() const{
                 return state.radius;
@@ -256,7 +262,7 @@ namespace agent{
                 return state;
             }
 
-            void set_state(const AgentState &new_state){
+            virtual void set_state(const AgentState &new_state){
                 state = AgentState(new_state);
             }
             void update_state(double x, double y, double speed, double heading){
@@ -315,6 +321,8 @@ namespace agent{
         int current_motion_goal_idx{0};
         double distance_threshold{50};
         public:
+            int sequence_length = 10;
+            std::deque<AgentState> previous_states;
 
             bool is_threat() const{
                 return threat;
@@ -333,10 +341,7 @@ namespace agent{
                     current_motion_goal_idx=-1;
                 }
             }
-            IntruderAgent(const IntruderAgent &agent){
-                set_state(agent.get_state());
-                set_constraints(agent.get_constraints());
-                set_collision_avoidance_params(agent.get_collision_avoidance_params());
+            IntruderAgent(const IntruderAgent &agent) : BaseAgent(agent){
                 threat=agent.is_threat();
             }
 
@@ -402,6 +407,13 @@ namespace agent{
             void add_motion_goal(const MotionGoal &motion_goal){
                 motion_goals.push_back(motion_goal);
             }
+            void set_state(const agent::AgentState &state){
+                BaseAgent::set_state(state);
+                while (previous_states.size() >= sequence_length){
+                    previous_states.pop_back();
+                }
+                previous_states.push_front(state);
+            }
 
     };
 
@@ -412,6 +424,8 @@ namespace agent{
 
         public:
 
+            int sequence_length=10;
+            std::deque<AgentState> previous_states;
             void set_threat_estimate(bool alert, double probability){
                 threat_classification=alert;
                 threat_probability=probability;
@@ -432,8 +446,16 @@ namespace agent{
                     threat_classification=dist(generator);
                 }
             }
+            @override;
+            void set_state(const agent::AgentState &state){
+                BaseAgent::set_state(state);
+                while (previous_states.size() >= sequence_length){
+                    previous_states.pop_back();
+                }
+                previous_states.push_front(state);
+            }
 
-            ObservedIntruderAgent(){}
+            ObservedIntruderAgent()=default;
             ObservedIntruderAgent(const AgentState &state,
                           const AgentConstraints &constraints,
                           const CollisionAvoidanceParameters &ca_params)
@@ -441,14 +463,11 @@ namespace agent{
                 threat_classification=false;
                 threat_probability=0.05;
             }
-            ObservedIntruderAgent(const ObservedIntruderAgent &agent){
-                set_state(agent.get_state());
-                set_constraints(agent.get_constraints());
-                set_collision_avoidance_params(agent.get_collision_avoidance_params());
+            ObservedIntruderAgent(const ObservedIntruderAgent &agent) : BaseAgent(agent){
                 threat_classification=agent.get_threat_classification();
                 threat_probability=agent.get_threat_probability();
             }
-            ObservedIntruderAgent(const AgentState &state){
+            explicit ObservedIntruderAgent(const AgentState &state){
                 set_state(state);
                 set_constraints(AgentConstraints{35, 5, swarm_tools::PI/2});
                 set_collision_avoidance_params(CollisionAvoidanceParameters{50, swarm_tools::PI, 0.5});
@@ -461,7 +480,7 @@ namespace agent{
     struct AssetAgent : public BaseAgent
     {
         public:
-            AssetAgent(){};
+            AssetAgent()=default;
             AssetAgent(const AgentState &state){
                 set_state(state);
                 set_agent_type(Asset);
@@ -549,17 +568,17 @@ namespace agent{
                 }
                 return false;
             }
-            USVAgent(){}
-            USVAgent(AgentState state,
-                     AgentConstraints constraints,
-                     CollisionAvoidanceParameters ca_params,
-                     AgentAssignment assignment)
+            USVAgent() = default;
+            USVAgent(const AgentState &state,
+                     const AgentConstraints &constraints,
+                     const CollisionAvoidanceParameters &ca_params,
+                     const AgentAssignment &assignment)
                     : BaseAgent(state, constraints, ca_params, USV)
                 {
                     set_current_assignment(assignment);
                 }
 
-            USVAgent(AgentState state){
+            explicit USVAgent(const AgentState &state){
                 set_state(state);
                 set_constraints(AgentConstraints{40,
                                                 100,
@@ -570,6 +589,9 @@ namespace agent{
                                                 0.9});
                 set_current_assignment(AgentAssignment());
                 set_agent_type(USV);
+            }
+            USVAgent(const USVAgent &usv):BaseAgent(usv){
+                set_current_assignment(usv.get_current_assignment());
             }
     };
 

@@ -11,6 +11,7 @@ namespace agent{
         std::map<int, USVAgent> usv_map;
         std::map<int, ObservedIntruderAgent> intruder_map;
         ros::ServiceClient threat_detection_client;
+        ros::ServiceClient intruder_model_client;
         AssetAgent asset;
 
         // private  methods
@@ -18,7 +19,19 @@ namespace agent{
         void update_usv_estimate(const USVAgent &usv);
 
         public:
+            USVSwarm() = default;
+            USVSwarm(const USVSwarm &swarm){
+                // ROS_INFO("Swarm is being copied!!!");
+                main_usv_id = swarm.main_usv_id;
+                usv_map = swarm.usv_map;
+                intruder_map = swarm.intruder_map;
+                threat_detection_client = swarm.threat_detection_client;
+                intruder_model_client = swarm.intruder_model_client;
+                asset = swarm.asset;
+                block_next_task_allocation = swarm.block_next_task_allocation;
+            }
             bool block_next_task_allocation=false;
+
             void reset();
             bool switch_observe_to_delay_task(int intruder_id);
 
@@ -41,6 +54,7 @@ namespace agent{
             // Intruders
             ObservedIntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
             std::vector<ObservedIntruderAgent> get_intruder_estimates() const;
+            bool get_batch_intruder_commands_from_model(std::vector<agent::AgentCommand> &commands);
             void sample_intruders();
 
             // Asset
@@ -58,6 +72,9 @@ namespace agent{
             }
             void set_threat_detection_client(const ros::ServiceClient &client){
                 threat_detection_client=client;
+            }
+            void set_intruder_model_client(const ros::ServiceClient &client){
+                intruder_model_client=client;
             }
 
             // Command agents monitored by swarm

@@ -40,4 +40,7 @@ namespace swarm_control{
                                              swarm.get_obstacle_states(),
                                              command);
     }
+    void get_batch_intruder_command(const agent::USVSwarm &swarm){
+        auto intruders = swarm.get_intruder_estimates();
+    }
 }

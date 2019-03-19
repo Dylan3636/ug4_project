@@ -16,7 +16,8 @@ class Simulation:
                  delta_time_secs=None,
                  anim=None,
                  use_gui=True,
-                 threshold=None):
+                 threshold=None,
+                 max_time=60):
         self.sim_objects = dict([(obj.sim_id, obj) for obj in sim_objects])
         self.OK = True
         self.use_gui = use_gui
@@ -26,6 +27,7 @@ class Simulation:
         self.start_time = time()
         self.end_time = None
         self.threshold = threshold
+        self.max_time = max_time
 
     def update_simulation_state(self):
         # Overridden in simulation node
@@ -61,13 +63,10 @@ class Simulation:
                 self.anim.cull_objects()
                 self.anim.update_threat_color()
 
-            # Termination check
-            terminate = self.termination_check()
-            if terminate:
-                self.kill()
             end = time()
             # Timeout
             sleep(max(self.timeout-(end-start), 0))
+        self.kill()
 
     def termination_check(self):
         if self.threshold is None:
@@ -82,9 +81,22 @@ class Simulation:
         return terminate
 
     def kill(self):
-        assert self.OK, "SIMULATION IS ALREADY DEAD"
+        assert self._OK, "SIMULATION IS ALREADY DEAD"
         self.end_time = time()
         self.OK = False
+
+    @property
+    def OK(self):
+        dt = time() - self.start_time
+        timedout = dt > self.max_time
+        # Termination check
+        terminate = self.termination_check()
+        # print(dt, self.max_time, timedout, terminate, self._OK)
+        return not timedout and self._OK and not terminate
+
+    @OK.setter
+    def OK(self, ok):
+        self._OK = ok
 
 
 def get_line_id(sim_id, task_id):

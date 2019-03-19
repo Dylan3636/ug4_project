@@ -30,8 +30,10 @@ void reallocate_tasks(){
     agent::SwarmAssignment swarm_assignment_candidate;
     double weight;
     agent::WeightedSwarmAssignment weighted_candidate;
-    for(int i=0; i<NUM_USVS; i++){
+    for(int i=1; i<NUM_USVS+1; i++){
         usv_id = i;
+        auto mp_name = boost::format("mp_simulation_service_%d") % i;
+        ros::service::waitForService(mp_name.str(), 5);
         if(service_client_map[usv_id].call(srv)){
             swarm_assignment_candidate = extract_from_swarm_assignment_msg(srv.response.candidate_assignment);
             weight = srv.response.weight;
@@ -61,10 +63,13 @@ int main(int argc, char **argv){
     std::string s = "Task_Manager";
     ros_container_ptr.reset( new RosContainer(argc, argv, s.c_str()));
     task_allocation_publisher = ros_container_ptr->nh.advertise<swarm_msgs::swarmAssignment>("Task_Allocation", 1000);
-    ros_container_ptr->nh.getParam("/swarm_simulation/num_usvs", NUM_USVS);
+    bool failed = !ros_container_ptr->nh.getParam("/swarm_simulation/num_usvs", NUM_USVS);
+    if(failed){
+        ROS_ERROR("/swarm_simulation/num_usvs NOT FOUND");
+    }
     int usv_id;
     for(int i=0; i<NUM_USVS; i++){
-        usv_id = i;
+        usv_id = i+1;
         auto mp_name = boost::format("mp_simulation_service_%d") % usv_id;
         service_client_map[usv_id] = ros_container_ptr->nh.serviceClient<swarm_task_manager::modelPredictiveSimulation>(mp_name.str());
     }

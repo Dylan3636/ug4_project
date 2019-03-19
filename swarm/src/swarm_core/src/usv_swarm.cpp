@@ -1,8 +1,10 @@
 #include "usv_swarm.h"
 #include "boost/format.hpp"
 #include <assert.h>
+#include "motion_goal_control.h"
 #include "ros_swarm_tools.h"
 #include "swarm_threat_detection/ThreatDetection.h"
+#include "swarm_threat_detection/batchIntruderCommands.h"
 namespace agent{
 
     void USVSwarm::reset(){
@@ -14,6 +16,10 @@ namespace agent{
     }
     ObservedIntruderAgent USVSwarm::get_intruder_estimate_by_id(int intruder_id) const{
         // assert(intruder_map.find(intruder_id)!=intruder_map.end());
+        if(usv_map.empty()){
+            ROS_ERROR("Intruder Map is empty!");
+            throw std::exception();
+        }
         try{
             return intruder_map.at(intruder_id);
         }
@@ -24,14 +30,21 @@ namespace agent{
         }
     }
     USVAgent USVSwarm::get_usv_estimate_by_id(int usv_id) const{
+        if(usv_map.empty()){
+            ROS_ERROR("USV Map is empty!");
+            throw std::exception();
+        }
         // assert(usv_map.find(usv_id)!=usv_map.end());
         try{
             return usv_map.at(usv_id);
         }
         catch (const std::out_of_range &error){
-            auto str = boost::format("USV ID : %d NOT FOUND!") % usv_id;
-            std::cout << str.str() << std::endl;
-            throw str.str();
+            ROS_ERROR("USV ID : %d NOT FOUND!\n %s", usv_id, error.what());
+            ROS_ERROR("USV Map contains");
+            for (const auto pair : usv_map){
+                ROS_ERROR("USV ID %d", pair.first);
+            }
+            throw std::exception();
         }
     }
 
@@ -178,6 +191,7 @@ namespace agent{
             return new_threat;
         }else{
             ROS_INFO("Intruder Threat Detection Failed!");
+            ROS_ERROR("Intruder Threat Detection Failed!");
             return false;
         }
         
@@ -370,5 +384,10 @@ namespace agent{
             intruder_pair.second.sample(generator);
         }
     }
+    bool USVSwarm::get_batch_intruder_commands_from_model(std::vector<agent::AgentCommand> &commands){
+        return swarm_control::get_batch_intruder_commands_from_model(get_intruder_estimates(),
+                commands,
+                intruder_model_client);
 
+    }
 }

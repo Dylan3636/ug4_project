@@ -39,6 +39,9 @@ template int collision_avoidance::correct_command<agent::USVAgent>(const agent::
 template int collision_avoidance::correct_command<agent::ObservedIntruderAgent>(const agent::ObservedIntruderAgent &agent,
                                                                         const std::vector<agent::AgentState> &obstacle_states,
                                                                         agent::AgentCommand &command);
+template int collision_avoidance::correct_command<agent::IntruderAgent>(const agent::IntruderAgent &agent,
+                                                                        const std::vector<agent::AgentState> &obstacle_states,
+                                                                        agent::AgentCommand &command);
 
 int collision_avoidance::correct_command(
     const agent::AgentState &agent_state,
@@ -72,9 +75,9 @@ int collision_avoidance::correct_command(
     // restrict command using differential constraints
     double delta_heading = swarm_tools::clip(command.delta_heading,
                                              -max_angle_rad,
-                                             max_angle_rad);
+                                             max_angle_rad)*0.1;
 
-    if (is_command_safe(command.delta_heading, safe_intervals)){
+    if (is_command_safe(delta_heading, safe_intervals)){
         return 0; // Indicates no change was made.
     }
 
@@ -95,6 +98,7 @@ int collision_avoidance::correct_command(
     }else{
         command.delta_heading = aggression*r_theta_rad + (1-aggression)*l_theta_rad;
     }
+    command.delta_heading /= 0.1;
     // std::cout << "Weighted heading command: "<< command.delta_heading*180/swarm_tools::PI; 
 
     // restrict command using differential constraint
@@ -107,8 +111,8 @@ bool collision_avoidance::is_command_safe(
     const std::vector<swarm_tools::AngleInterval>& safe_intervals
 ){
     for (const swarm_tools::AngleInterval interval : safe_intervals){
-        // double l_theta = interval.l_theta_rad;
-        // double r_theta = interval.r_theta_rad;
+        double l_theta = interval.l_theta_rad;
+        double r_theta = interval.r_theta_rad;
         // std::cout << "(" <<l_theta*180/swarm_tools::PI << ", " << r_theta*180/swarm_tools::PI << ")"<< std::endl;
         if (interval.contains(delta_heading)){
             return true;
@@ -124,7 +128,7 @@ int collision_avoidance::largest_safe_interval(
     double max_diff = -1;
     for (auto ip=safe_intervals.begin();ip != safe_intervals.end(); ip++){
         double diff = std::abs(ip->l_theta_rad-ip->r_theta_rad);
-        // std::cout << "Looking for largest interval(" <<ip->l_theta_rad*180/swarm_tools::PI << ", " << ip->r_theta_rad*180/swarm_tools::PI << ")"<< std::endl;
+        std::cout << "Looking for largest interval(" <<ip->l_theta_rad*180/swarm_tools::PI << ", " << ip->r_theta_rad*180/swarm_tools::PI << ")"<< std::endl;
         if (diff>=max_diff){
             max_index = distance(safe_intervals.begin(), ip);
             max_diff = diff;

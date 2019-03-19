@@ -66,6 +66,8 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
         return;
     }
     clock_t perc_t = clock();
+    mtx.lock();
+    agent::USVSwarm swarm_cp = swarm;
 
     ROS_INFO("USV %d Perception Callback", usv_id);
     usv_state_map.clear();
@@ -76,18 +78,19 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
                            usv_state_map,
                            intruder_state_map,
                            asset_state);
+    mtx.unlock();
     ROS_INFO("World Message Extraction time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
     for(const auto &usv_state_id_pair : usv_state_map){
-        if(swarm.contains_usv(usv_state_id_pair.first)){
+        if(swarm_cp.contains_usv(usv_state_id_pair.first)){
             t = clock();
-            swarm.update_usv_state_estimate(usv_state_id_pair.second);
+            swarm_cp.update_usv_state_estimate(usv_state_id_pair.second);
             ROS_INFO("Updating usv %d time %f", usv_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
         }
         else{
             ROS_INFO("Adding new usv %d to swarm", usv_state_id_pair.first);
             std::string usv_head_str = (boost::format("/swarm_simulation/usv_params/usv_%d") % usv_state_id_pair.first).str();
-            swarm.add_usv(agent::USVAgent(usv_state_id_pair.second,
+            swarm_cp.add_usv(agent::USVAgent(usv_state_id_pair.second,
                    usv_constraints_map[usv_state_id_pair.first],
                    usv_radar_params_map[usv_state_id_pair.first],
                    agent::AgentAssignment{}));
@@ -95,23 +98,23 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     }
 
     for(const auto &intruder_state_id_pair : intruder_state_map){
-        if(swarm.contains_intruder(intruder_state_id_pair.first)){
+        if(swarm_cp.contains_intruder(intruder_state_id_pair.first)){
             t = clock();
-            swarm.update_intruder_state_estimate(intruder_state_id_pair.second);
+            swarm_cp.update_intruder_state_estimate(intruder_state_id_pair.second);
             ROS_INFO("Updating intruder %d : time %f", intruder_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
         }
         else{
             ROS_INFO("Adding new intruder %d", intruder_state_id_pair.first);
-           swarm.add_intruder(agent::ObservedIntruderAgent(intruder_state_id_pair.second,
+           swarm_cp.add_intruder(agent::ObservedIntruderAgent(intruder_state_id_pair.second,
                    intruder_constraints_map[intruder_state_id_pair.first],
                    intruder_radar_params_map[intruder_state_id_pair.first]));
         }
     }
 
     t = clock();
-    for (const auto &task : swarm.get_assignment_by_id(usv_id)){
+    for (const auto &task : swarm_cp.get_assignment_by_id(usv_id)){
         if (task.task_type != agent::TaskType::Guard && task.task_idx!=-1 && task.task_idx>100){
-            const auto intruder = swarm.get_intruder_estimate_by_id(task.task_idx);
+            const auto intruder = swarm_cp.get_intruder_estimate_by_id(task.task_idx);
             double probability = intruder.get_threat_probability();
             bool classification = intruder.is_threat();
             publish_threat_statistics(task.task_idx, probability, classification);
@@ -120,14 +123,14 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     ROS_INFO("Publishing threat statistics total time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
 
-    // swarm.update_intruder_estimates(intruder_state_map);
+    // swarm_cp.update_intruder_estimates(intruder_state_map);
 
-    agent::USVAgent usv = swarm.get_usv_estimate_by_id(usv_id);
+    agent::USVAgent usv = swarm_cp.get_usv_estimate_by_id(usv_id);
 
     agent::MotionGoal motion_goal;
 
     swarm_control::get_motion_goal_from_assignment(usv_id,
-                                                   swarm,
+                                                   swarm_cp,
                                                    motion_goal);
 
     t = clock();
@@ -137,13 +140,13 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     agent::AgentCommand command;
     t = clock();
     swarm_control::get_usv_command_from_motion_goal(usv_id,
-                                                    swarm,
+                                                    swarm_cp,
                                                     motion_goal,
                                                     command);
     ROS_INFO("Motion goal calculation time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
     ROS_INFO("DERSIRED COMMAND: (%f, %f)", command.delta_speed, command.delta_heading*180/swarm_tools::PI);
 
-    std::vector<agent::AgentState> obstacle_states = swarm.get_obstacle_states();
+    std::vector<agent::AgentState> obstacle_states = swarm_cp.get_obstacle_states();
     t = clock();
     collision_avoidance::correct_command(usv,
                                          obstacle_states,
@@ -157,27 +160,33 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     command_msg.sim_id = usv.get_sim_id();
     command_pub.publish(command_msg);
     ROS_INFO("Perception Callback time %f", (clock()-perc_t)/(double) CLOCKS_PER_SEC);
+    try{
+        std::lock_guard<std::mutex> lock(mtx);
+        swarm = swarm_cp;
+    }catch(std::exception &e){
+        ROS_ERROR("Copy Error %s", e.what());
+    }
 } // callback
 
 
 void task_allocator_callback(const swarm_msgs::swarmAssignment::ConstPtr &swarm_task_assignment_ptr){
+    std::lock_guard<std::mutex> lock(mtx);
     if(!initialized) {
         ROS_INFO("Can't allocate tasks, swarm not initialized");
         return;
     }
     if(swarm.block_next_task_allocation){
         ROS_INFO("Current task allocation is stale, waiting on re-evaluation");
+        return;
     }
     ROS_INFO("Setting new task allocation!");
     agent::SwarmAssignment swarm_assignment = extract_from_swarm_assignment_msg(*swarm_task_assignment_ptr);
     ROS_INFO("%s", agent::swarm_assignment_to_string(swarm_assignment).c_str());
-    mtx.lock();
     try{
         swarm.update_swarm_assignment(swarm_assignment);
     }catch(std::exception &e){
         throw "Task Allocation Failed.";
     }
-    mtx.unlock();
 }
 
 bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Request &req,
@@ -186,12 +195,11 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
         ROS_INFO("Can't do model prediction, swarm not initialized");
         return false;
     }
-    if(!mtx.try_lock())
-    {
-        ROS_ERROR("Lock Not available");
-        return false;
-    }
+
+    mtx.lock();
     swarm.block_next_task_allocation=false;
+    agent::USVSwarm swarm_cp = swarm;
+    mtx.unlock();
     int num_timesteps_lookahead=req.num_timesteps_lookahead;
     double delta_time_secs = req.delta_time_secs;
     double threshold = req.threshold;
@@ -202,17 +210,16 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
                 threshold);
     try{
         weighted_swarm_assignment = swarm_task_manager::get_best_candidate_swarm_assignment(usv_id,
-                                                                                             swarm,
-                                                                                             usv_communication_map,
-                                                                                             num_timesteps_lookahead,
-                                                                                             delta_time_secs,
-                                                                                             threshold);
+                                                                                            swarm_cp,
+                                                                                            usv_communication_map,
+                                                                                            num_timesteps_lookahead,
+                                                                                            delta_time_secs,
+                                                                                            threshold);
  
         res.candidate_assignment = convert_to_swarm_assignment_msg(weighted_swarm_assignment.first);
         res.weight = weighted_swarm_assignment.second;
     }catch(std::exception& e){
         ROS_ERROR("Task Allocation ERROR: %s", e.what());
-        mtx.unlock();
         return false;
     }
     auto swarm_assignment = weighted_swarm_assignment.first;
@@ -220,11 +227,11 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
     ROS_INFO("%s", agent::swarm_assignment_to_string(swarm_assignment).c_str());
     ROS_INFO("WEIGHT: %f", weighted_swarm_assignment.second);
     ROS_INFO("Model Predictive Successful");
-    mtx.unlock();
     return true;
 }
 
 void reset_callback(const swarm_msgs::resetSystem &msg){
+    std::lock_guard<std::mutex> lock(mtx);
     if(!initialized) return;
     initialized=false;
     ROS_INFO("Resetting USV %d", usv_id);
@@ -248,6 +255,7 @@ void get_agent_parameters(){
     get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints_map, intruder_radar_params_map);
 }
 void initialize_callback(const swarm_msgs::initializeSystem &msg){
+    std::lock_guard<std::mutex> lock(mtx);
     if (initialized) return;
     for(auto id : msg.usv_ids){
         if(id==usv_id){
@@ -296,8 +304,9 @@ int main(int argc, char **argv){
     }
     ROS_INFO("Initialized %d", initialized);
     if(!ros::ok()) return 0;
-
-    ros::spin();
+    ros::MultiThreadedSpinner spinner(4);
+    spinner.spin();
+    // ros::spin();
 
     return 0;
 }
