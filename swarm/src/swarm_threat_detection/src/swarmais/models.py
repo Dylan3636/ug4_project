@@ -219,7 +219,7 @@ def train_rnn(datapath,
 
     # Set up callbacks
     callbacks = get_callbacks(graphdir+"/"+modelname,
-                              'rnn_{.epoch}.hd5',
+                               "/rnn_{epoch:02d}-{val_loss:.2f}.hd5",
                               total_iters_per_period=total_iters_per_period)
 
     print(seq_length, num_lstm_units, optimizer)
