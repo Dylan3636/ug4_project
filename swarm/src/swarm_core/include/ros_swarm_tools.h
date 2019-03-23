@@ -89,6 +89,10 @@ bool get_agent_parameters(RosContainerPtr ros_container_ptr,
                           std::string head_str,
                           std::map<int, agent::AgentConstraints> &constraints_map,
                           std::map<int, agent::CollisionAvoidanceParameters> &radar_params_map);
+bool get_intruder_threat_classification(
+        const RosContainerPtr &ros_container_ptr,
+        const std::string &head_str,
+        int intruder_id);
 bool get_intruder_motion_goals(
         const RosContainerPtr &ros_container_ptr,
         const std::string &head_str,

@@ -79,13 +79,13 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
                            intruder_state_map,
                            asset_state);
     mtx.unlock();
-    ROS_INFO("World Message Extraction time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
+    ROS_DEBUG("World Message Extraction time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
     for(const auto &usv_state_id_pair : usv_state_map){
         if(swarm_cp.contains_usv(usv_state_id_pair.first)){
             t = clock();
             swarm_cp.update_usv_state_estimate(usv_state_id_pair.second);
-            ROS_INFO("Updating usv %d time %f", usv_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
+            ROS_DEBUG("Updating usv %d time %f", usv_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
         }
         else{
             ROS_INFO("Adding new usv %d to swarm", usv_state_id_pair.first);
@@ -120,7 +120,7 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
             publish_threat_statistics(task.task_idx, probability, classification);
         }
     }
-    ROS_INFO("Publishing threat statistics total time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
+    ROS_DEBUG("Publishing threat_classification statistics total time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
 
     // swarm_cp.update_intruder_estimates(intruder_state_map);
@@ -129,9 +129,10 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
 
     agent::MotionGoal motion_goal;
 
-    swarm_control::get_motion_goal_from_assignment(usv_id,
+    double aggression = swarm_control::get_motion_goal_from_assignment(usv_id,
                                                    swarm_cp,
                                                    motion_goal);
+    usv.set_aggression(aggression);
 
     t = clock();
     publish_markers(motion_goal);

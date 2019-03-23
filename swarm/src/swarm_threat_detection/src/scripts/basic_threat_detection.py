@@ -1,8 +1,7 @@
 import numpy as np
 import rospy
 from threading import Lock
-
-
+from time import time
 
 class IntruderThreat:
     def __init__(self, is_threat, threat_evidence):
@@ -22,13 +21,16 @@ class BasicThreatDetector:
         self.lock = Lock()
 
     def reset(self):
-        self.intruders = {}
+        with self.lock:
+            self.intruders = {}
 
     def update_detector(self,
                         intruder_id,
                         dist_to_intruder):
-
+        t=time()
         with self.lock:
+            # rospy.logerr("LOCK ACQUIRE TIME {}".format(time()-t))
+            t1 = time()
             if intruder_id not in self.intruders:
                 is_threat =\
                     [param['is_threat'] for param in rospy.get_param('swarm_simulation/intruder_params/')
@@ -52,5 +54,5 @@ class BasicThreatDetector:
                     threat_prob = 1-self.intruders[intruder_id].threat_evidence
                 else:
                     threat_prob = 0.05
-
+            # rospy.logerr("THREAT DETECTION UPDATE TIME {}".format(time()-t1))
         return (threat_prob > self.p_alert), threat_prob

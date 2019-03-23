@@ -11,11 +11,11 @@ namespace swarm_control{
                                         swarm,
                                         motion_goal);
 
-        get_usv_command_from_motion_goal(usv_id,
+        double aggression = get_usv_command_from_motion_goal(usv_id,
                                          swarm,
                                          motion_goal,
                                          command);
-
+        usv.set_aggression(aggression);
         collision_avoidance::correct_command(usv,
                                              swarm.get_obstacle_states(),
                                              command);

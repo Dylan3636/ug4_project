@@ -56,6 +56,7 @@ if __name__ == "__main__":
                                   learning_rate=lr,
                                   max_dist_to_observe_threat=w_dist,
                                   noise_sigma=noise_sigma)
-        rospy.Service('ThreatDetection', ThreatDetection, update_threat_estimate)
+        rospy.Service('ThreatDetection', ThreatDetection, update_threat_estimate, 1000,
+                      lambda e: rospy.logerr(e.with_traceback()))
         rospy.loginfo("Initiating Threat Detection System")
         rospy.spin()

@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 #include <random>
+#include <time.h>
 #ifndef AGENT_H
 #define AGENT_H
 
@@ -194,8 +195,25 @@ namespace agent{
             AgentConstraints constraints{};
             CollisionAvoidanceParameters ca_params{};
             AgentType type{Base};
+            time_t previously_blocked_time = time(NULL);
 
         public:
+
+            void update_previously_blocked_time(){
+                time(&previously_blocked_time);
+            }
+
+            time_t get_previously_blocked_time(){
+                return previously_blocked_time;
+            }
+            bool evade() const{
+                std::default_random_engine generator;
+                double lambda = 5;
+                double delta_time_secs = std::difftime(time(NULL), previously_blocked_time);
+                double pdf = lambda*std::exp(-lambda*delta_time_secs);
+                std::bernoulli_distribution dist(pdf);
+                return dist(generator);
+            }
 
             BaseAgent() = default;
 
@@ -286,6 +304,9 @@ namespace agent{
             double get_aggression() const{
                 return ca_params.aggression;
             }
+            double set_aggression(double aggression){
+                ca_params.aggression = aggression;
+            }
             AgentConstraints get_constraints() const{
                 return constraints;
             }
@@ -315,100 +336,48 @@ namespace agent{
                 state.y += state.speed*sin(state.heading)*delta_time_secs; 
         }
     };
+    
     class IntruderAgent : public BaseAgent{
-        bool threat;
-        std::vector<MotionGoal> motion_goals;
-        int current_motion_goal_idx{0};
-        double distance_threshold{50};
+        bool threat_classification=false;
         public:
             int sequence_length = 10;
+            int count =0;
             std::deque<AgentState> previous_states;
 
-            bool is_threat() const{
-                return threat;
-            }
-            void set_threat(bool thrt){
-                threat=thrt;
-            }
-
             IntruderAgent() = default;
-            IntruderAgent(bool threat, const AgentState &initial_state) : threat(threat),
-                                                                             BaseAgent(initial_state, Intruder){
-                if(threat){
-                    current_motion_goal_idx=0;
-                    motion_goals.emplace_back(0,0);
-                }else{
-                    current_motion_goal_idx=-1;
-                }
+            IntruderAgent(bool threat, const AgentState &initial_state) : BaseAgent(initial_state, Intruder){
+                set_threat_classification(threat);
             }
             IntruderAgent(const IntruderAgent &agent) : BaseAgent(agent){
-                threat=agent.is_threat();
+                threat_classification=agent.threat_classification;
+                sequence_length = agent.sequence_length;
+                previous_states = agent.previous_states;
             }
 
-            IntruderAgent(bool is_threat,
-                          const AgentState &initial_state,
-                          const AgentConstraints &constraints,
-                          const CollisionAvoidanceParameters &ca_params) : threat(is_threat),
-                                                                           BaseAgent(initial_state,
+            IntruderAgent(
+                    bool threat,
+                    const AgentState &initial_state,
+                    const AgentConstraints &constraints,
+                    const CollisionAvoidanceParameters &ca_params) : BaseAgent(initial_state,
                                                                                      constraints,
                                                                                      ca_params,
                                                                                      Intruder){
-                if(threat){
-                    current_motion_goal_idx=0;
-                    motion_goals.emplace_back(0,0);
-                }else{
-                    current_motion_goal_idx=-1;
-                }
+            set_threat_classification(threat);
             }
-
-            bool get_motion_goal(MotionGoal* mg_ptr){
-                if(threat){
-                    // Return position of asset
-                    auto mg = MotionGoal(0,0);
-                    *mg_ptr = mg;
-                    return true;
-                }
-                auto current_motion_goal = motion_goals[current_motion_goal_idx];
-                auto current_position = get_position();
-                double dist_to_mg = swarm_tools::euclidean_distance(current_position,
-                                                                    current_motion_goal.get_position());
-                if(dist_to_mg<distance_threshold){
-                    // Reached acceptable distance of motion goal
-
-                    // No more motion goals
-                    if(motion_goals.size()<=1) return false;
-
-                    // Erase current motion goal
-                    motion_goals.erase(motion_goals.begin()+current_motion_goal_idx);
-
-                    // Find next nearest motion goal.
-                    double min_dist=1000000;
-                    current_motion_goal_idx=-1;
-                    for(int i=0; i<motion_goals.size(); i++){
-                        auto mg = motion_goals[i];
-                        double dist = swarm_tools::euclidean_distance(current_position, mg.get_position());
-                        if(dist<min_dist){
-                            min_dist = dist;
-                            current_motion_goal_idx=i;
-                        }
-                    }
-                    assert(current_motion_goal_idx!=-1 && "Did not find new motion goal!");
-                    *mg_ptr = motion_goals[current_motion_goal_idx];
-                    return true;
-                }else{
-                    *mg_ptr = current_motion_goal;
-                    return true;
-                }
+            bool is_threat() const{
+                return threat_classification;
             }
-            std::vector<MotionGoal>& get_motion_goals_ref(){
-                return motion_goals;
-            }
-
-            void add_motion_goal(const MotionGoal &motion_goal){
-                motion_goals.push_back(motion_goal);
+            void set_threat_classification(bool threat){
+                threat_classification=threat;
             }
             void set_state(const agent::AgentState &state){
                 BaseAgent::set_state(state);
+                count++;
+                if (count%1!=0){
+                    return;
+                }else{
+                    count=0;
+                }
                 while (previous_states.size() >= sequence_length){
                     previous_states.pop_back();
                 }
@@ -416,55 +385,70 @@ namespace agent{
             }
 
     };
+    
+//    class IntruderAgent : public BaseIntruderAgent{
+//        public:
 
-    class ObservedIntruderAgent : public BaseAgent
+//            IntruderAgent() = default;
+//            IntruderAgent(bool threat, const AgentState &initial_state) : threat_classification(threat),
+//                                                                             BaseAgent(initial_state, Intruder){
+//           }
+//            IntruderAgent(const IntruderAgent &agent) : BaseAgent(agent){
+//                threat_classification=agent.is_threat();
+//            }
+//
+//            IntruderAgent(bool is_threat,
+//                          const AgentState &initial_state,
+//                          const AgentConstraints &constraints,
+//                          const CollisionAvoidanceParameters &ca_params) : threat_classification(is_threat),
+//                                                                           BaseAgent(initial_state,
+//                                                                                     constraints,
+//                                                                                     ca_params,
+//                                                                                     Intruder){
+//            }
+//
+//            void set_state(const agent::AgentState &state){
+//                BaseAgent::set_state(state);
+//                while (previous_states.size() >= sequence_length){
+//                    previous_states.pop_back();
+//                }
+//                previous_states.push_front(state);
+//            }
+
+//    };
+
+    class ObservedIntruderAgent : public IntruderAgent
     {   
-        bool threat_classification;
-        double threat_probability;
+        double threat_probability=0.05;
 
         public:
 
-            int sequence_length=10;
-            std::deque<AgentState> previous_states;
-            void set_threat_estimate(bool alert, double probability){
-                threat_classification=alert;
+            void set_threat_estimate(bool threat, double probability){
+                set_threat_classification(threat);
                 threat_probability=probability;
             }
             bool get_threat_classification() const{
-                return threat_classification;
+                return is_threat();
             }
             double get_threat_probability() const{
                 return threat_probability;
             }
-            bool is_threat() const{
-                return threat_classification;
-            }
 
             bool sample(std::default_random_engine generator){
-                if (!threat_classification){
+                if (!is_threat()){
                     std::bernoulli_distribution dist(this->threat_probability);
-                    threat_classification=dist(generator);
+                    set_threat_classification(dist(generator));
                 }
-            }
-            @override;
-            void set_state(const agent::AgentState &state){
-                BaseAgent::set_state(state);
-                while (previous_states.size() >= sequence_length){
-                    previous_states.pop_back();
-                }
-                previous_states.push_front(state);
             }
 
             ObservedIntruderAgent()=default;
             ObservedIntruderAgent(const AgentState &state,
                           const AgentConstraints &constraints,
                           const CollisionAvoidanceParameters &ca_params)
-                    : BaseAgent(state, constraints, ca_params, Intruder){
-                threat_classification=false;
+                    : IntruderAgent(false, state, constraints, ca_params){
                 threat_probability=0.05;
             }
-            ObservedIntruderAgent(const ObservedIntruderAgent &agent) : BaseAgent(agent){
-                threat_classification=agent.get_threat_classification();
+            ObservedIntruderAgent(const ObservedIntruderAgent &agent) : IntruderAgent(agent){
                 threat_probability=agent.get_threat_probability();
             }
             explicit ObservedIntruderAgent(const AgentState &state){
@@ -472,7 +456,7 @@ namespace agent{
                 set_constraints(AgentConstraints{35, 5, swarm_tools::PI/2});
                 set_collision_avoidance_params(CollisionAvoidanceParameters{50, swarm_tools::PI, 0.5});
                 set_agent_type(Intruder);
-                threat_classification=false;
+                set_threat_classification(false);
                 threat_probability=0.05;
             }
     };
@@ -492,8 +476,19 @@ namespace agent{
     {
         // private variables
         AgentAssignment current_assignment;
+        bool _has_delay_task=false;
         public:
-            
+
+
+//            double get_aggression() const{
+//                if (has_delay_task()){
+//                    return 1;
+//                }else {
+//                    return BaseAgent::get_aggression();
+//                }
+//
+//            }
+
             void copy(const USVAgent &usv){
                 BaseAgent::copy(usv);
                 set_current_assignment(usv.get_current_assignment());
@@ -503,31 +498,44 @@ namespace agent{
             }
 
             void set_current_assignment(const AgentAssignment &assignment){
-                current_assignment=assignment;
-            }
-            int switch_observe_to_delay_assignment(int intruder_id){
-                if(has_delay_task()) return -1;
-                bool had_observe_task = remove_observe_assignment(intruder_id);
-                if(had_observe_task){
-                    set_delay_assignment(intruder_id);
-                    return 1;
-                }else{
-                    return 0;
+                current_assignment.clear();
+                _has_delay_task=false;
+                for(const auto &task : assignment){
+                    if(task.task_type==Delay){
+                        _has_delay_task=true;
+                    }
+                    current_assignment.push_back(task);
                 }
             }
+            bool switch_observe_to_delay_assignment(int intruder_id){
+                if(has_delay_task()){
+                    return false;
+                }else{
+                    set_delay_assignment(intruder_id);
+                    return true;
+                }
+                // bool had_observe_task = remove_observe_assignment(intruder_id);
+
+            }
             void set_delay_assignment(int delay_assignment_idx){
+                bool set=false;
                 for(auto &task : current_assignment){
                     if(task.task_type==Delay){
                         task.task_idx=delay_assignment_idx;
-                        return;
+                        set=true;
+                        break;
                     } else if(task.task_type==Observe && task.task_idx==delay_assignment_idx){
                         task.task_idx=delay_assignment_idx;
                         task.task_type=Delay;
-                        return;
+                        set=true;
+                        break;
                         
                     }
                 }
-                current_assignment.push_back(AgentTask(Delay, delay_assignment_idx));
+                if(!set){
+                   current_assignment.push_back(AgentTask(Delay, delay_assignment_idx));
+                   _has_delay_task=true;
+                }
 
             }
             void set_guard_assignment(int guard_assignment_idx){
@@ -545,10 +553,11 @@ namespace agent{
                 current_assignment.push_back(AgentTask(Observe, observe_assignment_idx));
             }
             bool has_delay_task() const{
-                for(const auto &task : current_assignment){
-                    if(task.task_type==Delay && task.task_idx!=-1) return true;
-                }
-                return false;
+                return _has_delay_task;
+//                for(const auto &task : current_assignment){
+//                    if(task.task_type==Delay && task.task_idx!=-1) return true;
+//                }
+//                return false;
             }
             bool has_delay_task(int intruder_id) const{
                 for (const auto &task : current_assignment) {
@@ -592,6 +601,7 @@ namespace agent{
             }
             USVAgent(const USVAgent &usv):BaseAgent(usv){
                 set_current_assignment(usv.get_current_assignment());
+                _has_delay_task = usv.has_delay_task();
             }
     };
 

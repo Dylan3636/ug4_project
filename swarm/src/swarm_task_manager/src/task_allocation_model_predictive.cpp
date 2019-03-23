@@ -68,14 +68,14 @@ namespace swarm_task_manager{
 
                         main_usv_task_idx_tmp = main_usv_task.task_idx;
                         other_usv_task_idx_tmp = other_usv_task.task_idx;
-                        ROS_INFO("BEFORE EXCHANGE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
+                        ROS_DEBUG("BEFORE EXCHANGE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
                         exchange_assignment(&main_usv_task.task_idx, &other_usv_task.task_idx);
-                        ROS_INFO("AFTER EXCHANGE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
+                        ROS_DEBUG("AFTER EXCHANGE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
                         candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
                         // reset
                         main_usv_task.task_idx = main_usv_task_idx_tmp;
                         other_usv_task.task_idx = other_usv_task_idx_tmp;
-                        ROS_INFO("AFTER RESET MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
+                        ROS_DEBUG("AFTER RESET MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
 
                         if(main_usv_task.task_type==agent::TaskType::Guard){
                             continue;
@@ -83,14 +83,14 @@ namespace swarm_task_manager{
                             main_usv_task_idx_tmp = main_usv_task.task_idx;
                             other_usv_task_idx_tmp = other_usv_task.task_idx;
 
-                            ROS_INFO("BEFORE SHARE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
+                            ROS_DEBUG("BEFORE SHARE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
                             bool successful = share_assignment(&main_usv_task.task_idx, &other_usv_task.task_idx);
                             if(successful){
-                                ROS_INFO("AFTER SHARE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
+                                ROS_DEBUG("AFTER SHARE MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
                                 candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
                             }else{
                                 if(main_usv_task.task_idx==other_usv_task.task_idx){
-                                    ROS_INFO("REMOVING %d TASK", main_usv_task.task_type);
+                                    ROS_DEBUG("REMOVING %d TASK", main_usv_task.task_type);
                                     main_usv_task.task_idx=-1;
                                     candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
                                 }
@@ -99,13 +99,13 @@ namespace swarm_task_manager{
                             // reset
                             main_usv_task.task_idx = main_usv_task_idx_tmp;
                             other_usv_task.task_idx = other_usv_task_idx_tmp;
-                            ROS_INFO("AFTER RESET MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
+                            ROS_DEBUG("AFTER RESET MAIN: %d OTHER %d", main_usv_task.task_idx, other_usv_task.task_idx);
                         }
                    }else{
                         // Share task
                         if(main_usv_task.task_type==agent::TaskType::Observe){
                             if(possible_duplicates.find(main_usv_task.task_idx) != possible_duplicates.end()){
-                                ROS_INFO("SHARING OBSERVE TASK MAIN %d", main_usv_task.task_idx);
+                                ROS_DEBUG("SHARING OBSERVE TASK MAIN %d", main_usv_task.task_idx);
                                 other_usv_assignment.push_back(main_usv_task);
                                 candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
                                 other_usv_assignment.pop_back(); // reset
@@ -113,7 +113,7 @@ namespace swarm_task_manager{
                         }
                         else if(main_usv_task.task_type==agent::TaskType::Delay){
                             if(!has_delay_task){
-                                ROS_INFO("SHARING DELAY TASK MAIN %d OTHER %d", main_usv_task.task_idx);
+                                ROS_DEBUG("SHARING DELAY TASK MAIN %d OTHER %d", main_usv_task.task_idx);
                                 other_usv_assignment.push_back(main_usv_task);
                                 candidates.push_back(agent::WeightedSwarmAssignment(swarm_assignment_copy, 0.0));
                                 other_usv_assignment.pop_back(); // reset
@@ -200,7 +200,7 @@ namespace swarm_task_manager{
            if (terminated || timestep > num_timesteps) { break; }
            timestep++;
        }
-       ROS_INFO("Sample time %f", (std::clock()-sample_t)/(double) CLOCKS_PER_SEC);
+       ROS_DEBUG("Sample time %f", (std::clock()-sample_t)/(double) CLOCKS_PER_SEC);
     }
 
     void evaluate_swarm_assignment(const agent::SwarmAssignment &swarm_assignment,

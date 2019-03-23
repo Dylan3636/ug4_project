@@ -47,7 +47,7 @@ namespace swarm_control{
         const agent::MotionGoal& motion_goal,
         agent::AgentCommand& command);
 
-    bool weighted_motion_goal(
+    double weighted_motion_goal(
         const std::vector<agent::MotionGoal>& motion_goals,
         const std::vector<double>& weights,
         agent::MotionGoal& weighted_motion_goal);
@@ -63,7 +63,7 @@ namespace swarm_control{
                                  const agent::USVSwarm &swarm,
                                  agent::MotionGoal &motion_goal);
 
-    bool get_motion_goal_from_assignment(int usv_id,
+    double get_motion_goal_from_assignment(int usv_id,
                                          const agent::USVSwarm &swarm,
                                          agent::MotionGoal &motion_goal);
 

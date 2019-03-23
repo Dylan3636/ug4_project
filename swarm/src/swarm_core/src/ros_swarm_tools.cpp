@@ -14,7 +14,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
             double heading = agent_state.heading;
             double radius = agent_state.radius;
 
-            ROS_INFO("Found USV [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
+            ROS_DEBUG("Found USV [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
                     sim_id,
                     x,
                     y,
@@ -34,7 +34,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
             double heading = agent_state.heading;
             double radius = agent_state.radius;
 
-            ROS_INFO("Found Intruder [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
+            ROS_DEBUG("Found Intruder [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
                     sim_id,
                     x,
                     y,
@@ -54,7 +54,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
             double heading = agent_state.heading;
             double radius = agent_state.radius;
 
-            ROS_INFO("Found Tanker [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
+            ROS_DEBUG("Found Tanker [%d]: \nx: [%f] \ny: [%f] \nspeed: [%f] \nheading: [%f], \nradius: [%f]",
                     sim_id,
                     x,
                     y,
@@ -257,6 +257,41 @@ template void get_batch_intruder_previous_states_msg(const std::vector<agent::Ob
         swarm_msgs::batchIntruderPreviousStates &prev_states_msg);
 template void get_batch_intruder_previous_states_msg(const std::vector<agent::IntruderAgent> &intruders,
                                                      swarm_msgs::batchIntruderPreviousStates &prev_states_msg);
+
+bool get_intruder_threat_classification(
+        const RosContainerPtr &ros_container_ptr,
+        const std::string &head_str,
+        int intruder_id){
+
+
+    XmlRpc::XmlRpcValue items;
+    bool failed = !get_complex_parameters(ros_container_ptr, head_str, items);
+    if (failed) return !failed;
+
+    XmlRpc::XmlRpcValue item;
+    for(int i=0; i<items.size(); i++) {
+
+        item = items[i];
+        ROS_ASSERT(item.hasMember("sim_id"));
+        auto sim_id_leaf = item["sim_id"];
+        ROS_ASSERT(sim_id_leaf.getType() == XmlRpc::XmlRpcValue::TypeInt);
+        int sim_id = static_cast<int>(sim_id_leaf);
+        ROS_INFO("LOADED SIM ID %d", sim_id);
+
+        // Skip if not correct intruder
+        if (sim_id != intruder_id) {
+            continue;
+        } else {
+            ROS_ASSERT(item.hasMember("is_threat"));
+            auto is_threat_leaf = item["is_threat"];
+            ROS_ASSERT(is_threat_leaf.getType() == XmlRpc::XmlRpcValue::TypeBoolean);
+            bool threat = static_cast<bool>(is_threat_leaf);
+            ROS_INFO("LOADED IS THREAT %d", threat);
+            return threat;
+        }
+    }
+}
+
 bool get_intruder_motion_goals(
         const RosContainerPtr &ros_container_ptr,
         const std::string &head_str,

@@ -10,7 +10,7 @@ from keras.wrappers.scikit_learn import KerasClassifier
 from keras.callbacks import TensorBoard, ModelCheckpoint, LearningRateScheduler
 from tensorboardcolab import *
 from keras import backend as K
-from tensorflow import set_random_seed, Session
+# from tensorflow import set_random_seed, Session
 
 from sklearn.model_selection import ParameterGrid, train_test_split
 from sklearn.metrics import mean_squared_error, r2_score

@@ -25,13 +25,10 @@ template<typename T> int collision_avoidance::correct_command(
         swarm_tools::PointInterval pi = {left_edge, right_edge};
         edge_points.push_back(pi);
     }
-    return collision_avoidance::correct_command(agent.get_state(),
+    return collision_avoidance::correct_command(agent,
                                                 command,
-                                                edge_points,
-                                                agent.get_constraints(),
-                                                agent.get_max_radar_distance(),
-                                                agent.get_max_radar_angle_rad(),
-                                                agent.get_aggression());
+                                                edge_points
+                                                );
 }
 template int collision_avoidance::correct_command<agent::USVAgent>(const agent::USVAgent &agent,
                                                                    const std::vector<agent::AgentState> &obstacle_states,
@@ -43,15 +40,16 @@ template int collision_avoidance::correct_command<agent::IntruderAgent>(const ag
                                                                         const std::vector<agent::AgentState> &obstacle_states,
                                                                         agent::AgentCommand &command);
 
-int collision_avoidance::correct_command(
-    const agent::AgentState &agent_state,
+template<typename T> int collision_avoidance::correct_command(
+    const T &agent,
     agent::AgentCommand &command,
-    const std::vector<swarm_tools::PointInterval> &edge_points,
-    const agent::AgentConstraints &constraints,
-    double max_distance,
-    double max_angle_rad,
-    double aggression
+    const std::vector<swarm_tools::PointInterval> &edge_points
 ){
+    agent::AgentState agent_state = agent.get_state();
+    agent::AgentConstraints constraints = agent.get_constraints();
+    double max_distance = agent.get_max_radar_distance();
+    double max_angle_rad = agent.get_max_radar_angle_rad();
+    double aggression = agent.get_aggression();
     std::vector<swarm_tools::AngleInterval> safe_intervals;
     int flag = get_safe_intervals(agent_state,
                                   edge_points,
@@ -92,8 +90,19 @@ int collision_avoidance::correct_command(
     // Get the weighted mid point of the interval.
     double l_theta_dist = std::abs(swarm_tools::radnorm(l_theta_rad-delta_heading));
     double r_theta_dist = std::abs(swarm_tools::radnorm(r_theta_rad-delta_heading));
-
+    bool go_left;
+    bool evade = agent.evade();
     if ( l_theta_dist < r_theta_dist){
+        go_left = true;
+    }else{
+        go_left = false;
+    }
+
+    if(evade){
+        aggression=0.1;
+    }
+
+    if(go_left){
         command.delta_heading = aggression*l_theta_rad + (1-aggression)*r_theta_rad;
     }else{
         command.delta_heading = aggression*r_theta_rad + (1-aggression)*l_theta_rad;

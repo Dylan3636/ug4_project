@@ -13,14 +13,11 @@ template<typename T> int correct_command(
     agent::AgentCommand &command
 );
 
-int correct_command(
-    const agent::AgentState &agent_state,
+template<typename T> int correct_command(
+        const T &agent,
     agent::AgentCommand &command,
-    const std::vector<swarm_tools::PointInterval> &edge_points,
-    const agent::AgentConstraints &constraints,
-    double max_distance,
-    double max_angle_rad,
-    double aggression);
+    const std::vector<swarm_tools::PointInterval> &edge_points
+    );
 
 bool collision_check(
     const agent::AgentState &agent_state,

@@ -304,8 +304,8 @@ namespace swarm_control{
             return true;
 
         }else {
-            ROS_INFO("Batch Intruder Model Query Successful!");
-            ROS_ERROR("Batch Intruder Model Query Successful!");
+            ROS_INFO("Batch Intruder Model Query Failed!");
+            ROS_ERROR("Batch Intruder Model Query Failed!");
             return false;
         }
     }
@@ -429,7 +429,7 @@ namespace swarm_control{
         command.delta_heading=delta_heading;
         }
 
-    bool weighted_motion_goal(
+    double weighted_motion_goal(
         const std::vector<agent::MotionGoal>& motion_goals,
         const std::vector<double>& weights,
         agent::MotionGoal& weighted_motion_goal
@@ -454,9 +454,9 @@ namespace swarm_control{
         weighted_motion_goal.x=weighted_x;
         weighted_motion_goal.y=weighted_y;
         weighted_motion_goal.heading_rad=weighted_heading;
-        return true;
+        return w_sum;
     }
-    bool get_motion_goal_from_assignment(int usv_id,
+    double get_motion_goal_from_assignment(int usv_id,
                                          const agent::USVSwarm &swarm,
                                          agent::MotionGoal &motion_goal){
         std::vector<agent::MotionGoal> motion_goals;
@@ -483,7 +483,7 @@ namespace swarm_control{
                 case agent::TaskType::Delay:
                     intruder_id = task.task_idx;
                     swarm_control::usv_delay_motion_goal(usv_id, intruder_id, swarm, motion_goal);
-                    return true;
+                    return 1.0;
                 case agent::TaskType::Guard:
                     guard_id=task.task_idx;
                     asset_state=swarm.get_asset_estimate().get_state();
@@ -507,8 +507,8 @@ namespace swarm_control{
                     break;
             }
         }
-        weighted_motion_goal(motion_goals, weights, motion_goal);
-        return true;
+        double total_weight = weighted_motion_goal(motion_goals, weights, motion_goal);
+        return 1-(w_guard/total_weight);
     }
     bool usv_observe_motion_goal(int usv_id,
                                  int intruder_id,

@@ -9,6 +9,7 @@ import keras
 from sklearn.externals import joblib
 from time import sleep
 from swarmais.models import coeff_determination
+import tensorflow as tf
 initialized = False
 
 
@@ -20,12 +21,14 @@ def reset_callback(msg):
 
 
 def nn_model_request(req):
-    return
+    rospy.logerr("THREAT HERE")
     if not initialized:
         return
     global rnnmodel
     try:
-        delta_speeds, delta_headings, ids = rnnmodel.predict(req)
+        rospy.logerr("THREAT HERE 1")
+        delta_speeds, delta_headings, ids = rnnmodel.predict(req.batch_previous_states)
+        rospy.logerr("THREAT HERE 2")
         commands = []
         for delta_speed, delta_heading, id in zip(delta_speeds, delta_headings, ids):
             command = agentCommand()
@@ -35,9 +38,9 @@ def nn_model_request(req):
             commands.append(command)
 
     except Exception as e:
-        rospy.loginfo(str(e.with_traceback()))
-        rospy.logerr(str(e.with_traceback()))
-        print(e.with_traceback())
+        rospy.loginfo(str(e))
+        rospy.logerr(str(e))
+        print(e)
         return
     resp = batchIntruderCommandsResponse()
     resp.batch_intruder_commands = commands
@@ -50,24 +53,27 @@ def start_callback(msg):
 
 
 if __name__ == "__main__":
-    rospy.init_node("nn_model_node")
+    rospy.init_node("swarm_intruder_model")
     rospy.Subscriber('SystemStart', initializeSystem, start_callback)
     rospy.Subscriber('SystemReset', resetSystem, reset_callback)
 
     while not initialized and not rospy.is_shutdown():
         sleep(0.001)
+        rospy.logerr("Waiting to start")
     if rospy.is_shutdown():
         pass
     else:
-        modelpth = rospy.get_param('swarm_threat_detection/modelpath')
+        modelpth = rospy.get_param('swarm_intruder_model/modelpath')
         rospy.logerr(modelpth)
         model = load_model(modelpth, custom_objects={'coeff_determination':coeff_determination})
+        model._make_predict_function()
+        graph = tf.get_default_graph()
 
-        normalizerspath = rospy.get_param('swarm_threat_detection/normalizerpath')
+        normalizerspath = rospy.get_param('swarm_intruder_model/normalizerpath')
         xnormalizer = joblib.load(normalizerspath+"/xnormalizer")
         ynormalizer = joblib.load(normalizerspath+"/ynormalizer")
-        seq_length = rospy.get_param('swarm_threat_detection/sequence_length')
-        rnnmodel = RNNModel(model, xnormalizer, ynormalizer, seq_length)
-        rospy.Service('IntruderModel', batchIntruderCommands, nn_model_request)
+        seq_length = rospy.get_param('swarm_intruder_model/sequence_length')
+        rnnmodel = RNNModel(model, xnormalizer, ynormalizer, seq_length,graph=graph)
+        rospy.Service('swarm_intruder_model_service', batchIntruderCommands, nn_model_request)
         rospy.loginfo("Initiating Threat Detection System")
         rospy.spin()

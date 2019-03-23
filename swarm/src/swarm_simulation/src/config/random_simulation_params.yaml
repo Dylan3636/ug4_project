@@ -7,7 +7,7 @@ visualize : True
 
 usv_params: {
   min_num_usvs : 2,
-  max_num_usvs : 5,
+  max_num_usvs : 4,
   initial_state: {
      x: {
        sampler: uniform,
@@ -40,7 +40,7 @@ usv_params: {
      },
      max_delta_speed: {
        sampler: constant,
-       constant: 100
+       constant: 50
      },
      max_delta_heading: {
        sampler: constant,
@@ -72,27 +72,27 @@ usv_params: {
 intruder_params :
   min_num_intruders : 3
   min_num_threats : 1
-  max_num_intruders : 8
+  max_num_intruders : 5
   time_between_intruders_mean : 5
   initial_state :
      x:
         sampler: hybrid
         samplers :
           - sampler : uniform
-            lower : -1800
-            upper : -1400
-          - sampler : uniform
-            lower : 1400
-            upper : 1800
+            lower : -2000
+            upper : -1500
+#          - sampler : uniform
+#            lower : 1400
+#            upper : 1800
      y:
          sampler: hybrid
          samplers :
+#           - sampler: uniform
+#             lower: -800
+#             upper: 1000
            - sampler: uniform
-             lower: -800
-             upper: 1000
-           - sampler: uniform
-             lower: -1800
-             upper: -1400
+             lower: -2000
+             upper: -1500
      speed:
         sampler : constant
         constant : 0
@@ -110,7 +110,7 @@ intruder_params :
        upper: 50
      max_delta_speed:
        sampler: constant
-       constant: 100
+       constant: 50
      max_delta_heading:
        sampler: constant
        constant: 90

@@ -1,7 +1,6 @@
 #include "usv_swarm.h"
 #include "boost/format.hpp"
 #include <assert.h>
-#include "motion_goal_control.h"
 #include "ros_swarm_tools.h"
 #include "swarm_threat_detection/ThreatDetection.h"
 #include "swarm_threat_detection/batchIntruderCommands.h"
@@ -146,16 +145,15 @@ namespace agent{
 
     bool USVSwarm::switch_observe_to_delay_task(int intruder_id){
        auto sorted_usvs = sort_usvs_by_weighted_distance_to_point(get_intruder_estimate_by_id(intruder_id).get_position());
-       int result;
+       bool switched=false;
        for(int usv_id : sorted_usvs){
-           result = usv_map[usv_id].switch_observe_to_delay_assignment(intruder_id);
-           if(result==1){
-               return true;
-           }else{
-               continue;
+           usv_map[usv_id].remove_observe_assignment(intruder_id);
+           if(!switched){
+               switched = usv_map[usv_id].switch_observe_to_delay_assignment(intruder_id);
+               ROS_ERROR("I SWITCHED %d", switched);
            }
        }
-       return false;
+       return switched;
     }
 
 
@@ -186,7 +184,7 @@ namespace agent{
             ROS_INFO("Intruder Threat Detection Service Successful!");
             ROS_INFO("For Intruder %d : (%d, %f)", intruder_state.sim_id, srv.response.threat_alert, srv.response.threat_probability);
             bool new_threat = (!get_intruder_estimate_by_id(intruder_state.sim_id).is_threat() && srv.response.threat_alert);
-            ROS_INFO("New threat %d", new_threat);
+            ROS_INFO("New threat_classification %d", new_threat);
             intruder_map[intruder_state.sim_id].set_threat_estimate(srv.response.threat_alert, srv.response.threat_probability);
             return new_threat;
         }else{
@@ -331,15 +329,21 @@ namespace agent{
 
     void USVSwarm::update_intruder_state_estimate(const AgentState &intruder_state){
         intruder_map[intruder_state.sim_id].set_state(intruder_state);
+
+        clock_t t = clock();
         bool new_threat_alert = update_intruder_threat_estimate(intruder_state);
+        ROS_DEBUG("Update intruder threat estimate time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
         if (new_threat_alert){
             ROS_INFO("Switching Observe Task to Delay Task for Intruder %d", intruder_state.sim_id);
+            t = clock();
             bool successful = switch_observe_to_delay_task(intruder_state.sim_id);
+            ROS_ERROR("Delay switch time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
             if(successful){
                 ROS_INFO("Switch successful!");
+                intruder_map[intruder_state.sim_id].set_threat_classification(true);
                 block_next_task_allocation=true;
             }else{
-                ROS_INFO("Switch failed!");
+                ROS_ERROR("Switch failed!");
             }
 
         }
@@ -384,10 +388,10 @@ namespace agent{
             intruder_pair.second.sample(generator);
         }
     }
-    bool USVSwarm::get_batch_intruder_commands_from_model(std::vector<agent::AgentCommand> &commands){
-        return swarm_control::get_batch_intruder_commands_from_model(get_intruder_estimates(),
-                commands,
-                intruder_model_client);
-
-    }
+//    bool USVSwarm::get_batch_intruder_commands_from_model(std::vector<agent::AgentCommand> &commands){
+//        return swarm_control::get_batch_intruder_commands_from_model(get_intruder_estimates(),
+//                commands,
+//                intruder_model_client);
+//
+//    }
 }

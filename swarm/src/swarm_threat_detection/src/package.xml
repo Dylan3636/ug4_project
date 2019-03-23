@@ -17,7 +17,7 @@
 <package>
   <name>swarm_threat_detection</name>
   <version>0.0.1</version>
-  <description>Package for threat detection</description>
+  <description>Package for threat_classification detection</description>
 
   <maintainer email="dylanangus@hotmail.com">Dylan Angus</maintainer>
 
