@@ -70,17 +70,17 @@ usv_params: {
 }
 
 intruder_params :
-  min_num_intruders : 3
+  min_num_intruders : 1
   min_num_threats : 1
-  max_num_intruders : 5
-  time_between_intruders_mean : 5
+  max_num_intruders : 15
+  time_between_intruders_mean : 10
   initial_state :
      x:
         sampler: hybrid
         samplers :
           - sampler : uniform
-            lower : -2000
-            upper : -1500
+            lower : 2000
+            upper : 1500
 #          - sampler : uniform
 #            lower : 1400
 #            upper : 1800

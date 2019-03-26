@@ -18,8 +18,11 @@ namespace agent{
     };
     struct AgentCommand
     {
-        double delta_speed;
-        double delta_heading;
+        double delta_speed=0.0;
+        double delta_heading=0.0;
+        AgentCommand()=default;
+        AgentCommand(const AgentCommand &command)=default;
+        AgentCommand(double delta_speed, double delta_heading) : delta_speed(delta_speed), delta_heading(delta_heading){}
     };
     struct AgentState
     {
@@ -35,6 +38,7 @@ namespace agent{
         }
 
         AgentState(const AgentState &state){
+            ROS_DEBUG("Copy State Constructor");
             x = state.x;
             y = state.y;
             speed = state.speed;
@@ -44,12 +48,13 @@ namespace agent{
         }
 
         AgentState(){
+            ROS_DEBUG("Default State Constructor");
             x=0;
             y=0;
             speed=0;
             heading=0;
             radius=-1;
-            sim_id=-1;
+            sim_id=-500;
         }
 
         AgentState(double x,
@@ -57,13 +62,7 @@ namespace agent{
                    double speed,
                    double heading,
                    double radius,
-                   int sim_id){
-            this->x=x;
-            this->y=y;
-            this->speed=speed;
-            this->heading=heading;
-            this->radius=radius;
-            this->sim_id=sim_id;
+                   int sim_id) : x(x), y(y), speed(speed), heading(heading), radius(radius), sim_id(sim_id){
         }
     };
 
@@ -81,12 +80,12 @@ namespace agent{
     };
 
     struct AgentTask{
-        TaskType task_type;
+        TaskType task_type=Guard;
         int task_idx=-1; // ID of intruder or guard position
 
         AgentTask(){
-            task_idx=-1;
-            task_type=Delay;
+            task_idx=-2;
+            task_type=Guard;
         }
         AgentTask(const AgentTask &task){
             task_idx=task.task_idx;
@@ -117,6 +116,30 @@ namespace agent{
             }
             task_str += " Index: ";
             task_str += std::to_string(task_idx);
+            task_str += "\n";
+            return task_str;
+        }
+    };
+    struct WeightedTask : AgentTask{
+        double weight=0;
+
+        WeightedTask():AgentTask(){ROS_DEBUG("Default Weighted Constructor");};
+        WeightedTask(TaskType tt, int tidx, double weight) : AgentTask(tt, tidx), weight(weight){}
+        WeightedTask(AgentTask task, double weight) : AgentTask(task), weight(weight){}
+        WeightedTask(const WeightedTask &wt) : AgentTask(wt), weight(wt.weight){
+           ROS_DEBUG("Copy Weighted Constructor");
+        }
+
+        bool operator<(const WeightedTask &wt) const{
+            return weight < wt.weight;
+        }
+        bool operator==(const WeightedTask &wt) const{
+            return weight < wt.weight;
+        }
+        std::string to_string() const{
+            auto task_str = AgentTask::to_string();
+            task_str += "Weight: ";
+            task_str += std::to_string(weight);
             task_str += "\n";
             return task_str;
         }
@@ -196,7 +219,8 @@ namespace agent{
             CollisionAvoidanceParameters ca_params{};
             AgentType type{Base};
             time_t previously_blocked_time = time(NULL);
-
+            bool _evading = false;
+            std::default_random_engine generator;
         public:
 
             void update_previously_blocked_time(){
@@ -207,12 +231,28 @@ namespace agent{
                 return previously_blocked_time;
             }
             bool evade() const{
-                std::default_random_engine generator;
+                return _evading;
+            }
+            bool update_evade(){
+                if(_evading){
+                    ROS_INFO("Currently evading");
+                    double delta_time_secs = std::difftime(time(NULL), previously_blocked_time);
+                    if (delta_time_secs>1){
+                        _evading=false;
+                        return _evading;
+                    }else{
+                        return _evading;
+                    }
+                }
                 double lambda = 5;
                 double delta_time_secs = std::difftime(time(NULL), previously_blocked_time);
-                double pdf = lambda*std::exp(-lambda*delta_time_secs);
-                std::bernoulli_distribution dist(pdf);
-                return dist(generator);
+                double cdf = 1-std::exp(-lambda*delta_time_secs);
+                if(delta_time_secs<2){
+                    std::bernoulli_distribution dist(get_aggression());
+                    _evading = dist(generator);
+                }
+                ROS_INFO("Evade: (%d, %f. %f)", _evading, cdf, delta_time_secs);
+                return _evading;
             }
 
             BaseAgent() = default;
@@ -229,15 +269,13 @@ namespace agent{
                                          ca_params(ca_params),
                                          type(type){}
 
-            void copy(const BaseAgent &agent){
+        BaseAgent(const BaseAgent &agent){
                 set_state(agent.get_state());
                 set_constraints(agent.get_constraints());
                 set_collision_avoidance_params(agent.get_collision_avoidance_params());
-            }
-            BaseAgent(const BaseAgent &agent){
-                set_state(agent.get_state());
-                set_constraints(agent.get_constraints());
-                set_collision_avoidance_params(agent.get_collision_avoidance_params());
+                previously_blocked_time=agent.previously_blocked_time;
+                _evading = agent._evading;
+                generator = generator;
             }
 
             double get_radius() const{
@@ -281,10 +319,10 @@ namespace agent{
             }
 
             virtual void set_state(const AgentState &new_state){
-                state = AgentState(new_state);
+                state = new_state;
             }
             void update_state(double x, double y, double speed, double heading){
-                set_state(AgentState{x, y, speed, heading, get_radius(), get_sim_id()});
+                set_state(AgentState(x, y, speed, heading, get_radius(), get_sim_id()));
             }
             double get_max_speed() const{
                 return constraints.max_speed;
@@ -324,7 +362,7 @@ namespace agent{
                 ca_params=new_ca_params;
                 }
 
-            void command_agent_forward(const AgentCommand &command,
+            virtual void command_agent_forward(const AgentCommand &command,
                                        double delta_time_secs){
 
                 state.speed += std::min(command.delta_speed*delta_time_secs, this->constraints.max_speed);
@@ -347,11 +385,13 @@ namespace agent{
             IntruderAgent() = default;
             IntruderAgent(bool threat, const AgentState &initial_state) : BaseAgent(initial_state, Intruder){
                 set_threat_classification(threat);
+                set_state(initial_state);
             }
             IntruderAgent(const IntruderAgent &agent) : BaseAgent(agent){
                 threat_classification=agent.threat_classification;
                 sequence_length = agent.sequence_length;
                 previous_states = agent.previous_states;
+                count=agent.count;
             }
 
             IntruderAgent(
@@ -362,6 +402,7 @@ namespace agent{
                                                                                      constraints,
                                                                                      ca_params,
                                                                                      Intruder){
+                set_state(initial_state);
             set_threat_classification(threat);
             }
             bool is_threat() const{
@@ -372,19 +413,20 @@ namespace agent{
             }
             void set_state(const agent::AgentState &state){
                 BaseAgent::set_state(state);
-                count++;
-                if (count%1!=0){
-                    return;
-                }else{
-                    count=0;
-                }
+
                 while (previous_states.size() >= sequence_length){
                     previous_states.pop_back();
                 }
                 previous_states.push_front(state);
             }
 
-    };
+            void command_agent_forward(const AgentCommand &command,
+                                       double delta_time_secs){
+                BaseAgent::command_agent_forward(command, delta_time_secs);
+                set_state(get_state());
+            }
+
+            };
     
 //    class IntruderAgent : public BaseIntruderAgent{
 //        public:
@@ -434,11 +476,22 @@ namespace agent{
                 return threat_probability;
             }
 
-            bool sample(std::default_random_engine generator){
+            bool sample_inplace(std::default_random_engine generator){
                 if (!is_threat()){
                     std::bernoulli_distribution dist(this->threat_probability);
                     set_threat_classification(dist(generator));
                 }
+                return is_threat();
+            }
+            bool sample(std::default_random_engine generator) const{
+                bool threat;
+                if (!is_threat()){
+                    std::bernoulli_distribution dist(this->threat_probability);
+                    threat = dist(generator);
+                }else{
+                    threat=true;
+                }
+                return threat;
             }
 
             ObservedIntruderAgent()=default;
@@ -469,14 +522,28 @@ namespace agent{
                 set_state(state);
                 set_agent_type(Asset);
             }
+            AssetAgent(const AssetAgent &asset)=default;
     };
 
+    double get_observation_weight(const agent::ObservedIntruderAgent &intruder, const agent::AssetAgent &asset){
+        double w_obs = 1500;
+        double w_dist = 5000;
+        double dist_to_asset = swarm_tools::euclidean_distance(asset.get_position(),
+                                                               intruder.get_position());
+        double p_threat = intruder.get_threat_probability();
+        return w_obs * p_threat * (1 + w_dist / dist_to_asset);
+    }
+    double get_guard_weight() {
+        return 100;
+    }
 
     class USVAgent : public BaseAgent
     {
         // private variables
         AgentAssignment current_assignment;
         bool _has_delay_task=false;
+        int max_num_observations=3;
+        int current_num_observations=0;
         public:
 
 
@@ -489,22 +556,23 @@ namespace agent{
 //
 //            }
 
-            void copy(const USVAgent &usv){
-                BaseAgent::copy(usv);
-                set_current_assignment(usv.get_current_assignment());
-            }
-            AgentAssignment get_current_assignment() const{
+        AgentAssignment get_current_assignment() const{
                 return current_assignment;
             }
 
             void set_current_assignment(const AgentAssignment &assignment){
                 current_assignment.clear();
+                current_num_observations=0;
                 _has_delay_task=false;
                 for(const auto &task : assignment){
                     if(task.task_type==Delay){
                         _has_delay_task=true;
+                        current_assignment.push_back(task);
+                    }else if(task.task_type==Observe){
+                        add_observe_task(task.task_idx);
+                    }else{
+                        current_assignment.push_back(task);
                     }
-                    current_assignment.push_back(task);
                 }
             }
             bool switch_observe_to_delay_assignment(int intruder_id){
@@ -514,8 +582,7 @@ namespace agent{
                     set_delay_assignment(intruder_id);
                     return true;
                 }
-                // bool had_observe_task = remove_observe_assignment(intruder_id);
-
+                // bool had_observe_task = remove_observe_task(intruder_id);
             }
             void set_delay_assignment(int delay_assignment_idx){
                 bool set=false;
@@ -548,9 +615,11 @@ namespace agent{
                 current_assignment.emplace_back(Guard, guard_assignment_idx);
             }
             
-            void add_observe_task(int observe_assignment_idx){
-                remove_observe_assignment(observe_assignment_idx);
+            bool add_observe_task(int observe_assignment_idx){
+                remove_observe_task(observe_assignment_idx);
+                if(current_num_observations>=max_num_observations) return false;
                 current_assignment.push_back(AgentTask(Observe, observe_assignment_idx));
+                current_num_observations++;
             }
             bool has_delay_task() const{
                 return _has_delay_task;
@@ -566,16 +635,23 @@ namespace agent{
                 return false;
             }
 
-            bool remove_observe_assignment(int observe_assignment_idx){
+            bool remove_observe_task(int observe_assignment_idx){
                 auto task2rem = AgentTask(Observe, observe_assignment_idx);
                 for(int i =0; i < current_assignment.size(); i++){
                     if(current_assignment[i].task_type==Observe && current_assignment[i].task_idx==observe_assignment_idx){
                         current_assignment[i]=current_assignment.back();
                         current_assignment.pop_back();
+                        current_num_observations--;
                         return true;
                     }
                 }
                 return false;
+            }
+            bool swap_observe_tasks(int old_task_idx, int new_task_idx){
+                bool result = remove_observe_task(old_task_idx);
+                if(!result) return false;
+                add_observe_task(new_task_idx);
+                return true;
             }
             USVAgent() = default;
             USVAgent(const AgentState &state,
@@ -600,8 +676,10 @@ namespace agent{
                 set_agent_type(USV);
             }
             USVAgent(const USVAgent &usv):BaseAgent(usv){
-                set_current_assignment(usv.get_current_assignment());
                 _has_delay_task = usv.has_delay_task();
+                max_num_observations=usv.max_num_observations;
+                current_num_observations=usv.current_num_observations;
+                set_current_assignment(usv.get_current_assignment());
             }
     };
 

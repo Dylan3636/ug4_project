@@ -1,34 +1,44 @@
 #include <map>
 #include <vector>
+#include <queue>
 #include "agent.h"
 
 #ifndef USV_SWARM_H
 #define USV_SWARM_H
 
 namespace agent{
+
     class USVSwarm{
         int main_usv_id;
         std::map<int, USVAgent> usv_map;
         std::map<int, ObservedIntruderAgent> intruder_map;
         ros::ServiceClient threat_detection_client;
-        ros::ServiceClient intruder_model_client;
         AssetAgent asset;
+        std::priority_queue<WeightedTask> task_queue;
+        std::default_random_engine generator;
 
         // private  methods
         void update_intruder_estimate(const ObservedIntruderAgent &intruder);
         void update_usv_estimate(const USVAgent &usv);
 
         public:
+            ros::ServiceClient intruder_model_client;
             USVSwarm() = default;
             USVSwarm(const USVSwarm &swarm){
-                // ROS_INFO("Swarm is being copied!!!");
+                ROS_DEBUG("Swarm is being copied!!!");
                 main_usv_id = swarm.main_usv_id;
                 usv_map = swarm.usv_map;
+                ROS_DEBUG("Swarm USV Map Copied!!!");
                 intruder_map = swarm.intruder_map;
+                ROS_DEBUG("Swarm Intruder Map Copied!!!");
                 threat_detection_client = swarm.threat_detection_client;
                 intruder_model_client = swarm.intruder_model_client;
                 asset = swarm.asset;
+                ROS_DEBUG("Swarm Asst Copied!!!");
                 block_next_task_allocation = swarm.block_next_task_allocation;
+                ROS_DEBUG("Copying Queue!");
+                task_queue=swarm.task_queue;
+                generator = swarm.generator;
             }
             bool block_next_task_allocation=false;
 
@@ -50,20 +60,21 @@ namespace agent{
             std::vector<int> get_usv_ids() const;
             int get_delay_position(int usv_id, int intruder_id) const;
             AgentAssignment get_assignment_by_id(int usv_id) const;
+            void get_unoccupied_usvs(std::vector<int> &usv_ids);
 
             // Intruders
             ObservedIntruderAgent get_intruder_estimate_by_id(int intruder_id) const;
-            std::vector<ObservedIntruderAgent> get_intruder_estimates() const;
-            bool get_batch_intruder_commands_from_model(std::vector<agent::AgentCommand> &commands);
+            void get_intruder_estimates(std::vector<ObservedIntruderAgent> &intruders) const;
             void sample_intruders();
+            void sample_intruder_threat_map(std::map<int, bool> &intruder_threat_map) const;
 
             // Asset
             AssetAgent get_asset_estimate() const;
 
             // Agents
-            std::map<int, AgentType> get_agent_sim_id_map() const;
-            std::vector<AgentState> get_obstacle_states() const;
-            SwarmAssignment get_swarm_assignment() const;
+            void get_agent_sim_id_map(std::map<int, AgentType> &sim_id_map) const;
+            void get_obstacle_states(std::vector<AgentState> &obstacles) const;
+            void get_swarm_assignment(SwarmAssignment &assignment_map) const;
 
 
             // Setters
@@ -87,9 +98,13 @@ namespace agent{
 
             // Adders
             void add_usv(const USVAgent &usv);
-            void add_intruder(ObservedIntruderAgent intruder);
+            void add_intruder(const ObservedIntruderAgent &intruder);
+
+
+            bool swap_around_observation_tasks();
 
             // Update
+            void update_queue_priorities();
             void update_intruder_state_estimate(const AgentState &intruder_state);
 
             void update_usv_state_estimate(const AgentState &usv_state);

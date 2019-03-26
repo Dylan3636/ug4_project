@@ -14,5 +14,7 @@ namespace swarm_control{
                                         const agent::USVSwarm &swarm,
                                         agent::MotionGoal &intruder_motion_goal,
                                         agent::AgentCommand &command);
+    void get_batch_intruder_commands(const agent::USVSwarm &swarm,
+            std::map<int, agent::AgentCommand> &intruder_commands_map);
 }
 #endif

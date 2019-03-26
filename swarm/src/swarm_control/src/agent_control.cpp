@@ -1,4 +1,5 @@
 #include "agent_control.h"
+#include "motion_goal_control.h"
 namespace swarm_control{
     void get_next_usv_command_by_id(int usv_id,
                                    const agent::USVSwarm &swarm,
@@ -16,8 +17,10 @@ namespace swarm_control{
                                          motion_goal,
                                          command);
         usv.set_aggression(aggression);
+        std::vector<agent::AgentState> obstacle_states;
+        swarm.get_obstacle_states(obstacle_states);
         collision_avoidance::correct_command(usv,
-                                             swarm.get_obstacle_states(),
+                                             obstacle_states,
                                              command);
     }
 
@@ -36,11 +39,16 @@ namespace swarm_control{
                                                        intruder_mg,
                                                        command);
 
+        std::vector<agent::AgentState> obstacle_states;
+        swarm.get_obstacle_states(obstacle_states);
         collision_avoidance::correct_command(intruder,
-                                             swarm.get_obstacle_states(),
-                                             command);
+                obstacle_states,
+                command);
     }
-    void get_batch_intruder_command(const agent::USVSwarm &swarm){
-        auto intruders = swarm.get_intruder_estimates();
+    void get_batch_intruder_commands(const agent::USVSwarm &swarm, std::map<int, agent::AgentCommand> &intruder_commands_map){
+        std::vector<agent::ObservedIntruderAgent> intruders;
+        swarm.get_intruder_estimates(intruders);
+        ros::ServiceClient client=swarm.intruder_model_client;
+        swarm_control::get_batch_intruder_commands_from_model(intruders, intruder_commands_map, client);
     }
 }

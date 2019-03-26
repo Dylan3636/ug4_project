@@ -10,6 +10,7 @@
 //#include "swarm_control/CollisionAvoidance.h"
 #include "swarm_threat_detection/batchIntruderCommands.h"
 
+int count=0;
 bool initialized=false;
 bool use_model=true;
 ros::Publisher command_pub;
@@ -122,53 +123,36 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         int sim_id = intruder_pair.first;
         auto &intruder = intruder_pair.second;
 
-        agent::AgentCommand command{};
+        agent::AgentCommand command;
         agent::MotionGoal motion_goal;
         // bool end = !intruder.get_motion_goal(&motion_goal);
         ROS_INFO("Intruder %d, %d", intruder_pair.first, intruder.is_threat());
         if(!intruder.is_threat()){
-            motion_goal.x=-1000;
+            motion_goal.x=-4000;
             motion_goal.y=1000;
         }
         //       ROS_ASSERT(!end);
 
-        if(!use_model || intruder.is_threat() || (intruder.previous_states.size()<intruder.sequence_length)){
+        if(intruder.is_threat() || (count++<50)){
             swarm_control::get_intruder_command_from_motion_goal(intruder,
                                                                  motion_goal,
                                                                  command);
+            ROS_INFO("Motion goal ([%f], [%f])",
+                     motion_goal.x, motion_goal.y);
+            ROS_INFO("Position ([%f], [%f])",
+                     intruder.get_x(), intruder.get_y());
         }else{
             command = intruder_commands_map[sim_id];
 
         }
 
-
-
-//        swarm_control::CollisionAvoidance srv;
-//
-//        // WorldState
-//        srv.request.world_state = *world_state;
-//
-//        // Command
-//        srv.request.desired_command.sim_id=sim_id;
-//        srv.request.desired_command.delta_speed=command.delta_speed;
-//        srv.request.desired_command.delta_heading=command.delta_heading;
-//
-//        // Constraints
-//        srv.request.agent_constraints.sim_id=sim_id;
-//        srv.request.agent_constraints.max_speed=intruder.get_max_speed();
-//        srv.request.agent_constraints.max_delta_speed=intruder.get_max_delta_speed();
-//        srv.request.agent_constraints.max_delta_heading=intruder.get_max_delta_heading();
-//
-//        // Parameters
-//        srv.request.agent_params.sim_id=sim_id;
-//        srv.request.agent_params.max_distance=intruder.get_max_radar_distance();
-//        srv.request.agent_params.max_angle=intruder.get_max_radar_angle_rad();
-//        srv.request.agent_params.aggression=intruder.get_aggression();
-
         ROS_INFO("Correcting command for intruder [%d]", sim_id);
         ROS_INFO("Recommended command ([%f], [%f])",
                 command.delta_speed,
                 command.delta_heading*180/swarm_tools::PI);
+
+        bool evade = intruder.update_evade();
+        double aggression = intruder.get_aggression();
         int result = collision_avoidance::correct_command(intruder,
                                                           obstacle_states,
                                                           command);

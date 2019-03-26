@@ -5,7 +5,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                             std::map<int, agent::AgentState> &intruder_state_map,
                             agent::AgentState &asset_state){
     // auto ws = world_state->worldState;
-    for ( swarm_msgs::agentState agent_state : world_state->worldState){
+    for ( const swarm_msgs::agentState &agent_state : world_state->worldState){
         if (agent_state.agent_type == swarm_msgs::agentType::USV){
             int sim_id = agent_state.sim_id;
             double x = agent_state.x;
@@ -23,8 +23,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                     radius
                     );
 
-            agent::AgentState usv_state = {x, y, speed, heading, radius, sim_id}; 
-            usv_state_map[sim_id] = usv_state;
+             usv_state_map[sim_id] = agent::AgentState(x, y, speed, heading, radius, sim_id);
         }
         if (agent_state.agent_type == swarm_msgs::agentType::INTRUDER){
             int sim_id = agent_state.sim_id;
@@ -43,8 +42,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                     radius
                     );
 
-            agent::AgentState intruder_state = {x, y, speed, heading, radius, sim_id};
-            intruder_state_map[sim_id] = intruder_state;
+            intruder_state_map[sim_id] = agent::AgentState(x, y, speed, heading, radius, sim_id);
         }
         if (agent_state.agent_type == swarm_msgs::agentType::TANKER){
             int sim_id = agent_state.sim_id;
@@ -62,7 +60,7 @@ void extract_from_world_msg(const swarm_msgs::worldStateConstPtr &world_state,
                     heading*180/swarm_tools::PI,
                     radius
                     );
-            asset_state = {x, y, speed, heading, radius, sim_id}; 
+            asset_state = agent::AgentState(x, y, speed, heading, radius, sim_id);
         }
     }
 }
@@ -145,7 +143,7 @@ agent::AgentTask extract_from_task_msg(const swarm_msgs::agentTask &task_msg){
 }
 
 agent::AgentCommand extract_from_command_msg(const swarm_msgs::agentCommand &command_msg){
-    return agent::AgentCommand{command_msg.delta_speed, command_msg.delta_heading};
+    return agent::AgentCommand(command_msg.delta_speed, command_msg.delta_heading);
 }
 
 agent::SwarmAssignment extract_from_swarm_assignment_msg(const swarm_msgs::swarmAssignment &swarm_assignment_msg){

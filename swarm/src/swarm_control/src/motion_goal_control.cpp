@@ -258,6 +258,23 @@ namespace swarm_control{
                                           max_delta_heading);
         return delta_heading;
     }
+    double get_largest_delta_heading(double left_turn,
+                                      double right_turn,
+                                      double current_heading,
+                                      double max_delta_heading){
+        double delta_heading;
+        if (std::abs(left_turn)>std::abs(right_turn)) {
+            delta_heading = left_turn/0.1;
+            }
+        else {
+            delta_heading = right_turn/0.1;
+            }
+
+        delta_heading = swarm_tools::clip(delta_heading,
+                                          -max_delta_heading,
+                                          max_delta_heading);
+        return delta_heading;
+    }
     double get_delta_heading_towards_asset(double left_turn,
                                            double right_turn,
                                            double current_heading,
@@ -309,11 +326,11 @@ namespace swarm_control{
             return false;
         }
     }
-    template bool get_batch_intruder_commands_from_model(
+    template bool get_batch_intruder_commands_from_model<agent::ObservedIntruderAgent>(
             const std::vector<agent::ObservedIntruderAgent> &intruders,
             std::map<int, agent::AgentCommand> &commands,
             ros::ServiceClient &client);
-    template bool get_batch_intruder_commands_from_model(
+    template bool get_batch_intruder_commands_from_model<agent::IntruderAgent>(
             const std::vector<agent::IntruderAgent> &intruders,
             std::map<int, agent::AgentCommand> &commands,
             ros::ServiceClient &client);
@@ -340,10 +357,19 @@ namespace swarm_control{
         double current_heading = intruder.get_heading();
 
         get_left_and_right_turns(heading_goal, current_heading, left_turn, right_turn);
-        double delta_heading = get_smallest_delta_heading(left_turn,
-                                                          right_turn,
-                                                          current_heading,
-                                                          intruder.get_max_delta_heading());
+        double delta_heading;
+        if(intruder.evade()){
+            delta_heading = get_largest_delta_heading(left_turn,
+                                                              right_turn,
+                                                              current_heading,
+                                                              intruder.get_max_delta_heading());
+
+        }else{
+            delta_heading = get_smallest_delta_heading(left_turn,
+                                                       right_turn,
+                                                       current_heading,
+                                                       intruder.get_max_delta_heading());
+        }
         double delta_speed = get_delta_speed(speed_goal,
                                              intruder.get_speed(),
                                              intruder.get_max_delta_speed());
@@ -464,15 +490,13 @@ namespace swarm_control{
         agent::MotionGoal mg;
         agent::USVAgent usv = swarm.get_usv_estimate_by_id(usv_id);
         agent::AgentAssignment assignment = usv.get_current_assignment();
-        agent::AgentState asset_state;
+        agent::AgentState asset_state = swarm.get_asset_estimate().get_state();
 
         int num_usvs = swarm.get_num_usvs();
         int guard_radius = 100;
+        double w_guard = agent::get_guard_weight();
         int guard_id;
         int intruder_id;
-        double w_guard = 100;
-        double w_obs = 1500;
-        double w_dist =5000;
         double dist_to_asset;
         double p_threat;
         double weight;
@@ -497,9 +521,7 @@ namespace swarm_control{
                     motion_goals.push_back(mg);
                     intruder = swarm.get_intruder_estimate_by_id(intruder_id);
 //                    usv = swarm.get_usv_estimate_by_id(usv_id);
-                    dist_to_asset = swarm_tools::euclidean_distance(swarm.get_asset_estimate().get_position(), intruder.get_position());
-                    p_threat = intruder.get_threat_probability();
-                    weight = w_obs*p_threat*(1+w_dist/dist_to_asset);
+                    weight = agent::get_observation_weight(intruder, swarm.get_asset_estimate());
                     weights.push_back(weight);
                     // ROS_INFO("Distance %f, Probability %f, Weight %f", dist_to_asset, p_threat, weight);
                     break;

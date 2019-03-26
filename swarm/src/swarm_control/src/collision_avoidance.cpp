@@ -11,7 +11,7 @@ template<typename T> int collision_avoidance::correct_command(
     agent::AgentCommand &command
 ){
     std::vector<swarm_tools::PointInterval> edge_points;
-    for (auto obstacle_state : obstacle_states){
+    for (auto &obstacle_state : obstacle_states){
         if(agent.get_sim_id()==obstacle_state.sim_id) continue;
         swarm_tools::Point2D left_edge;
         swarm_tools::Point2D right_edge;
@@ -91,16 +91,12 @@ template<typename T> int collision_avoidance::correct_command(
     double l_theta_dist = std::abs(swarm_tools::radnorm(l_theta_rad-delta_heading));
     double r_theta_dist = std::abs(swarm_tools::radnorm(r_theta_rad-delta_heading));
     bool go_left;
-    bool evade = agent.evade();
     if ( l_theta_dist < r_theta_dist){
         go_left = true;
     }else{
         go_left = false;
     }
 
-    if(evade){
-        aggression=0.1;
-    }
 
     if(go_left){
         command.delta_heading = aggression*l_theta_rad + (1-aggression)*r_theta_rad;
@@ -120,8 +116,8 @@ bool collision_avoidance::is_command_safe(
     const std::vector<swarm_tools::AngleInterval>& safe_intervals
 ){
     for (const swarm_tools::AngleInterval interval : safe_intervals){
-        double l_theta = interval.l_theta_rad;
-        double r_theta = interval.r_theta_rad;
+//        double l_theta = interval.l_theta_rad;
+//        double r_theta = interval.r_theta_rad;
         // std::cout << "(" <<l_theta*180/swarm_tools::PI << ", " << r_theta*180/swarm_tools::PI << ")"<< std::endl;
         if (interval.contains(delta_heading)){
             return true;

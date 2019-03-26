@@ -12,6 +12,7 @@
 #include "swarm_msgs/resetSystem.h"
 #include "task_allocation.h"
 #include "swarm_threat_detection/ThreatDetection.h"
+#include "swarm_threat_detection/batchIntruderCommands.h"
 #include "swarm_task_manager/modelPredictiveSimulation.h"
 #include "ctime"
 
@@ -27,6 +28,7 @@ RosContainerPtr ros_container_ptr;
 ros::Publisher command_pub;
 ros::Publisher marker_pub;
 ros::Publisher threat_pub;
+ros::Publisher task_allocation_pub;
 ros::ServiceClient client;
 
 std::map<int, ros::ServiceClient> usv_sync_service_map;
@@ -38,10 +40,10 @@ std::map<int, agent::CollisionAvoidanceParameters> usv_radar_params_map;
 std::map<int, agent::AgentState> intruder_state_map;
 std::map<int, agent::AgentConstraints> intruder_constraints_map;
 std::map<int, agent::CollisionAvoidanceParameters> intruder_radar_params_map;
-agent::AgentState asset_state;
+agent::AgentState asset_state = agent::AgentState(0,0,0,0,40,0);
 
 std::mutex mtx;
-
+int count_since_shuffle = 0;
 void publish_markers(const agent::MotionGoal &motion_goal){
     // Motion Goal 
     ROS_INFO("Publishing Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
@@ -51,6 +53,17 @@ void publish_markers(const agent::MotionGoal &motion_goal){
     marker.sim_id = 10000 + usv_id; // TODO Fix this.
     marker.colour = "RED";
     marker_pub.publish(marker);
+}
+
+double standard_gaussian_liklihood(){
+}
+
+double calculate_threat_likelihood(const agent::AgentState previous_state, const agent::AgentState current_state){
+    double delta_speed = current_state.speed-previous_state.speed;
+    double delta_heading = swarm_tools::radnorm(current_state.heading-previous_state.heading);
+    double accel_x = delta_speed*std::cos(delta_heading);
+    double accel_y = delta_speed*std::cos(delta_heading);
+
 }
 
 void publish_threat_statistics(int intruder_id, double probability, bool classification){
@@ -81,6 +94,16 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     mtx.unlock();
     ROS_DEBUG("World Message Extraction time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
+    if(count_since_shuffle>10){
+        swarm_cp.swap_around_observation_tasks();
+        if (usv_id==1){
+            agent::SwarmAssignment assignment;
+            swarm_cp.get_swarm_assignment(assignment);
+            task_allocation_pub.publish(convert_to_swarm_assignment_msg(assignment));
+        }
+        count_since_shuffle=0;
+    }
+
     for(const auto &usv_state_id_pair : usv_state_map){
         if(swarm_cp.contains_usv(usv_state_id_pair.first)){
             t = clock();
@@ -89,11 +112,10 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
         }
         else{
             ROS_INFO("Adding new usv %d to swarm", usv_state_id_pair.first);
-            std::string usv_head_str = (boost::format("/swarm_simulation/usv_params/usv_%d") % usv_state_id_pair.first).str();
             swarm_cp.add_usv(agent::USVAgent(usv_state_id_pair.second,
                    usv_constraints_map[usv_state_id_pair.first],
                    usv_radar_params_map[usv_state_id_pair.first],
-                   agent::AgentAssignment{}));
+                   agent::AgentAssignment()));
         }
     }
 
@@ -110,10 +132,11 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
                    intruder_radar_params_map[intruder_state_id_pair.first]));
         }
     }
+    swarm_cp.update_queue_priorities();
 
     t = clock();
     for (const auto &task : swarm_cp.get_assignment_by_id(usv_id)){
-        if (task.task_type != agent::TaskType::Guard && task.task_idx!=-1 && task.task_idx>100){
+        if (task.task_type != agent::TaskType::Guard && task.task_idx!=-1){
             const auto intruder = swarm_cp.get_intruder_estimate_by_id(task.task_idx);
             double probability = intruder.get_threat_probability();
             bool classification = intruder.is_threat();
@@ -147,7 +170,8 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     ROS_INFO("Motion goal calculation time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
     ROS_INFO("DERSIRED COMMAND: (%f, %f)", command.delta_speed, command.delta_heading*180/swarm_tools::PI);
 
-    std::vector<agent::AgentState> obstacle_states = swarm_cp.get_obstacle_states();
+    std::vector<agent::AgentState> obstacle_states;
+    swarm_cp.get_obstacle_states(obstacle_states);
     t = clock();
     collision_avoidance::correct_command(usv,
                                          obstacle_states,
@@ -167,6 +191,7 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     }catch(std::exception &e){
         ROS_ERROR("Copy Error %s", e.what());
     }
+    count_since_shuffle++;
 } // callback
 
 
@@ -279,12 +304,15 @@ int main(int argc, char **argv){
     // Initialize swarm
     swarm.set_main_usv_id(usv_id);
     auto threat_detection_client = ros_container_ptr->nh.serviceClient<swarm_threat_detection::ThreatDetection>("ThreatDetection");
+    auto intruder_model_client = ros_container_ptr->nh.serviceClient<swarm_threat_detection::batchIntruderCommands>("swarm_intruder_model_service");
     swarm.set_threat_detection_client(threat_detection_client);
+    swarm.intruder_model_client=intruder_model_client;
 
     // Command and motion goal marker publisher
     command_pub = ros_container_ptr->nh.advertise<swarm_msgs::agentCommand>("Commands", 1000);
     marker_pub = ros_container_ptr->nh.advertise<swarm_msgs::simulationMarker>("Markers", 1000);
     threat_pub = ros_container_ptr->nh.advertise<swarm_msgs::threatStatistics>("threatStatistics", 1000);
+    task_allocation_pub = ros_container_ptr->nh.advertise<swarm_msgs::swarmAssignment>("Task_Allocation", 1000);
 
     // Perception Subscriber
     ros::Subscriber perc_sub = ros_container_ptr->nh.subscribe("Perception", 1000, perception_callback);
@@ -305,7 +333,7 @@ int main(int argc, char **argv){
     }
     ROS_INFO("Initialized %d", initialized);
     if(!ros::ok()) return 0;
-    ros::MultiThreadedSpinner spinner(4);
+    ros::MultiThreadedSpinner spinner(5);
     spinner.spin();
     // ros::spin();
 

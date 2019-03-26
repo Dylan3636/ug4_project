@@ -2,7 +2,7 @@
 <launch>
     <node pkg="swarm_threat_detection" type="threat_detection_node" name="swarm_threat_detection" clear_params="true" required="true">
         <param name="lr" value="0.1"/>
-        <param name="w_dist" value="800"/>
+        <param name="w_dist" value="1600"/>
         <param name="noise_sigma" value="0.025"/>
         <param name="alert_threshold" value="0.7"/>
     </node>

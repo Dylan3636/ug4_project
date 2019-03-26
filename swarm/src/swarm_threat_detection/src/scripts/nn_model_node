@@ -10,8 +10,12 @@ from sklearn.externals import joblib
 from time import sleep
 from swarmais.models import coeff_determination
 import tensorflow as tf
+import traceback
+from time import time
+from threading import Lock
 initialized = False
 
+thread_lock = Lock()
 
 def reset_callback(msg):
     global initialized
@@ -21,14 +25,13 @@ def reset_callback(msg):
 
 
 def nn_model_request(req):
-    rospy.logerr("THREAT HERE")
     if not initialized:
         return
     global rnnmodel
     try:
-        rospy.logerr("THREAT HERE 1")
+        pred_t = time()
         delta_speeds, delta_headings, ids = rnnmodel.predict(req.batch_previous_states)
-        rospy.logerr("THREAT HERE 2")
+        rospy.logerr("Prediction time {}".format(time()-pred_t))
         commands = []
         for delta_speed, delta_heading, id in zip(delta_speeds, delta_headings, ids):
             command = agentCommand()
@@ -36,11 +39,12 @@ def nn_model_request(req):
             command.delta_heading = delta_heading
             command.sim_id = id
             commands.append(command)
+        rospy.logerr("Total time {}".format(time()-pred_t))
 
     except Exception as e:
-        rospy.loginfo(str(e))
-        rospy.logerr(str(e))
-        print(e)
+        rospy.loginfo(traceback.format_exc())
+        rospy.logerr(traceback.format_exc())
+        print(traceback.format_exc())
         return
     resp = batchIntruderCommandsResponse()
     resp.batch_intruder_commands = commands
