@@ -108,7 +108,7 @@ namespace agent{
         }
 
         for (const auto &intruder_pair : intruder_map){
-            ROS_INFO("ADDING INRUDER %d TO AGENT MAP",intruder_pair.first);
+//            ROS_INFO("ADDING INRUDER %d TO AGENT MAP",intruder_pair.first);
             if(intruder_pair.first<100) continue;
             sim_id_map[intruder_pair.first] = Intruder;
         }
@@ -153,7 +153,11 @@ namespace agent{
            usv_map[usv_id].remove_observe_task(intruder_id);
            if(!switched){
                switched = usv_map[usv_id].switch_observe_to_delay_assignment(intruder_id);
-               ROS_ERROR("I SWITCHED %d", switched);
+               std::vector<agent::AgentTask> popped_tasks;
+               usv_map[usv_id].pop_all_observe_tasks(popped_tasks);
+               for(const auto &task : popped_tasks){
+                   task_queue.push(WeightedTask(task, agent::get_observation_weight(intruder_map[task.task_idx], asset)));
+               }
            }
        }
        return switched;
@@ -343,8 +347,12 @@ namespace agent{
 
     void USVSwarm::update_intruder_state_estimate(const AgentState &intruder_state){
         intruder_map[intruder_state.sim_id].set_state(intruder_state);
-
+    }
+    bool USVSwarm::update_intruder_threat_estimate(int intruder_id)
+    {
         clock_t t = clock();
+        auto intruder = get_intruder_estimate_by_id(intruder_id);
+        auto intruder_state = intruder.get_state();
         bool new_threat_alert = update_intruder_threat_estimate(intruder_state);
         ROS_DEBUG("Update intruder threat estimate time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
         if (new_threat_alert){
@@ -360,7 +368,11 @@ namespace agent{
                 ROS_ERROR("Switch failed!");
             }
         }
-
+        return new_threat_alert;
+    }
+    void USVSwarm::update_intruder_threat_estimate(int intruder_id, double threat_ll, double non_threat_ll)
+    {
+        intruder_map[intruder_id].update_threat_estimate(exp(threat_ll), exp(non_threat_ll));
     }
     void USVSwarm::update_intruder_estimate(const ObservedIntruderAgent &intruder){
         intruder_map[intruder.get_sim_id()] = intruder;

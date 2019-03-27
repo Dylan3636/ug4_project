@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/home/dylan/miniconda3/envs/mlp/bin/python3
 
 import rospy
 import numpy as np
@@ -7,7 +7,9 @@ from simulation_listener import SimulationNode
 from sim_objects import Intruder, BasicUSV, Tanker
 from numpy.random import RandomState
 from swarm_msgs.msg import resetSystem
-from time import time
+from time import time, sleep
+from swarmais.aisdata import drop_lt, drop_gt, drop_cond
+import pandas as pd
 import os
 
 
@@ -73,6 +75,29 @@ class InitialStateSampler:
         y = self.y_sampler.sample(num_samples)
         speed = self.speed_sampler.sample(num_samples)
         heading = float(np.deg2rad(self.heading_sampler.sample(num_samples)))
+        return x, y, speed, heading
+
+
+class AISInititialStateSampler(Sampler):
+    def __init__(self, randomstate, data):
+        super().__init__(randomstate)
+        self.data=data
+
+    def sample(self, num_samples=1):
+        subdata=drop_lt(self.data,'Xcoord', -1)
+        subdata=drop_lt(subdata, 'Ycoord', -1)
+        subdata=drop_gt(subdata, 'Xcoord', 1)
+        subdata=drop_gt(subdata, 'Ycoord', 1)
+        row = subdata.sample(1, random_state=self.randomstate)
+        x = 1000*row.Xcoord.iloc[0]
+        y = 1000*row.Ycoord.iloc[0]
+        x_dot = row.SmoothedVectorXcoord.iloc[0]
+        y_dot = row.SmoothedVectorYcoord.iloc[0]
+        print(row)
+        print(x,y,x_dot,y_dot)
+        heading = np.arctan2(y_dot, x_dot)
+        speed = np.sqrt(x_dot**2 + y_dot**2)
+        x, y, speed, heading = map(float, [x, y, speed, heading])
         return x, y, speed, heading
 
 
@@ -264,6 +289,9 @@ class SimulationSampler(Sampler):
         self.visualize = self.config['visualize']
         self.anim = LivePlot() if self.visualize else None
         self.reset_pub = rospy.Publisher('SystemReset', resetSystem, queue_size=100)
+        self.data = pd.read_csv("/home/dylan/Github/ug4_project/data.csv")
+        self.intruder_initstate_sampler = AISInititialStateSampler(randomstate, self.data)
+        self.intruder_sampler.initial_state_sampler = self.intruder_initstate_sampler
         rospy.set_param('/swarm_simulation/delta_time_secs', self.delta_time_secs)
 
     def sample_usvs(self):
@@ -405,6 +433,7 @@ class SimulationSampler(Sampler):
 if __name__ == "__main__":
     rospy.init_node("RandomSimulation", anonymous=True)
     SEED = rospy.get_param('/random_simulation/seed')
+    rospy.logerr("SEED : {}".format(SEED))
     NUM_SIMS = rospy.get_param('/random_simulation/num_simulations')
     rs = np.random.RandomState(seed=SEED)
     simulation_sampler = SimulationSampler(rs)

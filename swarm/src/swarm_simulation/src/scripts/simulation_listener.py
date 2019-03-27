@@ -12,6 +12,7 @@ from swarm_msgs.msg import (agentState,
                             initializeSystem,
                             )
 from time import time
+import os
 
 
 class SimulationNode(Simulation):
@@ -58,13 +59,19 @@ class SimulationNode(Simulation):
     def update_simulation_state(self):
         ws = worldState().worldState
         for sim_id, obj in self.sim_objects.items():
-            if type(obj.object_type) == Intruder:
-                if obj.active:
-                    pass
-                elif time() > self.start_time + obj.activate_time:
-                    obj.active = True
-                else:
-                    continue
+            # if type(obj) == Intruder:
+            #     # intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
+            #     # rospy.logerr("Intruder Config Before {}".format(intruder_configs))
+            #     if time() > self.start_time + obj.activate_time and not obj.active:
+            #         intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
+            #         for config in intruder_configs:
+            #             if config['sim_id']==sim_id:
+            #                 config['threat'] = True
+            #         os.system('rosparam delete /swarm_simulation/{}'.format('intruder_params'))
+            #         rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
+            #         obj.active=True
+            #     else:
+            #         continue
             ws.append(state_to_msg(sim_id, obj.update_state(self.timeout)))
         self.publisher.publish(ws)
 

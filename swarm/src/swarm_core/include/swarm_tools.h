@@ -64,6 +64,15 @@ namespace swarm_tools{
         const Point2D& p1,
         const Point2D& p2
     );
+    double log_multivariate_normal_2d(double x[2], double mu[2], double sigma ){
+        double dx = x[0]-mu[0];
+        double dy = x[1]-mu[1];
+
+        double constant = log(2*PI*sigma*2);
+        double exponent = -0.5 *(dx*2 + dy*2)/sigma*2;
+
+        return exponent + constant;
+    }
 
     int edge_points_of_circle(
         const Point2D& reference,

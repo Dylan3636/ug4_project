@@ -31,11 +31,13 @@ class BasicThreatDetector:
         with self.lock:
             # rospy.logerr("LOCK ACQUIRE TIME {}".format(time()-t))
             t1 = time()
+            is_threat = \
+                [param['is_threat'] for param in rospy.get_param('swarm_simulation/intruder_params/')
+                 if param['sim_id'] == intruder_id][0]
             if intruder_id not in self.intruders:
-                is_threat =\
-                    [param['is_threat'] for param in rospy.get_param('swarm_simulation/intruder_params/')
-                     if param['sim_id'] == intruder_id][0]
                 self.intruders[intruder_id] = IntruderThreat(is_threat, 0.0)
+            else:
+                self.intruders[intruder_id].is_threat=is_threat
             if dist_to_intruder < self.max_dist_to_observe_threat:
                 noise = self.noise_sigma*np.random.randn()  # (0.1*self.intruders[intruder_id].threat_evidence)
                 self.intruders[intruder_id].threat_evidence += \

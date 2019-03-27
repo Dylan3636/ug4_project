@@ -20,6 +20,7 @@ bool initialized = false;
 int usv_id;
 int intruder_id;
 int NUM_USVS;
+bool vanilla_threat_detection=true;
 
 agent::USVSwarm swarm;
 
@@ -44,6 +45,7 @@ agent::AgentState asset_state = agent::AgentState(0,0,0,0,40,0);
 
 std::mutex mtx;
 int count_since_shuffle = 0;
+bool reset=false;
 void publish_markers(const agent::MotionGoal &motion_goal){
     // Motion Goal 
     ROS_INFO("Publishing Motion Goal ([%f], [%f])", motion_goal.x, motion_goal.y);
@@ -58,12 +60,44 @@ void publish_markers(const agent::MotionGoal &motion_goal){
 double standard_gaussian_liklihood(){
 }
 
-double calculate_threat_likelihood(const agent::AgentState previous_state, const agent::AgentState current_state){
+double calculate_non_threat_log_likelihood(agent::ObservedIntruderAgent intruder){
+    agent::AgentState current_state = intruder.previous_states.front();
+    intruder.previous_states.pop_back();
+    agent::AgentState previous_state = intruder.previous_states.front();
+    intruder.previous_states.pop_back();
     double delta_speed = current_state.speed-previous_state.speed;
     double delta_heading = swarm_tools::radnorm(current_state.heading-previous_state.heading);
     double accel_x = delta_speed*std::cos(delta_heading);
-    double accel_y = delta_speed*std::cos(delta_heading);
+    double accel_y = delta_speed*std::sin(delta_heading);
+    double x[2]={accel_x, accel_y};
+    double mu[2]={0, 0};
+    double log_likelihood = swarm_tools::log_multivariate_normal_2d(x, mu, 2);
+    return log_likelihood;
+}
+double calculate_threat_log_likelihood(agent::ObservedIntruderAgent intruder){
+    agent::AgentState current_state = intruder.previous_states.front();
+    intruder.previous_states.pop_back();
+    agent::AgentState previous_state = intruder.previous_states.front();
+    intruder.previous_states.pop_back();
+    intruder.set_state(previous_state);
+    double delta_speed = current_state.speed-previous_state.speed;
+    double delta_heading = swarm_tools::radnorm(current_state.heading-previous_state.heading);
+    double obs_accel_x = delta_speed*std::cos(delta_heading);
+    double obs_accel_y = delta_speed*std::sin(delta_heading);
+    agent::AgentCommand command;
+    swarm_control::get_intruder_command_from_motion_goal(intruder, agent::MotionGoal(0, 0), command);
+    double accel_x = command.delta_speed*std::cos(command.delta_heading);
+    double accel_y = command.delta_speed*std::sin(command.delta_heading);
+    double x[2]={obs_accel_x, obs_accel_y};
+    double mu[2]={accel_x, accel_y};
+    double log_likelihood = swarm_tools::log_multivariate_normal_2d(x, mu, 2);
+    return log_likelihood;
+}
 
+double update_intruder_threat_probability(agent::ObservedIntruderAgent &intruder){
+    double threat_ll = calculate_threat_log_likelihood(intruder);
+    double non_threat_ll = calculate_non_threat_log_likelihood(intruder);
+    intruder.update_threat_estimate(threat_ll, non_threat_ll);
 }
 
 void publish_threat_statistics(int intruder_id, double probability, bool classification){
@@ -131,6 +165,15 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
                    intruder_constraints_map[intruder_state_id_pair.first],
                    intruder_radar_params_map[intruder_state_id_pair.first]));
         }
+        if(vanilla_threat_detection){
+            swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first);
+        }else{
+            auto intruder = swarm_cp.get_intruder_estimate_by_id(intruder_state_id_pair.first);
+            double threat_ll = calculate_threat_log_likelihood(intruder);
+            double non_threat_ll = calculate_non_threat_log_likelihood(intruder);
+            swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first, threat_ll, non_threat_ll);
+        }
+        swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first);
     }
     swarm_cp.update_queue_priorities();
 
@@ -187,7 +230,9 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     ROS_INFO("Perception Callback time %f", (clock()-perc_t)/(double) CLOCKS_PER_SEC);
     try{
         std::lock_guard<std::mutex> lock(mtx);
-        swarm = swarm_cp;
+        if(initialized){
+            swarm = swarm_cp;
+        }
     }catch(std::exception &e){
         ROS_ERROR("Copy Error %s", e.what());
     }

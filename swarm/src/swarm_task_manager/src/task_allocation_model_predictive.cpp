@@ -31,8 +31,8 @@ namespace swarm_task_manager{
     }
 
     std::vector<agent::WeightedSwarmAssignment> generate_assignment_candidates(int sim_id,
-                                                                               const agent::SwarmAssignment &swarm_assignment,
-                                                                               const std::map<int, bool> &communication_map){
+            const agent::SwarmAssignment &swarm_assignment,
+            const std::map<int, bool> &communication_map){
 
         assert(swarm_assignment.find(sim_id)!=swarm_assignment.end());
 
@@ -73,30 +73,6 @@ namespace swarm_task_manager{
                         // Reset
                         main_usv_task.task_idx = main_usv_task_idx_tmp;
                         other_usv_task.task_idx = other_usv_task_idx_tmp;
-
-                        if(main_usv_task.task_type==agent::TaskType::Guard){
-                            continue;
-                        }else{
-                            if(main_usv_task.task_type==agent::TaskType::Delay) {
-                                main_usv_task_idx_tmp = main_usv_task.task_idx;
-                                other_usv_task_idx_tmp = other_usv_task.task_idx;
-
-                                bool successful = share_assignment(&main_usv_task.task_idx, &other_usv_task.task_idx);
-                                if (successful) {
-                                    candidates.emplace_back(swarm_assignment_copy, 0.0);
-                                } else {
-
-                                    if (main_usv_task.task_idx == other_usv_task.task_idx) {
-                                        // Drop shared task
-                                        main_usv_task.task_idx = -1;
-                                        candidates.emplace_back(swarm_assignment_copy, 0.0);
-                                    }
-                                }
-                                // Reset
-                                main_usv_task.task_idx = main_usv_task_idx_tmp;
-                                other_usv_task.task_idx = other_usv_task_idx_tmp;
-                            }
-                        }
                    }else{
                         // Share Task
                         if(main_usv_task.task_type==agent::TaskType::Delay){
@@ -208,7 +184,7 @@ namespace swarm_task_manager{
                    swarm.command_usv_forward_by_id(sim_id,
                                                    command,
                                                    delta_time_secs);
-                   ROS_INFO("USV sample time %f", (std::clock()-usv_t)/(double) CLOCKS_PER_SEC);
+//                   ROS_INFO("USV sample time %f", (std::clock()-usv_t)/(double) CLOCKS_PER_SEC);
                } else if (agent_type == agent::Intruder) {
                    time_t intruder_t= std::clock();
                    agent::ObservedIntruderAgent intruder = swarm.get_intruder_estimate_by_id(
@@ -224,19 +200,19 @@ namespace swarm_task_manager{
                                                                   intruder_motion_goal,
                                                                   command);
                    }
-                   ROS_INFO("INTRUDER %d COMMAND (%f, %f)", sim_id, command.delta_heading, command.delta_speed);
+//                   ROS_INFO("INTRUDER %d COMMAND (%f, %f)", sim_id, command.delta_heading, command.delta_speed);
                    swarm.command_intruder_forward_by_id(sim_id,
                                                         command,
                                                         delta_time_secs);
                    swarm_tools::Point2D intruder_position = intruder.get_state().get_position();
-                   ROS_INFO("INTRUDER %d Position (%f, %f)", sim_id, intruder_position.x, intruder_position.y);
+//                   ROS_INFO("INTRUDER %d Position (%f, %f)", sim_id, intruder_position.x, intruder_position.y);
                    dist_to_asset = swarm_tools::euclidean_distance(intruder_position,
                                                                    swarm.get_asset_estimate().get_position());
                    if (min_dist_to_asset > dist_to_asset) {
                        min_dist_to_asset = dist_to_asset;
                        weight = min_dist_to_asset / intruder.get_speed();
                    }
-                   ROS_INFO("Intruder sample time %f", (std::clock()-intruder_t)/(double) CLOCKS_PER_SEC);
+//                   ROS_INFO("Intruder sample time %f", (std::clock()-intruder_t)/(double) CLOCKS_PER_SEC);
 
                    if (min_dist_to_asset < threshold) {
                        terminated = true;
@@ -245,7 +221,7 @@ namespace swarm_task_manager{
                }
            }
            // ROS_INFO("Update time %f", (std::clock()-update_t)/(double) CLOCKS_PER_SEC);
-           ROS_INFO("TIMESTEP %d", timestep);
+//           ROS_INFO("TIMESTEP %d", timestep);
            if (terminated || timestep > num_timesteps) { break; }
            timestep++;
        }

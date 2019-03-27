@@ -106,6 +106,8 @@ namespace agent{
             // Update
             void update_queue_priorities();
             void update_intruder_state_estimate(const AgentState &intruder_state);
+            bool update_intruder_threat_estimate(int intruder_id);
+            void update_intruder_threat_estimate(int intruder_id, double threat_ll, double non_threat_ll);
 
             void update_usv_state_estimate(const AgentState &usv_state);
 

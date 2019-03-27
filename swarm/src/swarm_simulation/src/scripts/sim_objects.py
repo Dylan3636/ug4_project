@@ -124,13 +124,14 @@ class SimObject:
                           [])
 
     def update_state(self, delta_t):
-        self.lock.acquire()
-        # Action commands
+        self.lock.acquire()  # Acquire thread lock
+
+        # Commands
         command = self.command
         delta_speed = command.delta_speed
         delta_heading = command.delta_heading
 
-        # Kinematics
+        # State
         pos_x = self.x
         pos_y = self.y
         speed = self.state[2]
@@ -147,7 +148,7 @@ class SimObject:
         self.y = pos_y
         self.speed = max(speed, 0)
         self.heading = heading
-        self.lock.release()
+        self.lock.release() # Release thread lock
         self.command = None
         return self.state
 
@@ -208,6 +209,7 @@ class Intruder(SimObject):
                  radius_buffer=100,
                  noise=None):
         self.activate_time = activate_time
+        self.active=True
         super().__init__(sim_id,
                          initial_state,
                          constraints,

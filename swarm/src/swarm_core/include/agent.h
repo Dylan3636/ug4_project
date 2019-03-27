@@ -462,12 +462,25 @@ namespace agent{
     class ObservedIntruderAgent : public IntruderAgent
     {   
         double threat_probability=0.05;
+        double threat_threshold_upper=0.75;
+        double threat_threshold_lower=0.25;
 
         public:
 
             void set_threat_estimate(bool threat, double probability){
                 set_threat_classification(threat);
                 threat_probability=probability;
+            }
+            void update_threat_estimate(double threat_likelihood, double non_threat_likelihood){
+                double threat_joint = threat_likelihood*threat_probability;
+                double non_threat_joint = non_threat_likelihood*threat_probability;
+                threat_probability = threat_joint/(threat_joint + non_threat_joint + 1e-10);
+                if(threat_probability>threat_threshold_upper){
+                    set_threat_classification(true);
+                }
+                if(threat_probability<threat_threshold_lower){
+                    set_threat_classification(true);
+                }
             }
             bool get_threat_classification() const{
                 return is_threat();
@@ -503,6 +516,8 @@ namespace agent{
             }
             ObservedIntruderAgent(const ObservedIntruderAgent &agent) : IntruderAgent(agent){
                 threat_probability=agent.get_threat_probability();
+                double threat_threshold_upper=agent.threat_threshold_upper;
+                double threat_threshold_lower=agent.threat_threshold_lower;
             }
             explicit ObservedIntruderAgent(const AgentState &state){
                 set_state(state);
@@ -634,7 +649,18 @@ namespace agent{
                 }
                 return false;
             }
-
+            void pop_all_observe_tasks(std::vector<AgentTask> &popped_observe_tasks){
+                popped_observe_tasks.clear();
+                for(int i =0; i < current_assignment.size(); i++){
+                    if(current_assignment[i].task_type==Observe){
+                        popped_observe_tasks.emplace_back(
+                                current_assignment[i].task_type,current_assignment[i].task_idx);
+                        current_assignment[i]=current_assignment.back();
+                        current_assignment.pop_back();
+                        current_num_observations--;
+                    }
+                }
+            }
             bool remove_observe_task(int observe_assignment_idx){
                 auto task2rem = AgentTask(Observe, observe_assignment_idx);
                 for(int i =0; i < current_assignment.size(); i++){

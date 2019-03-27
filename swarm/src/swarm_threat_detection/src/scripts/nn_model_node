@@ -31,7 +31,7 @@ def nn_model_request(req):
     try:
         pred_t = time()
         delta_speeds, delta_headings, ids = rnnmodel.predict(req.batch_previous_states)
-        rospy.logerr("Prediction time {}".format(time()-pred_t))
+        #rospy.logerr("Prediction time {}".format(time()-pred_t))
         commands = []
         for delta_speed, delta_heading, id in zip(delta_speeds, delta_headings, ids):
             command = agentCommand()
@@ -39,7 +39,7 @@ def nn_model_request(req):
             command.delta_heading = delta_heading
             command.sim_id = id
             commands.append(command)
-        rospy.logerr("Total time {}".format(time()-pred_t))
+        #rospy.logerr("Total time {}".format(time()-pred_t))
 
     except Exception as e:
         rospy.loginfo(traceback.format_exc())
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     while not initialized and not rospy.is_shutdown():
         sleep(0.001)
-        rospy.logerr("Waiting to start")
+        # rospy.logerr("Waiting to start")
     if rospy.is_shutdown():
         pass
     else:

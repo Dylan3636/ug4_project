@@ -51,7 +51,7 @@ class RNNModel:
         with self.graph.as_default():
             t = time()
             self.model.predict(X)
-            rospy.logerr("NN predict time {}".format(time()-t))
+            #rospy.logerr("NN predict time {}".format(time()-t))
             y_pred = self.ynormalizer.inverse_transform(self.model.predict(X))
         pred_speeds = np.sqrt(y_pred[:, 0]**2+y_pred[:, 1]**2)*100
         pred_headings = np.array([radnorm(theta) for theta in np.arctan2(y_pred[:, 1], y_pred[:, 0])])

@@ -9,7 +9,7 @@ PlotObject = namedtuple('PlotObject',
                          'heading',
                          'radius'])
 
-scale = 2
+scale = 1.2
 triangle_shape = [[20/scale, 0/scale],
                   [10/scale, -10/scale],
                   [-20/scale, -10/scale],
@@ -60,6 +60,7 @@ class LivePlot:
         self.thread_lock = Lock()
         self.queue = Queue()
         self.threat_queue = Queue()
+        self.debug=True
 
     def initiate_canvas(self):
         canvas = Canvas(self.window,
@@ -169,37 +170,38 @@ class LivePlot:
                 obj = self.create_object(sim_object)
             self.update_object(obj, sim_object)
         self.thread_lock.acquire()
-        
-        # Update Lines
-        for sim_id, line in self.lines.items():
-            if sim_id not in self.objects:
-                start_obj = sim_objects[line.start_id]
-                end_obj = sim_objects[line.end_id]
-                start_xy = self.offset_object_position(start_obj.x, start_obj.y) 
-                end_xy = self.offset_object_position(end_obj.x, end_obj.y) 
-                self.objects[sim_id] = self.canvas.create_line(*start_xy, *end_xy)
-            else:
-                start_obj = sim_objects[line.start_id]
-                end_obj = sim_objects[line.end_id]
-                start_xy = self.offset_object_position(start_obj.x, start_obj.y) 
-                end_xy = self.offset_object_position(end_obj.x, end_obj.y) 
-                self.canvas.coords(self.objects[sim_id],
-                                   *start_xy,
-                                   *end_xy)
 
-        # Update Markers
-        for sim_id, marker in self.markers.items():
-            if marker.sim_id not in self.objects:
-                self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill=marker.colour)
-            obj = self.objects[sim_id]
-            # x = marker.x/scale + center[0]
-            # y = -marker.y/scale + center[1]
-            x, y = self.offset_object_position(marker.x, marker.y)
-            self.canvas.coords(obj,
-                               oval_shape[0][0]+x,
-                               oval_shape[0][1]+y,
-                               oval_shape[1][0]+x,
-                               oval_shape[1][1]+y)
+        if self.debug:
+            # Update Lines
+            for sim_id, line in self.lines.items():
+                if sim_id not in self.objects:
+                    start_obj = sim_objects[line.start_id]
+                    end_obj = sim_objects[line.end_id]
+                    start_xy = self.offset_object_position(start_obj.x, start_obj.y)
+                    end_xy = self.offset_object_position(end_obj.x, end_obj.y)
+                    self.objects[sim_id] = self.canvas.create_line(*start_xy, *end_xy)
+                else:
+                    start_obj = sim_objects[line.start_id]
+                    end_obj = sim_objects[line.end_id]
+                    start_xy = self.offset_object_position(start_obj.x, start_obj.y)
+                    end_xy = self.offset_object_position(end_obj.x, end_obj.y)
+                    self.canvas.coords(self.objects[sim_id],
+                                       *start_xy,
+                                       *end_xy)
+
+            # Update Markers
+            for sim_id, marker in self.markers.items():
+                if marker.sim_id not in self.objects:
+                    self.objects[sim_id] = self.canvas.create_oval(oval_shape, fill=marker.colour)
+                obj = self.objects[sim_id]
+                # x = marker.x/scale + center[0]
+                # y = -marker.y/scale + center[1]
+                x, y = self.offset_object_position(marker.x, marker.y)
+                self.canvas.coords(obj,
+                                   oval_shape[0][0]+x,
+                                   oval_shape[0][1]+y,
+                                   oval_shape[1][0]+x,
+                                   oval_shape[1][1]+y)
         self.thread_lock.release()
         self.canvas.update()
     
