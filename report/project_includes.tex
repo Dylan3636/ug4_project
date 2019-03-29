@@ -1,0 +1,79 @@
+%\usepackage{subcaption}
+\usepackage{graphicx}
+%\usepackage{caption}
+\usepackage{subfigure}
+
+% For citations
+\usepackage{natbib}
+\usepackage[utf8]{inputenc}
+\usepackage{fourier} 
+\usepackage{array}
+\usepackage{makecell}
+
+% For algorithms
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset { %
+    language=C++,
+    backgroundcolor=\color{black!5}, % set backgroundcolor
+    basicstyle=\footnotesize,% basic font setting
+}
+
+\usepackage{enumerate}
+
+\graphicspath{ {./images/} }
+\bibliographystyle{plain}
+
+
+\usepackage[hyphens]{url}
+\urlstyle{same}
+\usepackage{hyperref}
+
+\usepackage{amsmath}
+
+\DeclareMathOperator{\atan}{atan2}
+\DeclareMathOperator{\acos}{acos}
+
+\newcommand{\threat}{malicious \hspace{}}
+\newcommand{\Threat}{Malicious \hspace{}}
+\newcommand{\nonthreat}{benign \hspace{}}
+\newcommand{\Nonthreat}{Benign \hspace{}}
+
+\newcommand{\E}[2]{\mathbb{E}\left[{#1} | #2 \right]}
+\newcommand{\usvset}{\mathrm{U}}
+\newcommand{\intruderset}{\mathrm{B}}
+\newcommand{\threatintruderset}{\mathrm{I}}
+\newcommand{\threatintruder}{\mathcal{\iota}}
+\newcommand{\observationset}{\mathcal{O}}
+\newcommand{\agentassignment}[1]{\mathrm{H}_{#1}}
+\newcommand{\swarmassignment}[1]{\mathcal{A}_{#1}}
+\newcommand{\agentmotiongoal}[1]{\mathrm{M}_{#1}(\mathcal{O}, \mathcal{A})}
+\newcommand{\agentlocation}[1]{\mathrm{l_{#1}}}
+\newcommand{\agentcommand}[1]{\phi_{#1}}%{(\agentmotiongoal{#1}})}
+\newcommand{\agent}[1]{a_{#1}}
+\newcommand{\usvagent}[1]{u_{#1}}
+\newcommand{\intruderagent}[1]{b_{#1}}
+\newcommand{\agentheading}{\theta}
+\newcommand{\agentspeed}{s}
+\newcommand{\deltaspeed}{\Delta~\agentspeed}
+\newcommand{\deltaheading}{\Delta~\agentheading}
+\newcommand{\maxsym}{max}
+\newcommand{\maxdeltaspeed}{\deltaspeed^{\maxsym}}
+\newcommand{\maxdeltaheading}{\deltaheading^{\maxsym}}
+\newcommand{\maxagentspeed}{\agentspeed^{\maxsym}}
+\newcommand{\aggression}{\alpha}
+\newcommand{\pthreat}{p_{threat}}
+\newcommand{\threatprob}[1]{P(\intruderagent{#1} \in \threatintruderset|\observationset)}
+\newcommand{\taskallocation}[1]{\mathrm{H}_{#1}}
+\newcommand{\usvtaskallocation}{\taskallocation{\usvagent{j}}}
+\newcommand{\totaltaskset}{\agentassignment{g} \cup \agentassignment{o} \cup \agentassignment{d}}
+
+
+\renewcommand\theadalign{bc}
+\renewcommand\theadfont{\bfseries}
+\renewcommand\theadgape{\Gape[4pt]}
+\renewcommand\cellgape{\Gape[4pt]}
+
