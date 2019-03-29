@@ -10,6 +10,7 @@ from swarm_msgs.msg import resetSystem
 from time import time, sleep
 from swarmais.aisdata import drop_lt, drop_gt, drop_cond
 import pandas as pd
+from sklearn.externals import joblib
 import os
 
 
@@ -84,21 +85,21 @@ class AISInititialStateSampler(Sampler):
         self.data=data
 
     def sample(self, num_samples=1):
-        subdata=drop_lt(self.data,'Xcoord', -1)
-        subdata=drop_lt(subdata, 'Ycoord', -1)
-        subdata=drop_gt(subdata, 'Xcoord', 1)
-        subdata=drop_gt(subdata, 'Ycoord', 1)
+        subdata=drop_lt(self.data,'SOG', 10)
+        subdata=drop_lt(subdata,'Xcoord', -10)
+        subdata=drop_lt(subdata, 'Ycoord', -10)
+        subdata=drop_gt(subdata, 'Xcoord', 10)
+        subdata=drop_gt(subdata, 'Ycoord', 10)
         row = subdata.sample(1, random_state=self.randomstate)
-        x = 1000*row.Xcoord.iloc[0]
-        y = 1000*row.Ycoord.iloc[0]
+        x = 1000*(row.Xcoord.iloc[0])/10
+        y = 1000*(row.Ycoord.iloc[0])/10
         x_dot = row.SmoothedVectorXcoord.iloc[0]
         y_dot = row.SmoothedVectorYcoord.iloc[0]
-        print(row)
-        print(x,y,x_dot,y_dot)
         heading = np.arctan2(y_dot, x_dot)
         speed = np.sqrt(x_dot**2 + y_dot**2)
         x, y, speed, heading = map(float, [x, y, speed, heading])
-        return x, y, speed, heading
+        print(x,y,speed, row.SOG.iloc[0])
+        return x, y, 50/2*speed, heading
 
 
 class ConstraintSampler:
@@ -287,9 +288,11 @@ class SimulationSampler(Sampler):
         self.delta_time_secs = self.config['delta_time_secs']
         self.threshold = self.config['threshold']
         self.visualize = self.config['visualize']
+        self.max_time = self.config['max_time']
         self.anim = LivePlot() if self.visualize else None
         self.reset_pub = rospy.Publisher('SystemReset', resetSystem, queue_size=100)
         self.data = pd.read_csv("/home/dylan/Github/ug4_project/data.csv")
+        self.ynormalizer = joblib.load('/home/dylan/Github/ug4_project/notebooks/ynormalizer')
         self.intruder_initstate_sampler = AISInititialStateSampler(randomstate, self.data)
         self.intruder_sampler.initial_state_sampler = self.intruder_initstate_sampler
         rospy.set_param('/swarm_simulation/delta_time_secs', self.delta_time_secs)
@@ -343,7 +346,7 @@ class SimulationSampler(Sampler):
                               anim=self.anim,
                               threshold=self.threshold,
                               delta_t=self.delta_time_secs,
-                              initialize=False)
+                              initialize=False,max_time=self.max_time)
         return node
 
     def reset(self):

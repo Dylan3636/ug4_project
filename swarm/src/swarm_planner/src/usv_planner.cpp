@@ -20,7 +20,7 @@ bool initialized = false;
 int usv_id;
 int intruder_id;
 int NUM_USVS;
-bool vanilla_threat_detection=true;
+bool vanilla_threat_detection=false;
 
 agent::USVSwarm swarm;
 
@@ -173,10 +173,10 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
             double non_threat_ll = calculate_non_threat_log_likelihood(intruder);
             swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first, threat_ll, non_threat_ll);
         }
-        swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first);
     }
+    t = clock();
     swarm_cp.update_queue_priorities();
-
+    ROS_INFO("Update queue priorities time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
     t = clock();
     for (const auto &task : swarm_cp.get_assignment_by_id(usv_id)){
         if (task.task_type != agent::TaskType::Guard && task.task_idx!=-1){

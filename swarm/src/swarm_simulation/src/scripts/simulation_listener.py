@@ -13,15 +13,25 @@ from swarm_msgs.msg import (agentState,
                             )
 from time import time
 import os
+from perception import perceive
 
 
 class SimulationNode(Simulation):
 
-    def __init__(self, sim_objects, sim_timeout=0.1, delta_t=None, anim=None, use_gui=True, threshold=None, initialize=True):
+    def __init__(self,
+                 sim_objects,
+                 sim_timeout=0.1,
+                 delta_t=None,
+                 anim=None,
+                 use_gui=True,
+                 threshold=None,
+                 initialize=True,
+                 noise=5, max_time=60):
 
         if initialize:
             rospy.init_node("Simulation", anonymous=True)
-        super().__init__(sim_objects, anim=anim, timeout=sim_timeout, delta_time_secs=delta_t, use_gui=use_gui, threshold=threshold)
+        super().__init__(sim_objects, anim=anim, timeout=sim_timeout, delta_time_secs=delta_t, use_gui=use_gui,
+                         threshold=threshold, max_time=max_time)
         self._active_ids = None
         self.publisher = rospy.Publisher('Perception', worldState, queue_size=100)
         self.start_pub = rospy.Publisher('SystemStart', initializeSystem, queue_size=100)
@@ -31,6 +41,7 @@ class SimulationNode(Simulation):
         self.task_allocation_listener = rospy.Subscriber("Task_Allocation",
                                                          swarmAssignment,
                                                          self.task_allocation_callback)
+        self.noise = noise
 
     def command_callback(self, msg):
         command = Command(msg.delta_speed,
@@ -72,7 +83,7 @@ class SimulationNode(Simulation):
             #         obj.active=True
             #     else:
             #         continue
-            ws.append(state_to_msg(sim_id, obj.update_state(self.timeout)))
+            ws.append(state_to_msg(sim_id, perceive(obj.update_state(self.timeout), self.noise)))
         self.publisher.publish(ws)
 
     def begin(self):

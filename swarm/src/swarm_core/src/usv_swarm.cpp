@@ -354,7 +354,7 @@ namespace agent{
         auto intruder = get_intruder_estimate_by_id(intruder_id);
         auto intruder_state = intruder.get_state();
         bool new_threat_alert = update_intruder_threat_estimate(intruder_state);
-        ROS_DEBUG("Update intruder threat estimate time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
+        ROS_INFO("Update intruder threat estimate time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
         if (new_threat_alert){
             ROS_INFO("Switching Observe Task to Delay Task for Intruder %d", intruder_state.sim_id);
             t = clock();

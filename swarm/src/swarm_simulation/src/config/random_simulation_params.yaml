@@ -1,5 +1,6 @@
 seed : 2000
 num_simulations : 100
+max_time : 180
 delta_time_secs : 0.1
 radius_buffer : 50
 threshold : 25

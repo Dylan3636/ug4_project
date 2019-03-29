@@ -107,6 +107,9 @@ template<typename T> int collision_avoidance::correct_command(
     // std::cout << "Weighted heading command: "<< command.delta_heading*180/swarm_tools::PI; 
 
     // restrict command using differential constraint
+    if(command.delta_speed*0.1 + agent_state.speed>constraints.max_speed){
+        command.delta_heading = (constraints.max_speed-agent_state.speed)/0.1;
+    }
     command.delta_heading = swarm_tools::clip(command.delta_heading, -max_angle_rad, max_angle_rad);
     return 1;
 }

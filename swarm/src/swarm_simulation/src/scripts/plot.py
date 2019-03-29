@@ -9,13 +9,16 @@ PlotObject = namedtuple('PlotObject',
                          'heading',
                          'radius'])
 
-scale = 1.2
+scale = 0.5 #1.2
+
+old_scale = scale
+scale *= 5
 triangle_shape = [[20/scale, 0/scale],
                   [10/scale, -10/scale],
                   [-20/scale, -10/scale],
                   [-20/scale, 10/scale],
                   [10/scale, 10/scale]]
-
+scale = old_scale
 
 asset_shape = [[30/scale, 0/scale],
                [20/scale, -20/scale],
@@ -64,7 +67,7 @@ class LivePlot:
 
     def initiate_canvas(self):
         canvas = Canvas(self.window,
-                        width=2000,
+                        width=1500,
                         height=1000,
                         bg='white')
         canvas.pack(fill=BOTH, expand=True)

@@ -133,7 +133,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         }
         //       ROS_ASSERT(!end);
 
-        if(intruder.is_threat() || (count++<50)){
+        if(intruder.is_threat()){
             swarm_control::get_intruder_command_from_motion_goal(intruder,
                                                                  motion_goal,
                                                                  command);
@@ -141,9 +141,9 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                      motion_goal.x, motion_goal.y);
             ROS_INFO("Position ([%f], [%f])",
                      intruder.get_x(), intruder.get_y());
-        }else{
+        }
+        else if (count++>200){
             command = intruder_commands_map[sim_id];
-
         }
 
         ROS_INFO("Correcting command for intruder [%d]", sim_id);

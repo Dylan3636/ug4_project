@@ -225,6 +225,7 @@ void get_obstacle_states(
         ){
     obstacle_states.clear();
     for(const auto agent_state : world_state->worldState){
+        if(agent_state.agent_type==swarm_msgs::agentType::TANKER) continue;
         obstacle_states.emplace_back(agent_state.x,
                                       agent_state.y,
                                       agent_state.heading,
