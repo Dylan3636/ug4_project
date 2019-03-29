@@ -9,16 +9,11 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(catkin REQUIRED COMPONENTS roslaunch)
 roslaunch_add_file_check(launch)
 
-# find_package(tkinter REQUIRED)
-# find_package(numpy REQUIRED)
-
-set(BUILD_FLAGS "-std=c++11 -Wuninitialized")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
+#set(BUILD_FLAGS "-std=c++11 -Wuninitialized")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 
 catkin_package(
-  DEPENDS Boost
   CATKIN_DEPENDS std_msgs swarm_msgs
-  swarm_msgs
 )
 
 catkin_install_python(PROGRAMS scripts/sim.py

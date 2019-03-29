@@ -1,0 +1,143 @@
+seed : 0
+num_simulations : 100
+delta_time_secs : 0.1
+radius_buffer : 50
+threshold : 25
+visualize : True
+
+usv_params: {
+  min_num_usvs : 2,
+  max_num_usvs : 4,
+  initial_state: {
+     x: {
+       sampler: uniform,
+       lower: -100,
+       upper: 100
+     },
+     y: {
+       sampler: uniform,
+       lower: -100,
+       upper: 100
+     },
+     speed: {
+       sampler: uniform,
+       lower: -100,
+       upper: 100
+     },
+     heading: {
+       sampler: uniform,
+       lower: -90,
+       upper: 90
+     }
+   },
+   constraints: {
+     max_speed: {
+        sampler : constant,
+        constant : 60
+#       sampler: uniform,
+#       lower: 20,
+#       upper: 60
+     },
+     max_delta_speed: {
+       sampler: constant,
+       constant: 50
+     },
+     max_delta_heading: {
+       sampler: constant,
+       constant: 90
+     }
+   },
+   radar_constraints: {
+     max_distance: {
+        sampler: constant,
+        constant: 60
+       # sampler: uniform,
+       # lower: 100,
+       # upper: 200
+     },
+     max_angle: {
+       sampler: constant,
+       constant: 90
+     },
+     aggression: {
+        sampler : constant,
+        constant : 1.0
+#       sampler: uniform,
+#       lower: 0.5,
+#       upper: 1.0
+     }
+   }
+}
+
+intruder_params :
+  min_num_intruders : 1
+  min_num_threats : 1
+  max_num_intruders : 15
+  time_between_intruders_mean : 10
+  initial_state :
+     x:
+        sampler: hybrid
+        samplers :
+          - sampler : uniform
+            lower : 2000
+            upper : 1500
+#          - sampler : uniform
+#            lower : 1400
+#            upper : 1800
+     y:
+         sampler: hybrid
+         samplers :
+#           - sampler: uniform
+#             lower: -800
+#             upper: 1000
+           - sampler: uniform
+             lower: -2000
+             upper: -1500
+     speed:
+        sampler : constant
+        constant : 0
+#       sampler: uniform
+#       lower: 10
+#       upper: 40
+     heading:
+       sampler: uniform
+       lower: -90
+       upper: 90
+  constraints:
+     max_speed:
+       sampler: uniform
+       lower: 30
+       upper: 50
+     max_delta_speed:
+       sampler: constant
+       constant: 50
+     max_delta_heading:
+       sampler: constant
+       constant: 90
+  radar_constraints:
+     max_distance:
+       sampler : constant
+       constant : 60
+#       sampler: uniform
+#       lower: 100
+#       upper: 200
+     max_angle:
+       sampler: constant
+       constant: 90
+     aggression:
+       sampler: uniform
+       lower: 0.5
+       upper: 1.0
+
+asset_params : {
+  asset : {
+    radius_buffer : 60.0,
+    sim_id : 100.0,
+    init_state : {
+        x : 0.0,
+        y : 0.0,
+        heading : 0.0,
+        speed : 0.0
+      }
+  }
+}

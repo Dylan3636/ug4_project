@@ -23,10 +23,10 @@ roslaunch_add_file_check(launch)
 set(BUILD_FLAGS "-std=c++11 -Wuninitialized")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 
-add_service_files(
-    FILES
-    CollisionAvoidance.srv
-    )
+#add_service_files(
+#    FILES
+#    CollisionAvoidance.srv
+#    )
 
 generate_messages(
     DEPENDENCIES std_msgs swarm_msgs
@@ -77,9 +77,9 @@ install(DIRECTORY include/${PROJECT_NAME}/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
-add_executable(collision_avoidance_service collision_avoidance_service.cpp)
-add_dependencies(collision_avoidance_service collision_avoidance swarm_control_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(collision_avoidance_service collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(collision_avoidance_service collision_avoidance_service.cpp)
+#add_dependencies(collision_avoidance_service collision_avoidance swarm_control_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
+#target_link_libraries(collision_avoidance_service collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(intruder_planner intruder_planner.cpp)
 add_dependencies(intruder_planner collision_avoidance motion_goal_control collision_avoidance_service swarm_control_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})

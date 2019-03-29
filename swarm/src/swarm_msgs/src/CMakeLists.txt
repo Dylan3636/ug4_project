@@ -9,19 +9,27 @@ find_package(catkin REQUIRED COMPONENTS
 # find_package(Boost REQUIRED thread)
 
 add_message_files(
-  DIRECTORY msg
-  FILES
-  agentState.msg
-  agentCommand.msg
-  worldState.msg
-  agentConstraints.msg
-  agentParam.msg
-  agentType.msg
-  agentAssignment.msg
-  usvAgent.msg
-  intruderAgent.msg
-  simulationMarker.msg
-  swarmAssignment.msg
+        DIRECTORY msg
+        FILES
+        agentState.msg
+        agentCommand.msg
+        worldState.msg
+        agentConstraints.msg
+        agentParam.msg
+        agentType.msg
+        agentAssignment.msg
+        usvAgent.msg
+        intruderAgent.msg
+        simulationMarker.msg
+        taskType.msg
+        agentTask.msg
+        swarmAssignment.msg
+        threatStatistics.msg
+        resetSystem.msg
+        initializeSystem.msg
+        intruderPreviousStates.msg
+        batchIntruderPreviousStates.msg
+
 )
 
 generate_messages(DEPENDENCIES

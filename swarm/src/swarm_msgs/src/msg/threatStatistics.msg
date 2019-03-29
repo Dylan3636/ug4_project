@@ -1,0 +1,3 @@
+int32 intruder_id
+bool threat_classification
+float32 threat_probability

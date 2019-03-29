@@ -1,0 +1,62 @@
+#!/usr/bin/python3
+
+import rospy
+from basic_threat_detection import BasicThreatDetector
+from swarm_threat_detection.srv import ThreatDetection, ThreatDetectionResponse
+from swarm_msgs.msg import resetSystem, initializeSystem
+from time import sleep
+initialized = False
+
+
+def reset_callback(msg):
+    global initialized
+    if not initialized:
+        return
+    initialized = False
+    btd.reset()
+
+
+def update_threat_estimate(req):
+    if not initialized:
+        return
+    global btd
+    try:
+        alert, prob = btd.update_detector(req.intruder_id, req.dist_to_intruder)
+    except Exception as e:
+        rospy.loginfo(str(e.with_traceback()))
+        rospy.logerr(str(e.with_traceback()))
+        print(e.with_traceback())
+        return None
+    resp = ThreatDetectionResponse()
+    resp.threat_alert = alert
+    resp.threat_probability = prob
+    return resp
+
+
+def start_callback(msg):
+    global initialized
+    initialized = True
+
+
+if __name__ == "__main__":
+    rospy.init_node("BasicThreatDetection")
+    rospy.Subscriber('SystemStart', initializeSystem, start_callback)
+    rospy.Subscriber('SystemReset', resetSystem, reset_callback)
+
+    while not initialized and not rospy.is_shutdown():
+        sleep(0.001)
+    if rospy.is_shutdown():
+        pass
+    else:
+        threshold = rospy.get_param('swarm_threat_detection/alert_threshold')
+        lr = rospy.get_param('swarm_threat_detection/lr')
+        w_dist = rospy.get_param('swarm_threat_detection/w_dist')
+        noise_sigma = rospy.get_param('swarm_threat_detection/noise_sigma')
+        btd = BasicThreatDetector(p_alert=threshold,
+                                  learning_rate=lr,
+                                  max_dist_to_observe_threat=w_dist,
+                                  noise_sigma=noise_sigma)
+        rospy.Service('ThreatDetection', ThreatDetection, update_threat_estimate, 1000,
+                      lambda e: rospy.logerr(e.with_traceback()))
+        rospy.loginfo("Initiating Threat Detection System")
+        rospy.spin()

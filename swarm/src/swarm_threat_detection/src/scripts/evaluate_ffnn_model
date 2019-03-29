@@ -1,0 +1,86 @@
+#!/usr/bin/python3
+from argparse import ArgumentParser
+from swarmais.models import train_ffnn
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        description="Trains and Evaluates FFNN on Parsed AIS Dataset"
+    )
+    parser.add_argument('-parsed_data',
+                        action="store",
+                        type=str,
+                        dest="parsed_dataset_fp",
+                        required=True)
+    parser.add_argument('-graphlogdir',
+                        action="store",
+                        type=str,
+                        nargs="*",
+                        dest="graphlogdir",
+                        default="graphlogs")
+    parser.add_argument('-savedmodelsdir',
+                        action="store",
+                        type=str,
+                        dest='models',
+                        nargs="*",
+                        default="models")
+    parser.add_argument('-save_path',
+                        action="store",
+                        type=str,
+                        dest="savepath",
+                        default="data.csv")
+    parser.add_argument('-layers',
+                        action="store",
+                        type=int,
+                        nargs='+',
+                        default=128)
+    parser.add_argument('-optimizer',
+                        action='store',
+                        type=str,
+                        default='Adam')
+    parser.add_argument('-total_iters_per_period',
+                        action="store",
+                        type=int,
+                        default=50)
+    parser.add_argument('-batch_size',
+                        action="store",
+                        type=int,
+                        default=64)
+    parser.add_argument('-num_epochs',
+                        action='store',
+                        type=int,
+                        default=1000)
+    parser.add_argument('-seed',
+                        action='store',
+                        type=int,
+                        default=0)
+    parser.add_argument('-colab',
+                        action='store_true',
+                        default=False)
+
+    results = parser.parse_args()
+    if type(results.graphlogdir) is str:
+        graphstr = results.graphlogdir
+    else:
+        graphstr=""
+        for p in results.graphlogdir:
+            graphstr += p + " "
+        graphstr = graphstr[0:-1]
+    if type(results.models) is str:
+        modelstr = results.models
+    else:
+        modelstr=""
+        for p in results.models:
+            modelstr += p + " "
+        modelstr = modelstr[0:-1]
+    print(graphstr, modelstr)
+    train_ffnn(results.parsed_dataset_fp,
+               graphstr,
+               modelstr,
+               results.layers,
+               results.optimizer,
+               results.total_iters_per_period,
+               results.batch_size,
+               results.num_epochs,
+               results.seed,
+               results.colab)

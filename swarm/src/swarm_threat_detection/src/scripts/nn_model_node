@@ -1,0 +1,83 @@
+#!/home/dylan/miniconda3/envs/mlp/bin/python3
+
+import rospy
+from nn_threat_detector import RNNModel
+from swarm_threat_detection.srv import batchIntruderCommandsResponse, batchIntruderCommands
+from swarm_msgs.msg import resetSystem, initializeSystem, agentCommand
+from keras.models import load_model
+import keras
+from sklearn.externals import joblib
+from time import sleep
+from swarmais.models import coeff_determination
+import tensorflow as tf
+import traceback
+from time import time
+from threading import Lock
+initialized = False
+
+thread_lock = Lock()
+
+def reset_callback(msg):
+    global initialized
+    if not initialized:
+        return
+    initialized = False
+
+
+def nn_model_request(req):
+    if not initialized:
+        return
+    global rnnmodel
+    try:
+        pred_t = time()
+        delta_speeds, delta_headings, ids = rnnmodel.predict(req.batch_previous_states)
+        rospy.logerr("Prediction time {}".format(time()-pred_t))
+        commands = []
+        for delta_speed, delta_heading, id in zip(delta_speeds, delta_headings, ids):
+            command = agentCommand()
+            command.delta_speed = delta_speed
+            command.delta_heading = delta_heading
+            command.sim_id = id
+            commands.append(command)
+        rospy.logerr("Total time {}".format(time()-pred_t))
+
+    except Exception as e:
+        rospy.loginfo(traceback.format_exc())
+        rospy.logerr(traceback.format_exc())
+        print(traceback.format_exc())
+        return
+    resp = batchIntruderCommandsResponse()
+    resp.batch_intruder_commands = commands
+    return resp
+
+
+def start_callback(msg):
+    global initialized
+    initialized = True
+
+
+if __name__ == "__main__":
+    rospy.init_node("swarm_intruder_model")
+    rospy.Subscriber('SystemStart', initializeSystem, start_callback)
+    rospy.Subscriber('SystemReset', resetSystem, reset_callback)
+
+    while not initialized and not rospy.is_shutdown():
+        sleep(0.001)
+        rospy.logerr("Waiting to start")
+    if rospy.is_shutdown():
+        pass
+    else:
+        modelpth = rospy.get_param('swarm_intruder_model/modelpath')
+        rospy.logerr(modelpth)
+        model = load_model(modelpth, custom_objects={'coeff_determination':coeff_determination})
+        model._make_predict_function()
+        graph = tf.get_default_graph()
+
+        normalizerspath = rospy.get_param('swarm_intruder_model/normalizerpath')
+        xnormalizer = joblib.load(normalizerspath+"/xnormalizer")
+        ynormalizer = joblib.load(normalizerspath+"/ynormalizer")
+        seq_length = rospy.get_param('swarm_intruder_model/sequence_length')
+        rnnmodel = RNNModel(model, xnormalizer, ynormalizer, seq_length,graph=graph)
+        rospy.Service('swarm_intruder_model_service', batchIntruderCommands, nn_model_request)
+        rospy.loginfo("Initiating Threat Detection System")
+        rospy.spin()

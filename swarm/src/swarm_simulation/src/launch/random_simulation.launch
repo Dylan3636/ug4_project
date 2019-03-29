@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="swarm_simulation" type="random_swarm.py" name="random_simulation" clear_params="true" required="true" output="screen">
+        <rosparam file="$(find swarm_simulation)/config/random_simulation_params.yaml" command="load"/>
+    </node>
+</launch>

@@ -1,0 +1,6 @@
+<launch>
+    <include file="$(find swarm_control)/launch/intruder_control.launch"/>
+    <include file="$(find swarm_planner)/launch/usv_planner.launch"/>
+    <include file="$(find swarm_simulation)/launch/swarm_simulation.launch"/>
+    <include file="$(find swarm_threat_detection)/launch/swarm_threat_detection.launch"/>
+</launch>

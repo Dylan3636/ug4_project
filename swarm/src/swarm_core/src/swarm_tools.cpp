@@ -24,16 +24,16 @@ namespace swarm_tools{
     }
     Vector2D::Vector2D(const Point2D& start, const Point2D& end) {
         Point2D diff = start-end;
-        this->x = diff.x;
-        this->y = diff.y;
+        x = diff.x;
+        y = diff.y;
     }
 
     double Vector2D::dot(Point2D& rhs) const{
-        return  this->x * rhs.x + this->y * rhs.y;
+        return  x * rhs.x + y * rhs.y;
     }
 
     double Vector2D::norm(){
-        return  std::sqrt(this->x * this->x + this->y * this->y);
+        return  std::sqrt(x * x + y * y);
     }
 
     bool AngleInterval::operator<(const AngleInterval& rhs) const{
@@ -131,5 +131,16 @@ namespace swarm_tools{
         // std::cout<< "Leftmost Point : (" << leftmost_point.x << ", " << leftmost_point.y << ")" << std::endl;
         // std::cout<< "Rightmost Point : (" << rightmost_point.x << ", " << rightmost_point.y << ")" << std::endl;
         return -1;
+    }
+    double radnorm(double rad){
+        while (rad>PI){rad-=2*PI;}
+        while (rad<-PI){rad+=2*PI;}
+        return rad;
+    }
+    double rad2deg(double rad){
+        return rad*180.0/PI;
+    }
+    double deg2rad(double deg){
+        return deg*PI/180.0;
     }
 }

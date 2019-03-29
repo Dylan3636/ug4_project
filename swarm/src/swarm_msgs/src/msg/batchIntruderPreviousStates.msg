@@ -1,0 +1,1 @@
+intruderPreviousStates[] batch_previous_states

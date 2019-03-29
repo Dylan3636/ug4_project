@@ -16,6 +16,10 @@ find_package(swarm_task_manager REQUIRED COMPONENTS
     swarm_msgs
     std_msgs
     message_generation)
+find_package(swarm_threat_detection REQUIRED COMPONENTS
+    swarm_msgs
+    std_msgs
+    message_generation)
 find_package(Boost 1.49.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
 
@@ -27,7 +31,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 
 catkin_package(
   DEPENDS Boost
-  CATKIN_DEPENDS message_runtime roscpp std_msgs swarm_msgs swarm_core swarm_control swarm_task_manager
+  # CATKIN_DEPENDS message_runtime roscpp std_msgs swarm_msgs swarm_core swarm_control swarm_task_manager swarm_threat_detection
   # INCLUDE_DIRS ../include
 )
 
@@ -45,9 +49,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
-# add_executable(intruder_planner intruder_planner.cpp)
-# add_dependencies(intruder_planner collision_avoidance motion_goal_control collision_avoidance_service swarm_control_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
-# target_link_libraries(intruder_planner motion_goal_control collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(usv_planner usv_planner.cpp)
 #add_dependencies(usv_planner ${swarm_control_LIBRARIES} ${swarm_task_manager_LIBRARIES} ${${PROJECT_NAME}_EXPORTED_TARGETS})

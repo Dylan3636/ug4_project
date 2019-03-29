@@ -1,0 +1,2 @@
+int32 task_idx
+int32 task_type

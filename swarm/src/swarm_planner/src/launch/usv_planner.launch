@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_1">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_1" >
         <param name="usv_id" value="1"/>
     </node>
     <node pkg="swarm_planner" type="usv_planner" name="usv_planner_2">
@@ -11,9 +11,21 @@
     <node pkg="swarm_planner" type="usv_planner" name="usv_planner_4">
         <param name="usv_id" value="4"/>
     </node>
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_5">
+        <param name="usv_id" value="5"/>
+    </node>
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_6">
+        <param name="usv_id" value="6"/>
+    </node>
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_7">
+        <param name="usv_id" value="7"/>
+    </node>
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_8">
+        <param name="usv_id" value="8"/>
+    </node>
     <node pkg="swarm_task_manager" type="task_manager" name="task_manager">
         <param name="delta_time_secs" value="0.1"/>
-        <param name="num_timesteps_lookahead" value="50"/>
+        <param name="num_timesteps_lookahead" value="25"/>
         <param name="dist_to_asset_threshold" value="75"/>
     </node>
 </launch>
