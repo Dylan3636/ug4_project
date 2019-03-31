@@ -1,14 +1,19 @@
-seed : 2000
+seed : 1000
 num_simulations : 100
-max_time : 180
+max_time : 90
 delta_time_secs : 0.1
-radius_buffer : 50
+radius_buffer : 20
 threshold : 25
 visualize : True
+noise : 0
+continue_from : 0
+statsdir : /home/dylan/Github/ug4_project/statistics
 
 usv_params: {
   min_num_usvs : 2,
-  max_num_usvs : 4,
+  max_num_usvs : 8,
+  threat_sigma : 10,
+  non_threat_sigma : 10,
   initial_state: {
      x: {
        sampler: uniform,
@@ -22,8 +27,8 @@ usv_params: {
      },
      speed: {
        sampler: uniform,
-       lower: -100,
-       upper: 100
+       lower: 0,
+       upper: 10
      },
      heading: {
        sampler: uniform,
@@ -34,14 +39,14 @@ usv_params: {
    constraints: {
      max_speed: {
         sampler : constant,
-        constant : 60
+        constant : 10
 #       sampler: uniform,
 #       lower: 20,
 #       upper: 60
      },
      max_delta_speed: {
        sampler: constant,
-       constant: 50
+       constant: 2
      },
      max_delta_heading: {
        sampler: constant,
@@ -51,7 +56,7 @@ usv_params: {
    radar_constraints: {
      max_distance: {
         sampler: constant,
-        constant: 60
+        constant: 10
        # sampler: uniform,
        # lower: 100,
        # upper: 200
@@ -71,9 +76,9 @@ usv_params: {
 }
 
 intruder_params :
-  min_num_intruders : 1
+  min_num_intruders : 50
   min_num_threats : 1
-  max_num_intruders : 15
+  max_num_intruders : 75
   time_between_intruders_mean : 10
   initial_state :
      x:
@@ -107,18 +112,18 @@ intruder_params :
   constraints:
      max_speed:
        sampler: uniform
-       lower: 30
-       upper: 50
+       lower: 8
+       upper: 10
      max_delta_speed:
        sampler: constant
-       constant: 50
+       constant: 2
      max_delta_heading:
        sampler: constant
        constant: 90
   radar_constraints:
      max_distance:
        sampler : constant
-       constant : 60
+       constant : 10
 #       sampler: uniform
 #       lower: 100
 #       upper: 200

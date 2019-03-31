@@ -11,7 +11,9 @@ from time import time, sleep
 from swarmais.aisdata import drop_lt, drop_gt, drop_cond
 import pandas as pd
 from sklearn.externals import joblib
+from tqdm import tqdm
 import os
+import json
 
 
 class Sampler:
@@ -91,15 +93,15 @@ class AISInititialStateSampler(Sampler):
         subdata=drop_gt(subdata, 'Xcoord', 10)
         subdata=drop_gt(subdata, 'Ycoord', 10)
         row = subdata.sample(1, random_state=self.randomstate)
-        x = 1000*(row.Xcoord.iloc[0])/10
-        y = 1000*(row.Ycoord.iloc[0])/10
+        x = 1000*(row.Xcoord.iloc[0])/20
+        y = 1000*(row.Ycoord.iloc[0])/20
         x_dot = row.SmoothedVectorXcoord.iloc[0]
         y_dot = row.SmoothedVectorYcoord.iloc[0]
         heading = np.arctan2(y_dot, x_dot)
         speed = np.sqrt(x_dot**2 + y_dot**2)
         x, y, speed, heading = map(float, [x, y, speed, heading])
-        print(x,y,speed, row.SOG.iloc[0])
-        return x, y, 50/2*speed, heading
+        print(x,y,speed, np.rad2deg(heading))
+        return x, y, (10/4)*speed, heading
 
 
 class ConstraintSampler:
@@ -136,7 +138,6 @@ class RadarConstraintSampler:
 
 class USVSampler:
     def __init__(self, initial_state_sampler, constraint_sampler, radar_constraint_sampler):
-        print(initial_state_sampler)
         self.initial_state_sampler = initial_state_sampler
         self.constraint_sampler = constraint_sampler
         self.radar_constraint_sampler = radar_constraint_sampler
@@ -273,7 +274,7 @@ def intruder_to_params(intruder: Intruder, radar_constraints, is_threat):
     config['sim_id'] = intruder.sim_id
     config['constraints'] = constraints_to_params(intruder.constraints)
     config['radar_parameters'] = radar_constraints_to_params(radar_constraints)
-    config['is_threat'] = is_threat
+    config['is_threat'] = False  # is_threat
     return config
 
 
@@ -281,18 +282,23 @@ class SimulationSampler(Sampler):
     def __init__(self, randomstate: RandomState):
         super().__init__(randomstate)
         self.config = rospy.get_param('/random_simulation')
+        self.start_seed = self.config['seed']
+        self.sim_number = self.config['continue_from']
         self.usv_sampler = get_usv_sampler_from_config(self.config, self.randomstate)
         self.intruder_sampler = get_intruder_sampler_from_config(self.config, self.randomstate)
         self.num_usvs = None
+        self.num_intruders = None
+        self.num_threats = None
         self.radius_buffer = self.config['radius_buffer']
         self.delta_time_secs = self.config['delta_time_secs']
         self.threshold = self.config['threshold']
         self.visualize = self.config['visualize']
         self.max_time = self.config['max_time']
+        self.noise = self.config['noise']
         self.anim = LivePlot() if self.visualize else None
         self.reset_pub = rospy.Publisher('SystemReset', resetSystem, queue_size=100)
         self.data = pd.read_csv("/home/dylan/Github/ug4_project/data.csv")
-        self.ynormalizer = joblib.load('/home/dylan/Github/ug4_project/notebooks/ynormalizer')
+        # self.ynormalizer = joblib.load('/home/dylan/Github/ug4_project/notebooks/ynormalizer')
         self.intruder_initstate_sampler = AISInititialStateSampler(randomstate, self.data)
         self.intruder_sampler.initial_state_sampler = self.intruder_initstate_sampler
         rospy.set_param('/swarm_simulation/delta_time_secs', self.delta_time_secs)
@@ -301,6 +307,10 @@ class SimulationSampler(Sampler):
         usv_config = self.config['usv_params']
         min_num_usvs = usv_config['min_num_usvs']
         max_num_usvs = usv_config['max_num_usvs']
+        threat_sigma = usv_config['threat_sigma']
+        non_threat_sigma = usv_config['non_threat_sigma']
+        rospy.set_param('/swarm_simulation/threat_sigma', threat_sigma)
+        rospy.set_param('/swarm_simulation/non_threat_sigma', non_threat_sigma)
         usv_samples = self._sample_usvs(self.usv_sampler,
                                         min_num_usvs,
                                         max_num_usvs,
@@ -327,6 +337,7 @@ class SimulationSampler(Sampler):
                                       )
 
     def sample_simulation(self):
+        self.randomstate.seed(self.start_seed+self.sim_number)
         asset_params = rospy.get_param('random_simulation/asset_params/asset')
         asset_sim_id = 100
         asset_radius_buffer = asset_params['radius_buffer']
@@ -339,14 +350,25 @@ class SimulationSampler(Sampler):
                         initial_state=asset_init_state,
                         radius_buffer=asset_radius_buffer)
         usvs = self.sample_usvs()
-        intruders = self.sample_intruders()
-
+        intruders, num_threats = self.sample_intruders()
+        self.num_intruders = len(intruders)
+        self.num_threats = int(num_threats)
+        self.sim_number += 1
         node = SimulationNode([*intruders, *usvs, tanker],
                               use_gui=self.visualize,
                               anim=self.anim,
                               threshold=self.threshold,
                               delta_t=self.delta_time_secs,
-                              initialize=False,max_time=self.max_time)
+                              initialize=False, max_time=self.max_time,
+                              noise=self.noise,
+                              stats=SimStats(self.sim_number,
+                                             self.start_seed,
+                                             self.num_usvs,
+                                             self.num_intruders,
+                                             self.num_threats,
+                                             self.noise,
+                                             self.config['usv_params']['threat_sigma'],
+                                             self.config['usv_params']['non_threat_sigma']))
         return node
 
     def reset(self):
@@ -356,6 +378,8 @@ class SimulationSampler(Sampler):
         # rospy.delete_param('/swarm_simulation/intruder_params')
         rospy.loginfo("Sending Reset Message")
         self.num_usvs = None
+        self.num_intruders = None
+        self.num_threats = None
         msg = resetSystem()
         rate = rospy.Rate(10)
         t = time()
@@ -387,8 +411,7 @@ class SimulationSampler(Sampler):
         rospy.set_param('/swarm_simulation/usv_params', usv_configs)
         return usvs
 
-    @staticmethod
-    def _sample_intruders(intruder_sampler: IntruderSampler,
+    def _sample_intruders(self, intruder_sampler: IntruderSampler,
                           min_num_intruders,
                           max_num_intruders,
                           min_num_threats,
@@ -404,11 +427,10 @@ class SimulationSampler(Sampler):
         min_num_threats = min(min_num_threats, max_num_threats)
         num_threats = randomstate.random_integers(min_num_threats, max_num_threats)
         print(min_num_threats, max_num_threats, num_threats, num_usvs)
-
         # Sample time between intruders (secs)
-        delta_times = randomstate.exponential(time_between_intruders_mean, num_intruders)
-        activate_times = np.cumsum(delta_times)
-        print(delta_times)
+        activate_times = randomstate.uniform(0, self.max_time/2)  # randomstate.exponential(time_between_intruders_mean, num_intruders)
+        # activate_times = np.cumsum(delta_times)
+        print(activate_times)
 
         # Get sim ids
         intruder_ids = [100 + j for j in range(1, num_intruders+1)]
@@ -430,20 +452,72 @@ class SimulationSampler(Sampler):
 
         # Set configs to ROS param server
         rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
-        return intruders
+        return intruders, num_threats
+
+
+class SimStats:
+    def __init__(self, sim_number, start_seed, num_usvs, num_intruders, num_threats, position_noise, threat_sigma, non_threat_sigma):
+        self.sim_number = sim_number
+        self.start_seed = start_seed
+        self.num_usvs = num_usvs
+        self.num_intruders = num_intruders
+        self.num_threats = num_threats
+        self.position_noise = position_noise
+        self.threat_sigma = threat_sigma
+        self.non_threat_sigma = non_threat_sigma
+        self.num_false_pos = 0
+        self.num_true_neg = 0
+        self.intruder_times = {}
+        self.start_time = None
+        self.end_time = None
+
+
+def log_stats(statsdir : str, stats: SimStats):
+    dic = {}
+    dic['num_usvs'] = stats.num_usvs
+    dic['num_intruders'] = stats.num_intruders
+    dic['num_threats'] = stats.num_threats
+    dic['num_false_positives'] = stats.num_false_pos
+    dic['num_true_negatives'] = stats.num_true_neg
+    dic['start_time'] = stats.start_time
+    dic['end_time'] = stats.end_time
+    dic['sim_number'] = stats.sim_number
+    dic['start_seed'] = stats.start_seed
+    dic['intruder_detection_times'] = []
+    dic['position_noise'] = stats.position_noise
+    dic['threat_sigma'] = stats.threat_sigma
+    dic['non_threat_sigma'] = stats.non_threat_sigma
+    for threat_id, times in stats.intruder_times.items():
+        if times[1] == -1:
+            dic['intruder_detection_times'].append(stats.end_time-times[0])
+        else:
+            dic['intruder_detection_times'].append(times[1] -times[0])
+        with open(statsdir + "/stats_{}_{}_{}_{}_{}_.json".format(
+                stats.position_noise,
+                stats.threat_sigma,
+                stats.non_threat_sigma,
+                stats.start_seed, stats.sim_number), "wb") as f:
+            f.write(json.dumps(dic).encode("utf-8"))
+    print("Statistics Summary\n =================")
+    print(dic)
 
 
 if __name__ == "__main__":
     rospy.init_node("RandomSimulation", anonymous=True)
     SEED = rospy.get_param('/random_simulation/seed')
-    rospy.logerr("SEED : {}".format(SEED))
     NUM_SIMS = rospy.get_param('/random_simulation/num_simulations')
+    statsdir = rospy.get_param('/random_simulation/statsdir')
+    rospy.logerr("SEED : {}".format(SEED))
     rs = np.random.RandomState(seed=SEED)
     simulation_sampler = SimulationSampler(rs)
+    i = simulation_sampler.sim_number
     while not rospy.is_shutdown():
-        for i in range(NUM_SIMS):
+        while simulation_sampler.sim_number < NUM_SIMS:
             print("STARTING SIMULATION {}".format(i))
             sim_node = simulation_sampler.sample_simulation()
-            result = sim_node.begin()
+            stats = sim_node.begin()
+            log_stats(statsdir, stats)
             simulation_sampler.reset()
             sim_node.unregister()
+            i += 1
+        rospy.signal_shutdown("Simulatons Completed")

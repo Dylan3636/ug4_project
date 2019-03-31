@@ -9,24 +9,26 @@
 #include "ctime"
 namespace swarm_task_manager{
     
-    bool share_assignment(int *main_usv_assignment_index,
-                          int *other_usv_assignment_index){
-        if(*other_usv_assignment_index == -1){
-            *other_usv_assignment_index = *main_usv_assignment_index;        
-            return true;
-        }else{
-            return false;
-        }
-    }
-    void exchange_assignment(int *main_usv_assignment_index,
-                             int *other_usv_assignment_index){
+//    bool share_assignment(agent::AgentTask main_usv_assignment,
+//                          agent::AgentTask other_usv_assignment){
+//        if(*other_usv_assignment_index == -1){
+//            *other_usv_assignment_index = *main_usv_assignment_index;
+//            return true;
+//        }else{
+//            return false;
+//        }
+//    }
+    void exchange_assignment(agent::AgentTask &main_usv_assignment,
+                          agent::AgentTask &other_usv_assignment){
         
-        int temp_assignment = *main_usv_assignment_index;
-        if(*main_usv_assignment_index == *other_usv_assignment_index){
-            *main_usv_assignment_index = -1;
+        auto temp_assignment = main_usv_assignment;
+        if(main_usv_assignment.task_idx == other_usv_assignment.task_idx && main_usv_assignment.task_type==other_usv_assignment.task_type){
+            main_usv_assignment.task_idx= -1;
         }else{
-            *main_usv_assignment_index = *other_usv_assignment_index;
-            *other_usv_assignment_index = temp_assignment;
+            main_usv_assignment.task_idx = other_usv_assignment.task_idx;
+            main_usv_assignment.task_type = other_usv_assignment.task_type;
+            other_usv_assignment.task_idx = temp_assignment.task_idx;
+            other_usv_assignment.task_type = temp_assignment.task_type;
         }
     }
 
@@ -43,9 +45,15 @@ namespace swarm_task_manager{
         // Initialise with original swarm assignment
         std::vector<agent::WeightedSwarmAssignment> candidates={agent::WeightedSwarmAssignment(swarm_assignment, 0.0)};
 
+        bool main_has_delay_task;
         bool has_delay_task; // does the other usv have a delay assignment
-        int main_usv_task_idx_tmp;
-        int other_usv_task_idx_tmp;
+        agent::AgentTask main_usv_task_tmp;
+        agent::AgentTask other_usv_task_tmp;
+        for(const auto &main_usv_task : main_usv_assignment){
+            if(main_usv_task.task_type==agent::TaskType::Delay){
+                main_has_delay_task=true;
+            }
+        }
 
         for (auto &assignment_pair : swarm_assignment_copy){
             if (sim_id==assignment_pair.first){
@@ -62,26 +70,37 @@ namespace swarm_task_manager{
             }
             for(auto &main_usv_task : main_usv_assignment){
                 for(auto &other_usv_task : other_usv_assignment){
-                    if(main_usv_task.task_type==other_usv_task.task_type){
-                        // Exchange Task
-                        main_usv_task_idx_tmp = main_usv_task.task_idx;
-                        other_usv_task_idx_tmp = other_usv_task.task_idx;
-
-                        exchange_assignment(&main_usv_task.task_idx, &other_usv_task.task_idx);
-
-                        candidates.emplace_back(swarm_assignment_copy, 0.0);
-                        // Reset
-                        main_usv_task.task_idx = main_usv_task_idx_tmp;
-                        other_usv_task.task_idx = other_usv_task_idx_tmp;
-                   }else{
-                        // Share Task
-                        if(main_usv_task.task_type==agent::TaskType::Delay){
-                            if(!has_delay_task){
-                                other_usv_assignment.push_back(main_usv_task);
-                                candidates.emplace_back(swarm_assignment_copy, 0.0);
-                                other_usv_assignment.pop_back(); // Reset
-                            }
+//                    if(main_usv_task.task_type==other_usv_task.task_type){
+                     // Exchange Task
+                     if(has_delay_task){
+                         if(main_usv_task.task_type == agent::TaskType::Delay &&
+                         other_usv_task.task_type != agent::TaskType::Delay){
+                             continue;
+                         }
+                     }
+                    if(main_has_delay_task) {
+                        if (other_usv_task.task_type == agent::TaskType::Delay &&
+                            main_usv_task.task_type != agent::TaskType::Delay) {
+                            continue;
                         }
+                    }
+                     main_usv_task_tmp = main_usv_task;
+                     other_usv_task_tmp = other_usv_task;
+
+                     exchange_assignment(main_usv_task, other_usv_task);
+
+                     candidates.push_back({swarm_assignment_copy, 0.0});
+                     // Reset
+                     main_usv_task = main_usv_task_tmp;
+                     other_usv_task = other_usv_task_tmp;
+//                   }else{
+                        // Share Task
+                   if(main_usv_task.task_type==agent::TaskType::Delay){
+                       if(!has_delay_task){
+                           other_usv_assignment.push_back(main_usv_task);
+                           candidates.push_back({swarm_assignment_copy, 0.0});
+                           other_usv_assignment.pop_back(); // Reset
+                       }
                    }
                 }
             }
@@ -168,7 +187,7 @@ namespace swarm_task_manager{
            time_t update_t= std::clock();
            swarm.get_obstacle_states(obstacle_states);
            if(count_since_shuffle>10) {
-               swarm.swap_around_observation_tasks();
+               swarm.shuffle_tasks();
                count_since_shuffle = 0;
            }
            for (const auto &sim_id_type_pair : agent_sim_id_map) {
@@ -235,7 +254,7 @@ namespace swarm_task_manager{
                                    double threshold,
                                    double &weight){
         bool use_threads=false;
-        int num_samples=50;
+        int num_samples=1;
         try {
             ROS_INFO("Evaluating swarm assignment:");
             ROS_INFO("%s", agent::swarm_assignment_to_string(swarm_assignment).c_str());
@@ -281,11 +300,11 @@ namespace swarm_task_manager{
             }
             double total_weight=0.0;
             for(auto sam_weight : weights){
-                ROS_INFO("WEIGHT: %f", sam_weight);
+                ROS_DEBUG("WEIGHT: %f", sam_weight);
                 total_weight += sam_weight;
             }
             weight = total_weight/(double) num_samples;
-            ROS_INFO("WEIGHT: %f, %f", weight, total_weight);
+            ROS_DEBUG("WEIGHT: %f, %f", weight, total_weight);
             // ROS_INFO("DISTANCE TO ASSET: %f", min_dist_to_asset);
         }catch(std::exception &e){
             ROS_ERROR("Error in thread %s", e.what());
@@ -298,7 +317,7 @@ namespace swarm_task_manager{
                                             std::vector<agent::WeightedSwarmAssignment> &candidate_assignments){
         std::thread threads[candidate_assignments.size()];
         int i = 0;
-        bool use_threads=false;
+        bool use_threads=true;
         double weights[candidate_assignments.size()];
         for (auto &assignment_pair : candidate_assignments){
             // time_t t= std::clock();
@@ -356,7 +375,7 @@ namespace swarm_task_manager{
 
         time_t t= std::clock();
         agent::USVSwarm swarm_cp=swarm;
-        swarm_cp.swap_around_observation_tasks();
+        swarm_cp.shuffle_tasks();
         agent::SwarmAssignment assignment;
         swarm_cp.get_swarm_assignment(assignment);
         auto candidate_assignments = generate_assignment_candidates(sim_id, assignment, communication_map);

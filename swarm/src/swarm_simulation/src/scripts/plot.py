@@ -9,7 +9,7 @@ PlotObject = namedtuple('PlotObject',
                          'heading',
                          'radius'])
 
-scale = 0.5 #1.2
+scale = 0.25 #1.2
 
 old_scale = scale
 scale *= 5
@@ -18,7 +18,7 @@ triangle_shape = [[20/scale, 0/scale],
                   [-20/scale, -10/scale],
                   [-20/scale, 10/scale],
                   [10/scale, 10/scale]]
-scale = old_scale
+# scale = old_scale
 
 asset_shape = [[30/scale, 0/scale],
                [20/scale, -20/scale],
@@ -28,6 +28,7 @@ asset_shape = [[30/scale, 0/scale],
 
 oval_shape = [[-5/scale, -5/scale],
               [5/scale, 5/scale]]
+scale=old_scale
 
 center = [1000, 500]
 
@@ -140,7 +141,7 @@ class LivePlot:
 
     @staticmethod
     def offset_object_position(x, y):
-        return x/(scale*2.5) + center[0], -y/(scale*2.5) + center[1]
+        return float(x/(scale*2.5)) + center[0], -float(y/(scale*2.5)) + center[1]
 
     def update_object(self, obj, sim_obj):
         sim_id = sim_obj.sim_id
@@ -199,12 +200,15 @@ class LivePlot:
                 obj = self.objects[sim_id]
                 # x = marker.x/scale + center[0]
                 # y = -marker.y/scale + center[1]
-                x, y = self.offset_object_position(marker.x, marker.y)
-                self.canvas.coords(obj,
+                try:
+                    x, y = self.offset_object_position(marker.x, marker.y)
+                    self.canvas.coords(obj,
                                    oval_shape[0][0]+x,
                                    oval_shape[0][1]+y,
                                    oval_shape[1][0]+x,
                                    oval_shape[1][1]+y)
+                except Exception as e:
+                    print(e)
         self.thread_lock.release()
         self.canvas.update()
     
@@ -224,5 +228,8 @@ class LivePlot:
         while not self.queue.empty():
             sim_id = self.queue.get()
             with self.thread_lock:
-                self.canvas.delete(self.objects[sim_id])
-                del self.objects[sim_id]
+                try:
+                    self.canvas.delete(self.objects[sim_id])
+                    del self.objects[sim_id]
+                except Exception as e:
+                    print(e)

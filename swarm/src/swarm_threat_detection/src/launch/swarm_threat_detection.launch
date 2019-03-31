@@ -6,9 +6,9 @@
         <param name="noise_sigma" value="0.025"/>
         <param name="alert_threshold" value="0.7"/>
     </node>
-    <node pkg="swarm_threat_detection" type="nn_model_node" name="swarm_intruder_model" clear_params="true" required="true">
-        <param name="modelpath" value="/home/dylan/Github/ug4_project/notebooks/rnnmodel.h5"/>
-        <param name="normalizerpath" value="/home/dylan/Github/ug4_project/notebooks"/>
-        <param name="sequence_length" value="10"/>
-    </node>
+    <!--<node pkg="swarm_threat_detection" type="nn_model_node" name="swarm_intruder_model" clear_params="true" required="true">-->
+        <!--<param name="modelpath" value="/home/dylan/Github/ug4_project/notebooks/nnmodel.h5"/>-->
+        <!--<param name="normalizerpath" value="/home/dylan/Github/ug4_project/notebooks"/>-->
+        <!--<param name="sequence_length" value="10"/>-->
+    <!--</node>-->
 </launch>

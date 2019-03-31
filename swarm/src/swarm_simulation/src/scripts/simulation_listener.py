@@ -10,10 +10,13 @@ from swarm_msgs.msg import (agentState,
                             threatStatistics,
                             worldState,
                             initializeSystem,
+                            taskType
                             )
 from time import time
 import os
 from perception import perceive
+
+
 
 
 class SimulationNode(Simulation):
@@ -26,7 +29,7 @@ class SimulationNode(Simulation):
                  use_gui=True,
                  threshold=None,
                  initialize=True,
-                 noise=5, max_time=60):
+                 noise=5, max_time=60, stats=None):
 
         if initialize:
             rospy.init_node("Simulation", anonymous=True)
@@ -42,6 +45,7 @@ class SimulationNode(Simulation):
                                                          swarmAssignment,
                                                          self.task_allocation_callback)
         self.noise = noise
+        self.stats = stats
 
     def command_callback(self, msg):
         command = Command(msg.delta_speed,
@@ -60,6 +64,21 @@ class SimulationNode(Simulation):
                                   task.task_idx) for task in usv_assignment.tasks]
                                 for usv_assignment in msg.usvAssignments]
         self.update_task_lines([*new_task_assignments])
+        self.update_assignment_stats([*new_task_assignments])
+
+    def update_assignment_stats(self, task_assignments):
+        for task in task_assignments:
+            for (usv_id, task_type, task_idx) in task:
+                if task_type == taskType.DELAY:
+                    if task_idx in self.stats.intruder_times:
+                        if self.stats.intruder_times[task_idx][1] == -1:
+                            self.stats.intruder_times[task_idx][1] = time()
+                    else:
+                        self.stats.num_false_pos += 1
+                elif task_type == taskType.OBSERVE:
+                    if task_idx in self.stats.intruder_times:
+                        if self.stats.intruder_times[task_idx][1] != -1:
+                            self.stats.num_true_neg += 1
 
     @property
     def active_usvs(self):
@@ -70,19 +89,18 @@ class SimulationNode(Simulation):
     def update_simulation_state(self):
         ws = worldState().worldState
         for sim_id, obj in self.sim_objects.items():
-            # if type(obj) == Intruder:
-            #     # intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
-            #     # rospy.logerr("Intruder Config Before {}".format(intruder_configs))
-            #     if time() > self.start_time + obj.activate_time and not obj.active:
-            #         intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
-            #         for config in intruder_configs:
-            #             if config['sim_id']==sim_id:
-            #                 config['threat'] = True
-            #         os.system('rosparam delete /swarm_simulation/{}'.format('intruder_params'))
-            #         rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
-            #         obj.active=True
-            #     else:
-            #         continue
+            if type(obj) == Intruder and not obj.active:
+                # intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
+                # rospy.logerr("Intruder Config Before {}".format(intruder_configs))
+                if time() > self.start_time + obj.activate_time and not obj.active:
+                    intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
+                    for config in intruder_configs:
+                        if config['sim_id']==sim_id:
+                            config['threat'] = True
+                    os.system('rosparam delete /swarm_simulation/{}'.format('intruder_params'))
+                    rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
+                    obj.active = True
+                    self.stats.intruder_times[obj.sim_id] = [time(), -1]
             ws.append(state_to_msg(sim_id, perceive(obj.update_state(self.timeout), self.noise)))
         self.publisher.publish(ws)
 
@@ -96,7 +114,9 @@ class SimulationNode(Simulation):
             self.start_pub.publish(start_msg)
             rate.sleep()
         super().begin()
-        return self.end_time-self.start_time
+        self.stats.start_time=self.start_time
+        self.stats.end_time=self.end_time
+        return self.stats
 
     def unregister(self):
         self.listener.unregister()

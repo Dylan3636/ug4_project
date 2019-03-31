@@ -1,7 +1,7 @@
 #!/home/dylan/miniconda3/envs/mlp/bin/python3
 
 import rospy
-from nn_threat_detector import RNNModel
+from nn_threat_detector import FFNNModel
 from swarm_threat_detection.srv import batchIntruderCommandsResponse, batchIntruderCommands
 from swarm_msgs.msg import resetSystem, initializeSystem, agentCommand
 from keras.models import load_model
@@ -27,10 +27,10 @@ def reset_callback(msg):
 def nn_model_request(req):
     if not initialized:
         return
-    global rnnmodel
+    global nnmodel
     try:
         pred_t = time()
-        delta_speeds, delta_headings, ids = rnnmodel.predict(req.batch_previous_states)
+        delta_speeds, delta_headings, ids = nnmodel.predict(req.batch_previous_states)
         #rospy.logerr("Prediction time {}".format(time()-pred_t))
         commands = []
         for delta_speed, delta_heading, id in zip(delta_speeds, delta_headings, ids):
@@ -74,10 +74,10 @@ if __name__ == "__main__":
         graph = tf.get_default_graph()
 
         normalizerspath = rospy.get_param('swarm_intruder_model/normalizerpath')
-        xnormalizer = joblib.load(normalizerspath+"/xnormalizer")
-        ynormalizer = joblib.load(normalizerspath+"/ynormalizer")
+        xnormalizer = joblib.load(normalizerspath+"/ffnn_xnormalizer")
+        ynormalizer = joblib.load(normalizerspath+"/ffnn_ynormalizer")
         seq_length = rospy.get_param('swarm_intruder_model/sequence_length')
-        rnnmodel = RNNModel(model, xnormalizer, ynormalizer, seq_length,graph=graph)
+        nnmodel = FFNNModel(model, xnormalizer, ynormalizer, seq_length,graph=graph)
         rospy.Service('swarm_intruder_model_service', batchIntruderCommands, nn_model_request)
         rospy.loginfo("Initiating Threat Detection System")
         rospy.spin()

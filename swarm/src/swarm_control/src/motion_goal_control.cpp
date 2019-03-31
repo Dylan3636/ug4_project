@@ -25,8 +25,8 @@ namespace swarm_control{
         auto intruder_constraints = intruder.get_constraints();
 
         auto asset_state = asset.get_state();
-        double capture_radius = 30;
-        double w_delayed = 10;
+        double capture_radius = 10;
+        double w_delayed = 0.5;
 
         motion_goal.speed = std::max(intruder_state.speed -delay_position*w_delayed, 0.0);
         motion_goal.heading_rad = intruder_state.heading;
@@ -201,13 +201,7 @@ namespace swarm_control{
             agent::MotionGoal &motion_goal){
         auto intruder = swarm.get_intruder_estimate_by_id(intruder_id);
         auto asset = swarm.get_asset_estimate();
-        if(intruder.is_threat()){
-            return intruder_motion_goal(asset.get_state(), motion_goal);
-        }else{
-            motion_goal.x=100;
-            motion_goal.y=100;
-            return true;
-        }
+        return intruder_motion_goal(asset.get_state(), motion_goal);
     }
 
     double get_speed_goal(double distance_to_mg,
@@ -240,17 +234,16 @@ namespace swarm_control{
         if (left_turn<0) left_turn+= 2*swarm_tools::PI;
         right_turn = -(2*swarm_tools::PI-left_turn);
     }
-
-    double get_smallest_delta_heading(double left_turn,
+   double get_smallest_delta_heading(double left_turn,
                                       double right_turn,
                                       double current_heading,
                                       double max_delta_heading){
         double delta_heading;
         if (std::abs(left_turn)<=std::abs(right_turn)) {
-            delta_heading = left_turn/0.1;
+            delta_heading = left_turn;
             }
         else {
-            delta_heading = right_turn/0.1;
+            delta_heading = right_turn;
             }
 
         delta_heading = swarm_tools::clip(delta_heading,
@@ -258,16 +251,36 @@ namespace swarm_control{
                                           max_delta_heading);
         return delta_heading;
     }
+    double get_smallest_delta_heading(double heading_goal,
+                                      double current_heading,
+                                      double max_delta_heading){
+        double left_turn;
+        double right_turn;
+        get_smallest_delta_heading(left_turn, right_turn, current_heading, max_delta_heading);
+        double delta_heading;
+        if (std::abs(left_turn)<=std::abs(right_turn)) {
+            delta_heading = left_turn;
+            }
+        else {
+            delta_heading = right_turn;
+            }
+
+        delta_heading = swarm_tools::clip(delta_heading,
+                                          -max_delta_heading,
+                                          max_delta_heading);
+        return delta_heading;
+    }
+
     double get_largest_delta_heading(double left_turn,
                                       double right_turn,
                                       double current_heading,
                                       double max_delta_heading){
         double delta_heading;
         if (std::abs(left_turn)>std::abs(right_turn)) {
-            delta_heading = left_turn/0.1;
+            delta_heading = left_turn;
             }
         else {
-            delta_heading = right_turn/0.1;
+            delta_heading = right_turn;
             }
 
         delta_heading = swarm_tools::clip(delta_heading,
@@ -296,7 +309,7 @@ namespace swarm_control{
     double get_delta_speed(double speed_goal,
                            double current_speed,
                            double max_delta_speed){
-        double delta_speed = (speed_goal-current_speed)/0.1;
+        double delta_speed = (speed_goal-current_speed);
         delta_speed = swarm_tools::clip(delta_speed,
                                         -max_delta_speed,
                                         max_delta_speed);
@@ -345,8 +358,8 @@ namespace swarm_control{
                                                                          mg_position);
         double distance_to_mg = swarm_tools::euclidean_distance(intruder_position,
                                                                 mg_position);
-        double near_mg_dist=50;
-        double accepted_mg_dist=20;
+        double near_mg_dist=25;
+        double accepted_mg_dist=10;
         double speed_goal = get_speed_goal(distance_to_mg,
                                            intruder.get_max_speed(),
                                            near_mg_dist,
@@ -387,8 +400,8 @@ namespace swarm_control{
                                                                          mg_position);
         double distance_to_mg = swarm_tools::euclidean_distance(intruder_position,
                                                                 mg_position);
-        double near_mg_dist=50;
-        double accepted_mg_dist=20;
+        double near_mg_dist=25;
+        double accepted_mg_dist=10;
         double speed_goal = get_speed_goal(distance_to_mg,
                                            intruder.get_max_speed(),
                                            near_mg_dist,
@@ -426,12 +439,12 @@ namespace swarm_control{
         double speed_goal;
 
         if (usv.has_delay_task()){
-            double near_mg_dist=40;
-            double accepted_mg_dist=10;
+            double near_mg_dist=20;
+            double accepted_mg_dist=5;
             speed_goal = get_speed_goal(distance_to_mg, usv.get_max_speed(), near_mg_dist, accepted_mg_dist);
         }else{
-            double near_mg_dist=70;
-            double accepted_mg_dist=20;
+            double near_mg_dist=25;
+            double accepted_mg_dist=5;
             speed_goal = get_speed_goal(distance_to_mg, usv.get_max_speed(), near_mg_dist, accepted_mg_dist);
         }
 

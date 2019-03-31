@@ -20,6 +20,10 @@ namespace swarm_control{
         const agent::AgentState& asset_state,
         agent::MotionGoal& motion_goal);
 
+    double get_smallest_delta_heading(double heading_goal,
+                                      double current_heading,
+                                      double max_delta_heading);
+
     template<typename T> bool get_batch_intruder_commands_from_model(
             const std::vector<T> &intruders,
             std::map<int, agent::AgentCommand> &commands,

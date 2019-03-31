@@ -12,7 +12,7 @@
 
 int count=0;
 bool initialized=false;
-bool use_model=true;
+bool use_model=false;
 ros::Publisher command_pub;
 ros::ServiceClient client;
 ros::ServiceClient model_client;
@@ -107,6 +107,8 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     }
     std::vector<agent::AgentState> obstacle_states;
     get_obstacle_states(world_state, obstacle_states);
+    auto obstacle_states_w_asset = obstacle_states;
+    obstacle_states_w_asset.push_back(agent::AgentState(0,0,0,0,50,1));
     std::map<int, agent::AgentCommand> intruder_commands_map;
 
     std::vector<agent::IntruderAgent> intruders;
@@ -142,8 +144,11 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
             ROS_INFO("Position ([%f], [%f])",
                      intruder.get_x(), intruder.get_y());
         }
-        else if (count++>200){
-            command = intruder_commands_map[sim_id];
+        else{
+            command.delta_heading=swarm_control::get_smallest_delta_heading(
+                    intruder.heading_goal,
+                    intruder.get_heading(),
+                    intruder.get_max_delta_heading());
         }
 
         ROS_INFO("Correcting command for intruder [%d]", sim_id);
@@ -153,9 +158,16 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
 
         bool evade = intruder.update_evade();
         double aggression = intruder.get_aggression();
-        int result = collision_avoidance::correct_command(intruder,
-                                                          obstacle_states,
-                                                          command);
+        int result;
+        if(intruder.is_threat()){
+            result = collision_avoidance::correct_command(intruder,
+                                                              obstacle_states,
+                                                              command);
+        }else{
+            result = collision_avoidance::correct_command(intruder,
+                                                              obstacle_states_w_asset,
+                                                              command);
+        }
         if (result!=0){
             intruder.update_previously_blocked_time();
         }

@@ -20,6 +20,8 @@ bool initialized = false;
 int usv_id;
 int intruder_id;
 int NUM_USVS;
+double threat_sigma;
+double non_threat_sigma;
 bool vanilla_threat_detection=false;
 
 agent::USVSwarm swarm;
@@ -60,45 +62,70 @@ void publish_markers(const agent::MotionGoal &motion_goal){
 double standard_gaussian_liklihood(){
 }
 
-double calculate_non_threat_log_likelihood(agent::ObservedIntruderAgent intruder){
+double calculate_non_threat_log_likelihood(agent::ObservedIntruderAgent intruder, const std::vector<agent::AgentState> &obstacles){
+//    ROS_INFO("Calculating non threat ll");
     agent::AgentState current_state = intruder.previous_states.front();
-    intruder.previous_states.pop_back();
+//    ROS_ERROR("(%f, %f)", current_state.speed, current_state.heading);
+    intruder.previous_states.pop_front();
     agent::AgentState previous_state = intruder.previous_states.front();
-    intruder.previous_states.pop_back();
-    double delta_speed = current_state.speed-previous_state.speed;
-    double delta_heading = swarm_tools::radnorm(current_state.heading-previous_state.heading);
-    double accel_x = delta_speed*std::cos(delta_heading);
-    double accel_y = delta_speed*std::sin(delta_heading);
-    double x[2]={accel_x, accel_y};
+//    ROS_ERROR("(%f, %f)", previous_state.speed, previous_state.heading);
+    intruder.previous_states.pop_front();
+    agent::AgentCommand command;
+    collision_avoidance::correct_command(intruder, obstacles, command);
+    double pred_speed = previous_state.speed + command.delta_speed;
+    double pred_heading = previous_state.heading + command.delta_heading;
+    double resid_x = pred_speed*cos(pred_heading)-current_state.speed*cos(current_state.heading);
+    double resid_y = pred_speed*sin(pred_heading)-current_state.speed*sin(current_state.heading);
+//    double resid_x = current_state.speed*cos(current_state.heading)-current_state.speed*cos(current_state.heading);
+//    double resid_y = current_state.speed*cos(current_state.heading)-current_state.speed*sin(current_state.heading);
+//    ROS_ERROR("(%f, %f, %f, %f)", delta_speed, delta_heading, resid_x, resid_y);
+    double x[2]={resid_x, resid_y};
     double mu[2]={0, 0};
-    double log_likelihood = swarm_tools::log_multivariate_normal_2d(x, mu, 2);
+    double log_likelihood = swarm_tools::log_multivariate_normal_2d(x, mu, non_threat_sigma);
     return log_likelihood;
 }
-double calculate_threat_log_likelihood(agent::ObservedIntruderAgent intruder){
+double calculate_threat_log_likelihood(agent::ObservedIntruderAgent intruder, const std::vector<agent::AgentState> &obstacles){
+//    ROS_INFO("Calculating threat ll");
     agent::AgentState current_state = intruder.previous_states.front();
-    intruder.previous_states.pop_back();
+    intruder.previous_states.pop_front();
     agent::AgentState previous_state = intruder.previous_states.front();
-    intruder.previous_states.pop_back();
+    intruder.previous_states.pop_front();
     intruder.set_state(previous_state);
-    double delta_speed = current_state.speed-previous_state.speed;
-    double delta_heading = swarm_tools::radnorm(current_state.heading-previous_state.heading);
-    double obs_accel_x = delta_speed*std::cos(delta_heading);
-    double obs_accel_y = delta_speed*std::sin(delta_heading);
     agent::AgentCommand command;
-    swarm_control::get_intruder_command_from_motion_goal(intruder, agent::MotionGoal(0, 0), command);
-    double accel_x = command.delta_speed*std::cos(command.delta_heading);
-    double accel_y = command.delta_speed*std::sin(command.delta_heading);
-    double x[2]={obs_accel_x, obs_accel_y};
-    double mu[2]={accel_x, accel_y};
-    double log_likelihood = swarm_tools::log_multivariate_normal_2d(x, mu, 2);
+//    intruder.set_aggression(1.0);
+    int num_samples=1;
+    double log_likelihoods[num_samples];
+    double summed_log_likelihoods=0;
+    double log_likelihood;
+    for(int i=0;i<num_samples; i++){
+        std::normal_distribution<double> distribution(0,0);
+
+//        double mg_x = distribution(generator);
+//        double mg_y = distribution(generator);
+
+        swarm_control::get_intruder_command_from_motion_goal(intruder, agent::MotionGoal(0, 0), command);
+        collision_avoidance::correct_command(intruder, obstacles, command);
+
+        double pred_speed = previous_state.speed + command.delta_speed;
+        double pred_heading = previous_state.heading + command.delta_heading;
+
+        double resid_x = pred_speed*cos(pred_heading)-current_state.speed*cos(current_state.heading);
+        double resid_y = pred_speed*sin(pred_heading)-current_state.speed*sin(current_state.heading);
+
+        double x[2]={resid_x, resid_y};
+        double mu[2]={0, 0};
+        log_likelihood= swarm_tools::log_multivariate_normal_2d(x, mu, threat_sigma);
+        ROS_DEBUG("Threat (%f, %f, %f, %f, %f)", command.delta_speed, command.delta_heading, resid_x, resid_y, log_likelihood);
+    }
+//    double log_likelihood = summed_log_likelihoods/num_samples;
     return log_likelihood;
 }
 
-double update_intruder_threat_probability(agent::ObservedIntruderAgent &intruder){
-    double threat_ll = calculate_threat_log_likelihood(intruder);
-    double non_threat_ll = calculate_non_threat_log_likelihood(intruder);
-    intruder.update_threat_estimate(threat_ll, non_threat_ll);
-}
+//double update_intruder_threat_probability(agent::ObservedIntruderAgent &intruder){
+//    double threat_ll = calculate_threat_log_likelihood(intruder);
+//    double non_threat_ll = calculate_non_threat_log_likelihood(intruder);
+////    intruder.update_threat_estimate(threat_ll, non_threat_ll);
+//}
 
 void publish_threat_statistics(int intruder_id, double probability, bool classification){
     swarm_msgs::threatStatistics stats;
@@ -129,7 +156,7 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     ROS_DEBUG("World Message Extraction time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
     if(count_since_shuffle>10){
-        swarm_cp.swap_around_observation_tasks();
+        swarm_cp.shuffle_tasks();
         if (usv_id==1){
             agent::SwarmAssignment assignment;
             swarm_cp.get_swarm_assignment(assignment);
@@ -137,6 +164,8 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
         }
         count_since_shuffle=0;
     }
+    std::vector<agent::AgentState> obstacle_states;
+    swarm_cp.get_obstacle_states(obstacle_states);
 
     for(const auto &usv_state_id_pair : usv_state_map){
         if(swarm_cp.contains_usv(usv_state_id_pair.first)){
@@ -157,7 +186,7 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
         if(swarm_cp.contains_intruder(intruder_state_id_pair.first)){
             t = clock();
             swarm_cp.update_intruder_state_estimate(intruder_state_id_pair.second);
-            ROS_INFO("Updating intruder %d : time %f", intruder_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
+            ROS_DEBUG("Updating intruder %d : time %f", intruder_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
         }
         else{
             ROS_INFO("Adding new intruder %d", intruder_state_id_pair.first);
@@ -169,9 +198,13 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
             swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first);
         }else{
             auto intruder = swarm_cp.get_intruder_estimate_by_id(intruder_state_id_pair.first);
-            double threat_ll = calculate_threat_log_likelihood(intruder);
-            double non_threat_ll = calculate_non_threat_log_likelihood(intruder);
+            if(intruder.previous_states.size()<2) continue;
+            t = clock();
+            double threat_ll = calculate_threat_log_likelihood(intruder, obstacle_states);
+            double non_threat_ll = calculate_non_threat_log_likelihood(intruder, obstacle_states);
+//            ROS_ERROR("LL (%f, %f)", threat_ll, non_threat_ll);
             swarm_cp.update_intruder_threat_estimate(intruder_state_id_pair.first, threat_ll, non_threat_ll);
+            ROS_DEBUG("Updating intruder threat prob %d : time %f", intruder_state_id_pair.first, (clock()-t)/(double) CLOCKS_PER_SEC);
         }
     }
     t = clock();
@@ -206,6 +239,7 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
 
     agent::AgentCommand command;
     t = clock();
+    swarm_cp.get_obstacle_states(obstacle_states);
     swarm_control::get_usv_command_from_motion_goal(usv_id,
                                                     swarm_cp,
                                                     motion_goal,
@@ -213,8 +247,6 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     ROS_INFO("Motion goal calculation time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
     ROS_INFO("DERSIRED COMMAND: (%f, %f)", command.delta_speed, command.delta_heading*180/swarm_tools::PI);
 
-    std::vector<agent::AgentState> obstacle_states;
-    swarm_cp.get_obstacle_states(obstacle_states);
     t = clock();
     collision_avoidance::correct_command(usv,
                                          obstacle_states,
@@ -324,6 +356,13 @@ void get_agent_parameters(){
     ROS_INFO("LOADING INTRUDER PARAMETERS");
     std::string intruder_head_str = "/swarm_simulation/intruder_params";
     get_agent_parameters(ros_container_ptr, intruder_head_str, intruder_constraints_map, intruder_radar_params_map);
+
+    if (!ros_container_ptr->nh.getParam("/swarm_simulation/threat_sigma", threat_sigma)){
+        ROS_ERROR("Could not load threat sigma");
+    }
+    if (!ros_container_ptr->nh.getParam("/swarm_simulation/non_threat_sigma", non_threat_sigma)){
+        ROS_ERROR("Could not load non threat sigma");
+    }
 }
 void initialize_callback(const swarm_msgs::initializeSystem &msg){
     std::lock_guard<std::mutex> lock(mtx);

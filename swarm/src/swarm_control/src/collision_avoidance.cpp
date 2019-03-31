@@ -73,7 +73,7 @@ template<typename T> int collision_avoidance::correct_command(
     // restrict command using differential constraints
     double delta_heading = swarm_tools::clip(command.delta_heading,
                                              -max_angle_rad,
-                                             max_angle_rad)*0.1;
+                                             max_angle_rad);
 
     if (is_command_safe(delta_heading, safe_intervals)){
         return 0; // Indicates no change was made.
@@ -103,13 +103,13 @@ template<typename T> int collision_avoidance::correct_command(
     }else{
         command.delta_heading = aggression*r_theta_rad + (1-aggression)*l_theta_rad;
     }
-    command.delta_heading /= 0.1;
+//    command.delta_heading /= 0.1;
     // std::cout << "Weighted heading command: "<< command.delta_heading*180/swarm_tools::PI; 
 
     // restrict command using differential constraint
-    if(command.delta_speed*0.1 + agent_state.speed>constraints.max_speed){
-        command.delta_heading = (constraints.max_speed-agent_state.speed)/0.1;
-    }
+//    if(command.delta_speed*0.1 + agent_state.speed>constraints.max_speed){
+//        command.delta_speed = (constraints.max_speed-agent_state.speed);
+//    }
     command.delta_heading = swarm_tools::clip(command.delta_heading, -max_angle_rad, max_angle_rad);
     return 1;
 }

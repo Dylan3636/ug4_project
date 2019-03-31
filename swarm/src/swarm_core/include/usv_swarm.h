@@ -15,13 +15,13 @@ namespace agent{
         ros::ServiceClient threat_detection_client;
         AssetAgent asset;
         std::priority_queue<WeightedTask> task_queue;
-        std::default_random_engine generator;
 
         // private  methods
         void update_intruder_estimate(const ObservedIntruderAgent &intruder);
         void update_usv_estimate(const USVAgent &usv);
 
         public:
+            std::default_random_engine generator;
             ros::ServiceClient intruder_model_client;
             USVSwarm() = default;
             USVSwarm(const USVSwarm &swarm){
@@ -44,6 +44,8 @@ namespace agent{
 
             void reset();
             bool switch_observe_to_delay_task(int intruder_id);
+            void switch_delay_to_observe_task(int intruder_id);
+            void add_task_to_queue(const agent::AgentTask &task);
 
             // Contains
             bool contains_usv(int usv_id);
@@ -101,7 +103,7 @@ namespace agent{
             void add_intruder(const ObservedIntruderAgent &intruder);
 
 
-            bool swap_around_observation_tasks();
+            bool shuffle_tasks();
 
             // Update
             void update_queue_priorities();

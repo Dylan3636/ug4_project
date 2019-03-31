@@ -209,7 +209,7 @@ class Intruder(SimObject):
                  radius_buffer=100,
                  noise=None):
         self.activate_time = activate_time
-        self.active=True
+        self.active = False
         super().__init__(sim_id,
                          initial_state,
                          constraints,
