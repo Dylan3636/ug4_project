@@ -89,7 +89,7 @@ class SimulationNode(Simulation):
     def update_simulation_state(self):
         ws = worldState().worldState
         for sim_id, obj in self.sim_objects.items():
-            if type(obj) == Intruder and not obj.active:
+            if type(obj) == Intruder and obj.activate_time != -1 and not obj.active:
                 # intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
                 # rospy.logerr("Intruder Config Before {}".format(intruder_configs))
                 if time() > self.start_time + obj.activate_time and not obj.active:

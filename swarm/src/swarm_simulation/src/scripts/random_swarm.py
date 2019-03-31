@@ -428,27 +428,30 @@ class SimulationSampler(Sampler):
         num_threats = randomstate.random_integers(min_num_threats, max_num_threats)
         print(min_num_threats, max_num_threats, num_threats, num_usvs)
         # Sample time between intruders (secs)
-        activate_times = randomstate.uniform(0, self.max_time/2)  # randomstate.exponential(time_between_intruders_mean, num_intruders)
+        activate_times = randomstate.uniform(0, self.max_time/3, num_threats)  # randomstate.exponential(time_between_intruders_mean, num_intruders)
         # activate_times = np.cumsum(delta_times)
-        print(activate_times)
 
         # Get sim ids
         intruder_ids = [100 + j for j in range(1, num_intruders+1)]
 
         # Uniformly choose which will be threats
         threat_ids = randomstate.choice(intruder_ids, num_threats, replace=False)
+        threat_times_dic = dict(zip(threat_ids, activate_times))
 
         intruders = []
         intruder_configs = []
-        for intruder_id, activate_time in zip(intruder_ids, activate_times):
+        for intruder_id in intruder_ids:
 
+            if intruder_id in threat_times_dic:
+                activate_time = threat_times_dic[intruder_id]
+            else:
+                activate_time = -1
             # Sample intruder
             intruder, radar_params = intruder_sampler.sample(intruder_id, activate_time, radius)
             intruders.append(intruder)
 
             # Get config dictionary
             intruder_configs.append(intruder_to_params(intruder, radar_params, intruder_id in threat_ids))
-            print(intruder_id, intruder_id in threat_ids)
 
         # Set configs to ROS param server
         rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
