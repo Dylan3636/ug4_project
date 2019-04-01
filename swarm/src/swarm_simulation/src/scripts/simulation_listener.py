@@ -17,8 +17,6 @@ import os
 from perception import perceive
 
 
-
-
 class SimulationNode(Simulation):
 
     def __init__(self,
@@ -31,10 +29,10 @@ class SimulationNode(Simulation):
                  initialize=True,
                  noise=5, max_time=60, stats=None):
 
-        if initialize:
-            rospy.init_node("Simulation", anonymous=True)
         super().__init__(sim_objects, anim=anim, timeout=sim_timeout, delta_time_secs=delta_t, use_gui=use_gui,
                          threshold=threshold, max_time=max_time)
+        if initialize:
+            rospy.init_node("Simulation", anonymous=True)
         self._active_ids = None
         self.publisher = rospy.Publisher('Perception', worldState, queue_size=100)
         self.start_pub = rospy.Publisher('SystemStart', initializeSystem, queue_size=100)
@@ -67,18 +65,28 @@ class SimulationNode(Simulation):
         self.update_assignment_stats([*new_task_assignments])
 
     def update_assignment_stats(self, task_assignments):
+        intruder_ids = self.stats.intruder_times.keys()
+        visisted = dict(zip(intruder_ids, [False]*len(intruder_ids)))
         for task in task_assignments:
             for (usv_id, task_type, task_idx) in task:
                 if task_type == taskType.DELAY:
                     if task_idx in self.stats.intruder_times:
                         if self.stats.intruder_times[task_idx][1] == -1:
                             self.stats.intruder_times[task_idx][1] = time()
+                            self.stats.intruder_times[task_idx][0] = self.start_time
+                            visisted[task_idx]=True
                     else:
                         self.stats.num_false_pos += 1
                 elif task_type == taskType.OBSERVE:
                     if task_idx in self.stats.intruder_times:
                         if self.stats.intruder_times[task_idx][1] != -1:
                             self.stats.num_true_neg += 1
+                            visisted[task_idx]=True
+
+        for t_id, visit in visisted.items():
+            if not visit:
+                self.stats.num_true_neg += 1
+
 
     @property
     def active_usvs(self):
@@ -89,18 +97,19 @@ class SimulationNode(Simulation):
     def update_simulation_state(self):
         ws = worldState().worldState
         for sim_id, obj in self.sim_objects.items():
-            if type(obj) == Intruder and obj.activate_time != -1 and not obj.active:
+            # if type(obj) == Intruder and obj.activate_time != -1 and not obj.active:
                 # intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
                 # rospy.logerr("Intruder Config Before {}".format(intruder_configs))
-                if time() > self.start_time + obj.activate_time and not obj.active:
-                    intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
-                    for config in intruder_configs:
-                        if config['sim_id']==sim_id:
-                            config['threat'] = True
-                    os.system('rosparam delete /swarm_simulation/{}'.format('intruder_params'))
-                    rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
-                    obj.active = True
-                    self.stats.intruder_times[obj.sim_id] = [time(), -1]
+                # if time() > self.start_time + obj.activate_time and not obj.active:
+                #     rospy.logerr("Starting intruder {} as threat".format(sim_id))
+                #     intruder_configs=rospy.get_param('/swarm_simulation/intruder_params')
+                #     for config in intruder_configs:
+                #         if config['sim_id']==sim_id:
+                #             config['threat'] = True
+                #     os.system('rosparam delete /swarm_simulation/{}'.format('intruder_params'))
+                #     rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
+                #     obj.active = True
+                #     self.stats.intruder_times[obj.sim_id] = [time(), -1]
             ws.append(state_to_msg(sim_id, perceive(obj.update_state(self.timeout), self.noise)))
         self.publisher.publish(ws)
 

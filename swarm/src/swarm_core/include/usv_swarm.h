@@ -48,6 +48,8 @@ namespace agent{
             void add_task_to_queue(const agent::AgentTask &task);
 
             // Contains
+            bool assert_contains_usv(int usv_id);
+            bool assert_contains_intruder(int intruder_id);
             bool contains_usv(int usv_id);
             bool contains_intruder(int intruder_id);
 

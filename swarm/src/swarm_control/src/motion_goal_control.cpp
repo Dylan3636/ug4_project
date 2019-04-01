@@ -476,7 +476,7 @@ namespace swarm_control{
         double weighted_x=0;
         double weighted_y=0;
         double weighted_heading=0;
-        double w_sum = 0;
+        double w_sum = 1e-10;
 
         for (int i = 0; i<weights.size(); i++){
             double w = weights[i];

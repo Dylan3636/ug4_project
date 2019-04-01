@@ -4,16 +4,16 @@ max_time : 90
 delta_time_secs : 0.1
 radius_buffer : 20
 threshold : 25
-visualize : True
+visualize : False
 noise : 0
-continue_from : 0
+continue_from : 12
 statsdir : /home/dylan/Github/ug4_project/statistics
 
 usv_params: {
   min_num_usvs : 2,
   max_num_usvs : 8,
-  threat_sigma : 10,
-  non_threat_sigma : 10,
+  threat_sigma : 5,
+  non_threat_sigma : 5,
   initial_state: {
      x: {
        sampler: uniform,
@@ -76,9 +76,9 @@ usv_params: {
 }
 
 intruder_params :
-  min_num_intruders : 50
-  min_num_threats : 1
-  max_num_intruders : 75
+  min_num_intruders : 60
+  min_num_threats : 2
+  max_num_intruders : 100
   time_between_intruders_mean : 10
   initial_state :
      x:

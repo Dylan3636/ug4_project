@@ -79,9 +79,7 @@ double calculate_non_threat_log_likelihood(agent::ObservedIntruderAgent intruder
 //    double resid_x = current_state.speed*cos(current_state.heading)-current_state.speed*cos(current_state.heading);
 //    double resid_y = current_state.speed*cos(current_state.heading)-current_state.speed*sin(current_state.heading);
 //    ROS_ERROR("(%f, %f, %f, %f)", delta_speed, delta_heading, resid_x, resid_y);
-    double x[2]={resid_x, resid_y};
-    double mu[2]={0, 0};
-    double log_likelihood = swarm_tools::log_multivariate_normal_2d(x, mu, non_threat_sigma);
+    double log_likelihood = swarm_tools::log_multivariate_normal_2d(resid_x, resid_y, 0.0, 0.0, non_threat_sigma);
     return log_likelihood;
 }
 double calculate_threat_log_likelihood(agent::ObservedIntruderAgent intruder, const std::vector<agent::AgentState> &obstacles){
@@ -112,9 +110,7 @@ double calculate_threat_log_likelihood(agent::ObservedIntruderAgent intruder, co
         double resid_x = pred_speed*cos(pred_heading)-current_state.speed*cos(current_state.heading);
         double resid_y = pred_speed*sin(pred_heading)-current_state.speed*sin(current_state.heading);
 
-        double x[2]={resid_x, resid_y};
-        double mu[2]={0, 0};
-        log_likelihood= swarm_tools::log_multivariate_normal_2d(x, mu, threat_sigma);
+        log_likelihood= swarm_tools::log_multivariate_normal_2d(resid_x, resid_y, 0, 0, threat_sigma);
         ROS_DEBUG("Threat (%f, %f, %f, %f, %f)", command.delta_speed, command.delta_heading, resid_x, resid_y, log_likelihood);
     }
 //    double log_likelihood = summed_log_likelihoods/num_samples;
@@ -209,7 +205,7 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
     }
     t = clock();
     swarm_cp.update_queue_priorities();
-    ROS_INFO("Update queue priorities time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
+    ROS_DEBUG("Update queue priorities time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
     t = clock();
     for (const auto &task : swarm_cp.get_assignment_by_id(usv_id)){
         if (task.task_type != agent::TaskType::Guard && task.task_idx!=-1){
@@ -232,20 +228,23 @@ void perception_callback(const swarm_msgs::worldState::ConstPtr& world_state_ptr
                                                    swarm_cp,
                                                    motion_goal);
     usv.set_aggression(aggression);
-
-    t = clock();
+    ROS_INFO("Before");
     publish_markers(motion_goal);
-    ROS_INFO("Publishing markers time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
 
     agent::AgentCommand command;
+    ROS_INFO("After");
     t = clock();
+    ROS_INFO("Before1");
     swarm_cp.get_obstacle_states(obstacle_states);
+    ROS_INFO("After1");
+    ROS_INFO("Before2");
     swarm_control::get_usv_command_from_motion_goal(usv_id,
                                                     swarm_cp,
                                                     motion_goal,
                                                     command);
-    ROS_INFO("Motion goal calculation time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
-    ROS_INFO("DERSIRED COMMAND: (%f, %f)", command.delta_speed, command.delta_heading*180/swarm_tools::PI);
+    ROS_INFO("After2");
+    ROS_DEBUG("Motion goal calculation time %f", (clock()-t)/(double) CLOCKS_PER_SEC);
+    ROS_DEBUG("DERSIRED COMMAND: (%f, %f)", command.delta_speed, command.delta_heading*180/swarm_tools::PI);
 
     t = clock();
     collision_avoidance::correct_command(usv,
@@ -383,6 +382,7 @@ int main(int argc, char **argv){
     ROS_INFO("USV NODE STARTED");
     if(!nh_priv.getParam("usv_id", usv_id)){
         ROS_ERROR("USV ID NOT FOUND");
+        usv_id=1;
     }
     else{ROS_INFO("Found USV ID %d IN PARAMETERS", usv_id);}
     // Initialize swarm
@@ -417,7 +417,7 @@ int main(int argc, char **argv){
     }
     ROS_INFO("Initialized %d", initialized);
     if(!ros::ok()) return 0;
-    ros::MultiThreadedSpinner spinner(5);
+    ros::MultiThreadedSpinner spinner(1);
     spinner.spin();
     // ros::spin();
 

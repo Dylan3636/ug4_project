@@ -118,6 +118,7 @@ namespace agent{
 
     void USVSwarm::add_task_to_queue(const AgentTask &task){
         double weight;
+        if(task.task_idx==-1) return;
         if(task.task_type==agent::TaskType::Observe){
             weight = get_observation_weight(get_intruder_estimate_by_id(task.task_idx), asset);
         }else {
@@ -136,8 +137,10 @@ namespace agent{
             }
             if(has_delay){
                 std::vector<agent::AgentTask> popped_tasks;
+                assert(contains_usv(assignment_pair.first));
                 usv_map[assignment_pair.first].pop_all_non_priority_tasks(popped_tasks);
                 for(const auto &task: assignment_pair.second){
+                    if(task.task_idx==-1) continue;
                     if(task.task_type!=Delay){
                         add_task_to_queue(task);
                     }else{
@@ -160,7 +163,8 @@ namespace agent{
     void USVSwarm::command_usv_forward_by_id(int usv_id,
                                              const AgentCommand &command,
                                              double delta_time_secs){
-        
+
+        assert(contains_usv(usv_id));
         usv_map[usv_id].command_agent_forward(command,
                                               delta_time_secs);
     }
@@ -170,6 +174,7 @@ namespace agent{
         
         // ROS_INFO("DELTA TIME SEC %f", delta_time_secs);
         // ROS_INFO("(%f, %f)", command.delta_speed, command.delta_heading);
+        assert(contains_intruder(intruder_id));
         auto &intruder = intruder_map[intruder_id];
         // ROS_INFO("BEFORE: (x, y): (%f, %f)",intruder.get_x(), intruder.get_y());
         intruder.command_agent_forward(command,
@@ -186,9 +191,11 @@ namespace agent{
         }
     }
     bool USVSwarm::switch_observe_to_delay_task(int intruder_id){
+       if (intruder_id==-1) return false;
        auto sorted_usvs = sort_usvs_by_weighted_distance_to_point(get_intruder_estimate_by_id(intruder_id).get_position());
        bool switched=false;
        for(int usv_id : sorted_usvs){
+           assert(contains_usv(usv_id));
            usv_map[usv_id].remove_observe_task(intruder_id);
            if(!switched){
                switched = usv_map[usv_id].switch_observe_to_delay_task(intruder_id);
@@ -366,10 +373,12 @@ namespace agent{
     }
 
     void USVSwarm::update_usv_state_estimate(const AgentState &usv_state){
+        assert(contains_usv(usv_state.sim_id));
         usv_map[usv_state.sim_id].set_state(usv_state);
     }
 
     void USVSwarm::update_usv_estimate(const USVAgent &usv){
+        assert(contains_usv(usv.get_sim_id()));
         usv_map[usv.get_sim_id()] = usv;
     }
 
@@ -377,6 +386,7 @@ namespace agent{
         std::priority_queue<WeightedTask> new_queue;
         while(!task_queue.empty()){
             WeightedTask wt = task_queue.top();
+            if(wt.task_idx==-1) continue;
             if(wt.task_type==agent::TaskType::Observe){
                 wt.weight=get_observation_weight(get_intruder_estimate_by_id(wt.task_idx), asset);
             }
@@ -387,6 +397,7 @@ namespace agent{
     }
 
     void USVSwarm::update_intruder_state_estimate(const AgentState &intruder_state){
+        assert(contains_intruder(intruder_state.sim_id));
         intruder_map[intruder_state.sim_id].set_state(intruder_state);
     }
     bool USVSwarm::update_intruder_threat_estimate(int intruder_id)
@@ -404,7 +415,7 @@ namespace agent{
                 intruder_map[intruder_state.sim_id].set_threat_classification(true);
                 block_next_task_allocation=true;
             }else{
-                ROS_ERROR("Switch failed!");
+                ROS_WARN("Switch failed!");
             }
         }
         return new_threat_alert;
@@ -412,6 +423,7 @@ namespace agent{
     void USVSwarm::update_intruder_threat_estimate(int intruder_id, double threat_ll, double non_threat_ll)
     {
         double dist_to_asset = swarm_tools::euclidean_distance(get_intruder_estimate_by_id(intruder_id).get_position(), asset.get_position());
+        assert(contains_intruder(intruder_id));
         bool already_threat = intruder_map[intruder_id].is_threat();
         int result = intruder_map[intruder_id].update_threat_estimate(exp(threat_ll), exp(non_threat_ll), dist_to_asset);
         if(result==1 && !already_threat){
@@ -421,14 +433,23 @@ namespace agent{
                 intruder_map[intruder_id].set_threat_classification(true);
                 block_next_task_allocation=true;
             }else{
-                ROS_ERROR("Switch failed!");
+                ROS_WARN("Switch failed!");
             }
         } else if(result==-1 && already_threat){
             switch_delay_to_observe_task(intruder_id);
         }
     }
     void USVSwarm::update_intruder_estimate(const ObservedIntruderAgent &intruder){
+        assert(contains_intruder(intruder.get_sim_id()));
         intruder_map[intruder.get_sim_id()] = intruder;
+    }
+    bool USVSwarm::assert_contains_usv(int usv_id){
+        auto err_str = boost::format("Intruder map does not contain %d") % usv_id;
+        assert(contains_intruder(usv_id) && err_str.str().c_str());
+    }
+    bool USVSwarm::assert_contains_intruder(int intruder_id){
+        auto err_str = boost::format("Intruder map does not contain %d") % intruder_id;
+        assert(contains_intruder(intruder_id) && err_str.str().c_str());
     }
     bool USVSwarm::contains_usv(int usv_id){
         return usv_map.find(usv_id) != usv_map.end();
@@ -437,6 +458,7 @@ namespace agent{
         return intruder_map.find(intruder_id) != intruder_map.end();
     }
     void USVSwarm::add_usv(const USVAgent &usv){
+//        assert(contains_usv(usv.get_sim_id()));
         usv_map[usv.get_sim_id()] = usv;
         assign_guard_task_to_usv(usv.get_sim_id());
     }
@@ -455,6 +477,7 @@ namespace agent{
         task_queue.push(wt);
     }
     void USVSwarm::assign_guard_task_to_usv(int usv_id){
+        assert(contains_usv(usv_id));
         usv_map[usv_id].add_guard_task(get_num_usvs() - 1);
     }
     void USVSwarm::sample_intruders(){
@@ -480,48 +503,61 @@ namespace agent{
         if(task_queue.empty()){
             return false;
         }
-       WeightedTask top_task = task_queue.top();
-       double top_task_weight;
-       if(top_task.task_type==agent::TaskType::Observe){
-           top_task_weight = get_observation_weight(intruder_map[top_task.task_idx], asset);
-       }else if (top_task.task_type==agent::TaskType::Guard){
-           top_task_weight = get_guard_weight();
-       }else{
-           return false;
-       }
-       std::vector<int> unoccupied_usv_ids;
-       get_unoccupied_usvs(unoccupied_usv_ids);
-       auto sorted_usv_ids = sort_usvs_by_weighted_distance_to_point(intruder_map[top_task.task_idx].get_position());
+        WeightedTask top_task = task_queue.top();
+        if (top_task.task_idx==-1){
+            task_queue.pop();
+            return shuffle_tasks();
+        }
+        double top_task_weight;
+        if(top_task.task_type==agent::TaskType::Observe){
+            top_task_weight = get_observation_weight(intruder_map[top_task.task_idx], asset);
+        }else if (top_task.task_type==agent::TaskType::Guard){
+            top_task_weight = get_guard_weight();
+        }else{
+            return false;
+        }
+        std::vector<int> unoccupied_usv_ids;
+        get_unoccupied_usvs(unoccupied_usv_ids);
 
-       for(const auto &usv_id: sorted_usv_ids){
-           agent::AgentTask min_task = top_task;
-           double min_weight=top_task_weight;
-           ROS_DEBUG("Top weighted task on queue: %s", top_task.to_string().c_str());
-           if(usv_map[usv_id].has_delay_task()) continue;
-           for(const auto &task : usv_map[usv_id].get_current_assignment()){
-               ROS_DEBUG("USV %d candidate task: %s", usv_id, task.to_string().c_str());
-               double task_weight;
-               if(task.task_type==agent::TaskType::Observe){
-                   task_weight = get_observation_weight(intruder_map[task.task_idx], asset);
-               }else if(task.task_type==agent::TaskType::Guard){
-                   task_weight = get_guard_weight();
-               }else{
-                   continue;
-               }
-               if(min_weight>task_weight){
-                   ROS_DEBUG("New minimum &s", task.to_string().c_str());
-                   min_task=task;
-                   min_weight=task_weight;
-               }
-           }
-           if(min_task.task_idx!=top_task.task_idx){
-               task_queue.pop();
-               task_queue.push(WeightedTask(min_task, min_weight));
-               usv_map[usv_id].swap_tasks(min_task, top_task);
-               return true;
-           }
-       }
-       return false;
+        std::vector<int> sorted_usv_ids;
+        if(top_task.task_type==agent::Observe){
+            assert_contains_intruder(top_task.task_idx);
+            sorted_usv_ids = sort_usvs_by_weighted_distance_to_point(intruder_map[top_task.task_idx].get_position());
+        }else{
+            sorted_usv_ids = get_usv_ids();
+
+        }
+
+        for(const auto &usv_id: sorted_usv_ids){
+            agent::AgentTask min_task = top_task;
+            double min_weight=top_task_weight;
+            ROS_DEBUG("Top weighted task on queue: %s", top_task.to_string().c_str());
+            if(usv_map[usv_id].has_delay_task()) continue;
+            for(const auto &task : usv_map[usv_id].get_current_assignment()){
+                ROS_DEBUG("USV %d candidate task: %s", usv_id, task.to_string().c_str());
+                double task_weight;
+                if(task.task_idx==-1) continue;
+                if(task.task_type==agent::TaskType::Observe){
+                    task_weight = get_observation_weight(get_intruder_estimate_by_id(task.task_idx), asset);
+                }else if(task.task_type==agent::TaskType::Guard){
+                    task_weight = get_guard_weight();
+                }else{
+                    continue;
+                }
+                if(min_weight>task_weight){
+                    ROS_DEBUG("New minimum &s", task.to_string().c_str());
+                    min_task=task;
+                    min_weight=task_weight;
+                }
+            }
+            if(min_task.task_idx!=top_task.task_idx){
+                task_queue.pop();
+                task_queue.push(WeightedTask(min_task, min_weight));
+                usv_map[usv_id].swap_tasks(min_task, top_task);
+                return true;
+            }
+        }
+        return false;
     }
 //    bool USVSwarm::get_batch_intruder_commands_from_model(std::vector<agent::AgentCommand> &commands){
 //        return swarm_control::get_batch_intruder_commands_from_model(get_intruder_estimates(),

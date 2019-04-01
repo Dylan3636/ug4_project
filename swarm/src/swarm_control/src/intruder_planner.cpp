@@ -108,7 +108,7 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
     std::vector<agent::AgentState> obstacle_states;
     get_obstacle_states(world_state, obstacle_states);
     auto obstacle_states_w_asset = obstacle_states;
-    obstacle_states_w_asset.push_back(agent::AgentState(0,0,0,0,50,1));
+    obstacle_states_w_asset.push_back(agent::AgentState(0,0,0,0,150,1));
     std::map<int, agent::AgentCommand> intruder_commands_map;
 
     std::vector<agent::IntruderAgent> intruders;
@@ -151,8 +151,8 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
                     intruder.get_max_delta_heading());
         }
 
-        ROS_INFO("Correcting command for intruder [%d]", sim_id);
-        ROS_INFO("Recommended command ([%f], [%f])",
+        ROS_DEBUG("Correcting command for intruder [%d]", sim_id);
+        ROS_DEBUG("Recommended command ([%f], [%f])",
                 command.delta_speed,
                 command.delta_heading*180/swarm_tools::PI);
 
@@ -171,8 +171,8 @@ void callback(const swarm_msgs::worldState::ConstPtr& world_state){
         if (result!=0){
             intruder.update_previously_blocked_time();
         }
-        ROS_INFO("Collision Avoidance Result %d.", result);
-        ROS_INFO("Corrected command ([%f], [%f])",
+        ROS_DEBUG("Collision Avoidance Result %d.", result);
+        ROS_DEBUG("Corrected command ([%f], [%f])",
                 command.delta_speed,
                 command.delta_heading*180/swarm_tools::PI);
         auto command_msg = swarm_msgs::agentCommand();

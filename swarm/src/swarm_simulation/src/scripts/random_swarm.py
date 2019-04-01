@@ -87,12 +87,7 @@ class AISInititialStateSampler(Sampler):
         self.data=data
 
     def sample(self, num_samples=1):
-        subdata=drop_lt(self.data,'SOG', 10)
-        subdata=drop_lt(subdata,'Xcoord', -10)
-        subdata=drop_lt(subdata, 'Ycoord', -10)
-        subdata=drop_gt(subdata, 'Xcoord', 10)
-        subdata=drop_gt(subdata, 'Ycoord', 10)
-        row = subdata.sample(1, random_state=self.randomstate)
+        row = self.data.sample(1, random_state=self.randomstate)
         x = 1000*(row.Xcoord.iloc[0])/20
         y = 1000*(row.Ycoord.iloc[0])/20
         x_dot = row.SmoothedVectorXcoord.iloc[0]
@@ -100,7 +95,7 @@ class AISInititialStateSampler(Sampler):
         heading = np.arctan2(y_dot, x_dot)
         speed = np.sqrt(x_dot**2 + y_dot**2)
         x, y, speed, heading = map(float, [x, y, speed, heading])
-        print(x,y,speed, np.rad2deg(heading))
+        # print(x,y,speed, np.rad2deg(heading))
         return x, y, (10/4)*speed, heading
 
 
@@ -269,12 +264,13 @@ def usv_to_params(usv: BasicUSV, radar_constraints):
     return config
 
 
-def intruder_to_params(intruder: Intruder, radar_constraints, is_threat):
+def intruder_to_params(intruder: Intruder, radar_constraints, is_threat, activate_time):
     config = dict()
     config['sim_id'] = intruder.sim_id
     config['constraints'] = constraints_to_params(intruder.constraints)
     config['radar_parameters'] = radar_constraints_to_params(radar_constraints)
-    config['is_threat'] = False  # is_threat
+    config['is_threat'] = is_threat
+    # config['activate_time'] = activate_time
     return config
 
 
@@ -297,7 +293,7 @@ class SimulationSampler(Sampler):
         self.noise = self.config['noise']
         self.anim = LivePlot() if self.visualize else None
         self.reset_pub = rospy.Publisher('SystemReset', resetSystem, queue_size=100)
-        self.data = pd.read_csv("/home/dylan/Github/ug4_project/data.csv")
+        self.data = pd.read_csv("/home/dylan/Github/ug4_project/subdata.csv")
         # self.ynormalizer = joblib.load('/home/dylan/Github/ug4_project/notebooks/ynormalizer')
         self.intruder_initstate_sampler = AISInititialStateSampler(randomstate, self.data)
         self.intruder_sampler.initial_state_sampler = self.intruder_initstate_sampler
@@ -350,9 +346,12 @@ class SimulationSampler(Sampler):
                         initial_state=asset_init_state,
                         radius_buffer=asset_radius_buffer)
         usvs = self.sample_usvs()
-        intruders, num_threats = self.sample_intruders()
+        intruders, threat_ids = self.sample_intruders()
+        threat_times = {}
+        for t_id in threat_ids:
+            threat_times[t_id] = [-1,-1]
         self.num_intruders = len(intruders)
-        self.num_threats = int(num_threats)
+        self.num_threats = len(threat_ids)
         self.sim_number += 1
         node = SimulationNode([*intruders, *usvs, tanker],
                               use_gui=self.visualize,
@@ -368,7 +367,9 @@ class SimulationSampler(Sampler):
                                              self.num_threats,
                                              self.noise,
                                              self.config['usv_params']['threat_sigma'],
-                                             self.config['usv_params']['non_threat_sigma']))
+                                             self.config['usv_params']['non_threat_sigma'],
+                                             threat_times)
+                              )
         return node
 
     def reset(self):
@@ -438,6 +439,7 @@ class SimulationSampler(Sampler):
         threat_ids = randomstate.choice(intruder_ids, num_threats, replace=False)
         threat_times_dic = dict(zip(threat_ids, activate_times))
 
+        print(threat_times_dic)
         intruders = []
         intruder_configs = []
         for intruder_id in intruder_ids:
@@ -451,15 +453,24 @@ class SimulationSampler(Sampler):
             intruders.append(intruder)
 
             # Get config dictionary
-            intruder_configs.append(intruder_to_params(intruder, radar_params, intruder_id in threat_ids))
+            intruder_configs.append(intruder_to_params(intruder, radar_params, intruder_id in threat_ids, activate_time))
 
         # Set configs to ROS param server
         rospy.set_param('/swarm_simulation/intruder_params', intruder_configs)
-        return intruders, num_threats
+        return intruders, threat_ids
 
 
 class SimStats:
-    def __init__(self, sim_number, start_seed, num_usvs, num_intruders, num_threats, position_noise, threat_sigma, non_threat_sigma):
+    def __init__(self,
+                 sim_number,
+                 start_seed,
+                 num_usvs,
+                 num_intruders,
+                 num_threats,
+                 position_noise,
+                 threat_sigma,
+                 non_threat_sigma,
+                 intruder_times):
         self.sim_number = sim_number
         self.start_seed = start_seed
         self.num_usvs = num_usvs
@@ -470,7 +481,7 @@ class SimStats:
         self.non_threat_sigma = non_threat_sigma
         self.num_false_pos = 0
         self.num_true_neg = 0
-        self.intruder_times = {}
+        self.intruder_times = intruder_times
         self.start_time = None
         self.end_time = None
 
@@ -492,9 +503,9 @@ def log_stats(statsdir : str, stats: SimStats):
     dic['non_threat_sigma'] = stats.non_threat_sigma
     for threat_id, times in stats.intruder_times.items():
         if times[1] == -1:
-            dic['intruder_detection_times'].append(stats.end_time-times[0])
+            dic['intruder_detection_times'].append(stats.end_time-stats.start_time)
         else:
-            dic['intruder_detection_times'].append(times[1] -times[0])
+            dic['intruder_detection_times'].append(times[1] - times[0])
         with open(statsdir + "/stats_{}_{}_{}_{}_{}_.json".format(
                 stats.position_noise,
                 stats.threat_sigma,
@@ -502,6 +513,7 @@ def log_stats(statsdir : str, stats: SimStats):
                 stats.start_seed, stats.sim_number), "wb") as f:
             f.write(json.dumps(dic).encode("utf-8"))
     print("Statistics Summary\n =================")
+    print("Delay time: {}".format(stats.end_time-stats.start_time))
     print(dic)
 
 

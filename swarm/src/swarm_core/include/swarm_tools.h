@@ -65,11 +65,11 @@ namespace swarm_tools{
         const Point2D& p1,
         const Point2D& p2
     );
-    double log_multivariate_normal_2d(const double x[2], const double mu[2], double sigma ){
-        double dx = x[0]-mu[0];
-        double dy = x[1]-mu[1];
+    double log_multivariate_normal_2d(double z_x, double z_y, double mu_x, double mu_y, double sigma ){
+        double dx = z_x-mu_x;
+        double dy = z_y-mu_y;
 
-        double constant = -log(2*PI*sigma*2);
+        double constant = -log(2*PI*sigma*sigma);
         double exponent = -0.5 *(dx*dx + dy*dy)/(sigma*sigma);
 //        ROS_ERROR("exp: %f const: %f", exponent, constant);
 

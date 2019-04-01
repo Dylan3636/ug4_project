@@ -1,26 +1,26 @@
 <launch>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_1" >
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_1" required="true">
         <param name="usv_id" value="1"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_2">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_2" required="true">
         <param name="usv_id" value="2"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_3">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_3" required="true">
         <param name="usv_id" value="3"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_4">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_4" required="true">
         <param name="usv_id" value="4"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_5">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_5" required="true">
         <param name="usv_id" value="5"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_6">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_6" required="true">
         <param name="usv_id" value="6"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_7">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_7" required="true">
         <param name="usv_id" value="7"/>
     </node>
-    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_8">
+    <node pkg="swarm_planner" type="usv_planner" name="usv_planner_8" required="true">
         <param name="usv_id" value="8"/>
     </node>
     <node pkg="swarm_task_manager" type="task_manager" name="task_manager">

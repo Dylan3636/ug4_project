@@ -82,6 +82,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #target_link_libraries(collision_avoidance_service collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(intruder_planner intruder_planner.cpp)
-add_dependencies(intruder_planner collision_avoidance motion_goal_control collision_avoidance_service swarm_control_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(intruder_planner collision_avoidance motion_goal_control swarm_control_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(intruder_planner motion_goal_control collision_avoidance ${swarm_core_LIBRARIES} ${catkin_LIBRARIES})
 

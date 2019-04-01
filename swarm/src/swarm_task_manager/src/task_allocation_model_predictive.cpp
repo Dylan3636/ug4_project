@@ -366,19 +366,20 @@ namespace swarm_task_manager{
         }
     }
 
-    std::vector<agent::WeightedSwarmAssignment> generate_weighted_candidate_assignments(int sim_id,
-                                                                                 const agent::USVSwarm &swarm,
-                                                                                 const std::map<int, bool> &communication_map,
-                                                                                 int num_timesteps,
-                                                                                 double delta_time_secs,
-                                                                                 double threshold){
+    void generate_weighted_candidate_assignments(int sim_id,
+                                                const agent::USVSwarm &swarm,
+                                                const std::map<int, bool> &communication_map,
+                                                int num_timesteps,
+                                                double delta_time_secs,
+                                                double threshold,
+                                                std::vector<agent::WeightedSwarmAssignment> &candidate_assignments){
 
         time_t t= std::clock();
         agent::USVSwarm swarm_cp=swarm;
         swarm_cp.shuffle_tasks();
         agent::SwarmAssignment assignment;
         swarm_cp.get_swarm_assignment(assignment);
-        auto candidate_assignments = generate_assignment_candidates(sim_id, assignment, communication_map);
+        candidate_assignments = generate_assignment_candidates(sim_id, assignment, communication_map);
         ROS_INFO("Generation time %f", (std::clock()-t)/(double) CLOCKS_PER_SEC);
         t= std::clock();
         weight_candidate_swarm_assignments(swarm_cp,
@@ -387,7 +388,6 @@ namespace swarm_task_manager{
                                            threshold,
                                            candidate_assignments);
         ROS_INFO("Total Evaluation time %f",  (clock()-t)/(double) CLOCKS_PER_SEC);
-        return candidate_assignments;
     }
     agent::WeightedSwarmAssignment max_weighted_swarm_assignment(
         const std::vector<agent::WeightedSwarmAssignment> &weighted_assignments){
@@ -407,7 +407,14 @@ namespace swarm_task_manager{
                                                                        double delta_time_secs,
                                                                        double threshold){
 
-        auto weighted_assignments = generate_weighted_candidate_assignments(sim_id, swarm, communication_map, num_timesteps, delta_time_secs, threshold);
+        std::vector<agent::WeightedSwarmAssignment> weighted_assignments;
+        generate_weighted_candidate_assignments(sim_id,
+                swarm,
+                communication_map,
+                num_timesteps,
+                delta_time_secs,
+                threshold,
+                weighted_assignments);
         auto max_assignment = max_weighted_swarm_assignment(weighted_assignments);
         return max_assignment;
     }

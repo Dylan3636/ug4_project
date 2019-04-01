@@ -38,7 +38,7 @@ namespace agent{
         }
 
         AgentState(const AgentState &state){
-            ROS_DEBUG("Copy State Constructor");
+//            ROS_DEBUG("Copy State Constructor");
             x = state.x;
             y = state.y;
             speed = state.speed;
@@ -48,7 +48,7 @@ namespace agent{
         }
 
         AgentState(){
-            ROS_DEBUG("Default State Constructor");
+//            ROS_DEBUG("Default State Constructor");
             x=0;
             y=0;
             speed=0;
@@ -84,7 +84,7 @@ namespace agent{
         int task_idx=-1; // ID of intruder or guard position
 
         AgentTask(){
-            task_idx=-2;
+            task_idx=-1;
             task_type=Guard;
         }
         AgentTask(const AgentTask &task){
@@ -123,11 +123,13 @@ namespace agent{
     struct WeightedTask : AgentTask{
         double weight=0;
 
-        WeightedTask():AgentTask(){ROS_DEBUG("Default Weighted Constructor");};
+        WeightedTask():AgentTask() {
+//            ROS_DEBUG("Default Weighted Constructor");
+        }
         WeightedTask(TaskType tt, int tidx, double weight) : AgentTask(tt, tidx), weight(weight){}
         WeightedTask(AgentTask task, double weight) : AgentTask(task), weight(weight){}
         WeightedTask(const WeightedTask &wt) : AgentTask(wt), weight(wt.weight){
-           ROS_DEBUG("Copy Weighted Constructor");
+//           ROS_DEBUG("Copy Weighted Constructor");
         }
 
         bool operator<(const WeightedTask &wt) const{
@@ -482,6 +484,9 @@ namespace agent{
                 double non_threat_joint =  non_threat_likelihood*(1-trans_prob)*(1-threat_probability);
                 threat_probability = threat_joint/(threat_joint + non_threat_joint + 1e-10);
                 ROS_DEBUG("(%d, %f, %f, %f, %f, %f)", get_sim_id(), threat_likelihood, non_threat_likelihood, threat_probability, trans_prob, dist_to_asset);
+                if(std::isnan(threat_probability)){
+                    threat_probability = 1e-10;
+                }
                 if(threat_probability>threat_threshold_upper){
                     set_threat_classification(true);
                     return 1;
@@ -632,6 +637,7 @@ namespace agent{
 
             void set_delay_assignment(int delay_assignment_idx){
                 bool set=false;
+                if(delay_assignment_idx==-1) return;
                 for(auto &task : current_assignment){
                     if(task.task_type==Delay){
                         task.task_idx=delay_assignment_idx;
@@ -654,6 +660,7 @@ namespace agent{
             }
 
             bool add_guard_task(int guard_assignment_idx){
+                if(guard_assignment_idx==-1) return false;
                 remove_guard_task(guard_assignment_idx);
                 if(current_num_tasks>=max_num_tasks) return false;
                 current_assignment.emplace_back(Guard, guard_assignment_idx);
@@ -665,6 +672,7 @@ namespace agent{
                 ROS_DEBUG("Attemptind to add observe task %d", observe_assignment_idx);
                 ROS_DEBUG("Current num observations %d", current_num_tasks);
                 ROS_DEBUG("Max num observations %d", max_num_tasks);
+                if(observe_assignment_idx==-1) return false;
                 remove_observe_task(observe_assignment_idx);
                 if(current_num_tasks>=max_num_tasks) return false;
                 remove_observe_task(observe_assignment_idx);
@@ -722,6 +730,7 @@ namespace agent{
                 return false;
             }
             bool swap_tasks(agent::AgentTask old_task, agent::AgentTask new_task){
+                if(new_task.task_idx==-1) return false;
                 if(TaskType::Observe == old_task.task_type){
                     bool result = remove_observe_task(old_task.task_idx);
                     if(!result) return false;
