@@ -6,7 +6,7 @@ from time import time
 
 
 def radnorm(theta):
-    while theta<0:
+    while theta < 0:
         theta += 2*np.pi
     while theta > 2*np.pi:
         theta -= 2*np.pi
@@ -42,20 +42,21 @@ class FFNNModel:
             latest_headings.append(heading)
             ids.append(intruder_history_msg[0].sim_id)
 
-        X = np.reshape(vessel_states, [-1, 4])
+        X = self.xnormalizer.transform(np.reshape(vessel_states, [-1, 4]))
         # rospy.logerr(X)
         with self.graph.as_default():
             t = time()
             # self.model.predict(X)
             #rospy.logerr("NN predict time {}".format(time()-t))
-            y_pred = self.ynormalizer.inverse_transform(self.model.predict(X))
-            y_pred += self.sigma*np.random.randn(*np.shape(y_pred))/4
-        pred_speeds = np.sqrt(y_pred[:, 0]**2+y_pred[:, 1]**2)*scale
+            y_pred = (self.model.predict(X))
+            # y_pred += self.sigma*np.random.randn(*np.shape(y_pred))/4
+        pred_speeds = np.sqrt(y_pred[:, 1]**2+y_pred[:, 0]**2)*scale
         # rospy.logerr(pred_speeds)
-        pred_headings = np.array([radnorm(theta) for theta in np.arctan2(y_pred[:, 1], y_pred[:, 0])])
+        pred_headings = np.array([radnorm(theta) for theta in np.arctan2(y_pred[:, 0], y_pred[:, 1])])
+        rospy.logerr(np.rad2deg(pred_headings))
         delta_speed = pred_speeds-np.array(latest_speeds)
         delta_heading = pred_headings-np.array(latest_headings)
-        # rospy.logerr("ypred {}".format(y_pred))
+        rospy.logerr("ypred {}".format(y_pred))
         return delta_speed, delta_heading, ids
 
 

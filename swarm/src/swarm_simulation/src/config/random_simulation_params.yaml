@@ -4,9 +4,9 @@ max_time : 90
 delta_time_secs : 0.1
 radius_buffer : 20
 threshold : 25
-visualize : False
+visualize : True
 noise : 0
-continue_from : 12
+continue_from : 91
 statsdir : /home/dylan/Github/ug4_project/statistics
 
 usv_params: {

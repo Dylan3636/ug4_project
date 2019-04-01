@@ -163,21 +163,23 @@ namespace agent{
         double max_radar_angle_rad{swarm_tools::PI/2};
         double aggression{0.5};
         CollisionAvoidanceParameters()= default;
+        CollisionAvoidanceParameters(const CollisionAvoidanceParameters &ca_params)= default;
         CollisionAvoidanceParameters(double max_radar_distance, double max_radar_angle_rad, double aggression)
                 :max_radar_distance(max_radar_distance), max_radar_angle_rad(max_radar_angle_rad),
                  aggression(aggression) {}
     };
 
     struct MotionGoal{
-        double x{0};
-        double y{0};
-        double speed{0};
-        double heading_rad{0};
+        double x = 0;
+        double y =0;
+        double speed = 0;
+        double heading_rad = 0;
         swarm_tools::Point2D get_position() const{
             return swarm_tools::Point2D{x, y};
         }
 
         MotionGoal() = default;
+        MotionGoal(const MotionGoal &mg) = default;
 
         MotionGoal(double x, double y) : x(x), y(y){
             speed = 0;

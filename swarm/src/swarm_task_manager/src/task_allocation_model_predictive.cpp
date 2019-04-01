@@ -400,14 +400,15 @@ namespace swarm_task_manager{
         }
         return max_assignment;
     }
-    agent::WeightedSwarmAssignment get_best_candidate_swarm_assignment(int sim_id,
-                                                                       const agent::USVSwarm &swarm,
-                                                                       const std::map<int, bool> communication_map,
-                                                                       int num_timesteps,
-                                                                       double delta_time_secs,
-                                                                       double threshold){
+    void get_best_candidate_swarm_assignment(int sim_id,
+                                            const agent::USVSwarm &swarm,
+                                            const std::map<int, bool> communication_map,
+                                            int num_timesteps,
+                                            double delta_time_secs,
+                                            double threshold,
+                                            agent::WeightedSwarmAssignment &weighted_swarm_assignment){
 
-        std::vector<agent::WeightedSwarmAssignment> weighted_assignments;
+        std::vector<agent::WeightedSwarmAssignment>weighted_assignments;
         generate_weighted_candidate_assignments(sim_id,
                 swarm,
                 communication_map,
@@ -415,7 +416,6 @@ namespace swarm_task_manager{
                 delta_time_secs,
                 threshold,
                 weighted_assignments);
-        auto max_assignment = max_weighted_swarm_assignment(weighted_assignments);
-        return max_assignment;
+        weighted_swarm_assignment = max_weighted_swarm_assignment(weighted_assignments);
     }
 }

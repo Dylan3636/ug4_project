@@ -542,6 +542,10 @@ namespace swarm_control{
                     break;
             }
         }
+        if(motion_goals.empty()) {
+            ROS_ERROR("Task assignment for usv %d is empty", usv_id);
+            return 0.1;
+        }
         double total_weight = weighted_motion_goal(motion_goals, weights, motion_goal);
         return 1-(w_guard/total_weight);
     }

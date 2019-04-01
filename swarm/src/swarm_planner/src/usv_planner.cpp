@@ -311,12 +311,14 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
                 delta_time_secs,
                 threshold);
     try{
-        weighted_swarm_assignment = swarm_task_manager::get_best_candidate_swarm_assignment(usv_id,
-                                                                                            swarm_cp,
-                                                                                            usv_communication_map,
-                                                                                            num_timesteps_lookahead,
-                                                                                            delta_time_secs,
-                                                                                            threshold);
+        agent::WeightedSwarmAssignment weighted_swarm_assignment;
+         swarm_task_manager::get_best_candidate_swarm_assignment(usv_id,
+                                                                 swarm_cp,
+                                                                 usv_communication_map,
+                                                                 num_timesteps_lookahead,
+                                                                 delta_time_secs,
+                                                                 threshold,
+                                                                 weighted_swarm_assignment);
  
         res.candidate_assignment = convert_to_swarm_assignment_msg(weighted_swarm_assignment.first);
         res.weight = weighted_swarm_assignment.second;
