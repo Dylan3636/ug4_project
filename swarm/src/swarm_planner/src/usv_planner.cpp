@@ -319,7 +319,8 @@ bool model_predictive_response(swarm_task_manager::modelPredictiveSimulation::Re
                                                                  delta_time_secs,
                                                                  threshold,
                                                                  weighted_swarm_assignment);
- 
+
+         ROS_INFO("Found best swarm assignment");
         res.candidate_assignment = convert_to_swarm_assignment_msg(weighted_swarm_assignment.first);
         res.weight = weighted_swarm_assignment.second;
     }catch(std::exception& e){
@@ -419,7 +420,7 @@ int main(int argc, char **argv){
     }
     ROS_INFO("Initialized %d", initialized);
     if(!ros::ok()) return 0;
-    ros::MultiThreadedSpinner spinner(1);
+    ros::MultiThreadedSpinner spinner(2);
     spinner.spin();
     // ros::spin();
 

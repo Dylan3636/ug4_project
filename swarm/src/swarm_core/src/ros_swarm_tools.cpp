@@ -157,7 +157,6 @@ agent::SwarmAssignment extract_from_swarm_assignment_msg(const swarm_msgs::swarm
 
 swarm_msgs::swarmAssignment convert_to_swarm_assignment_msg(const agent::SwarmAssignment &swarm_assignment){
     swarm_msgs::swarmAssignment swarm_assignment_msg;
-    swarm_assignment_msg.usvAssignments.clear();
     for(const auto &assignment_pair : swarm_assignment){
         swarm_assignment_msg.usvAssignments.push_back(
             convert_to_agent_assignment_msg(assignment_pair.first,

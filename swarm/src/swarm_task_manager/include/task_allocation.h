@@ -19,7 +19,8 @@ namespace swarm_task_manager{
                                              double threshold,
                                              agent::WeightedSwarmAssignment &weighted_swarm_assignment);
 
-    agent::WeightedSwarmAssignment max_weighted_swarm_assignment(
-       const std::vector<agent::WeightedSwarmAssignment> &weighted_assignments);
+    void max_weighted_swarm_assignment(
+       const std::vector<agent::WeightedSwarmAssignment> &weighted_assignments,
+        agent::WeightedSwarmAssignment &max_assignment);
 }
 #endif

@@ -514,8 +514,17 @@ namespace swarm_control{
         double p_threat;
         double weight;
         agent::ObservedIntruderAgent intruder;
+        if(assignment.empty()) {
+            ROS_ERROR("Task assignment for usv %d is empty", usv_id);
+            motion_goal.x = 100;
+            motion_goal.y = 100;
+            return 0.1;
+        }
         for(const auto &task : assignment){
-            if(task.task_idx==-1) continue;
+            if(task.task_idx==-1) {
+                ROS_ERROR("Empty task in motion goal prediction for usv %d", usv_id);
+                continue;
+            };
             switch (task.task_type){
                 case agent::TaskType::Delay:
                     intruder_id = task.task_idx;
@@ -543,7 +552,9 @@ namespace swarm_control{
             }
         }
         if(motion_goals.empty()) {
-            ROS_ERROR("Task assignment for usv %d is empty", usv_id);
+            ROS_ERROR("Motion goals for usv %d is empty", usv_id);
+            motion_goal.x=100;
+            motion_goal.y=100;
             return 0.1;
         }
         double total_weight = weighted_motion_goal(motion_goals, weights, motion_goal);

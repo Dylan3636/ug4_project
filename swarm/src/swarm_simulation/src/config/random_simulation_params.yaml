@@ -1,17 +1,17 @@
 seed : 1000
-num_simulations : 100
+num_simulations : 200
 max_time : 90
 delta_time_secs : 0.1
 radius_buffer : 20
 threshold : 25
 visualize : True
-noise : 0
-continue_from : 91
+noise : 5
+continue_from : 156
 statsdir : /home/dylan/Github/ug4_project/statistics
 
 usv_params: {
   min_num_usvs : 2,
-  max_num_usvs : 8,
+  max_num_usvs : 7,
   threat_sigma : 5,
   non_threat_sigma : 5,
   initial_state: {

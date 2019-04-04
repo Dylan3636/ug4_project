@@ -87,13 +87,13 @@ namespace swarm_task_manager{
                      main_usv_task_tmp = main_usv_task;
                      other_usv_task_tmp = other_usv_task;
 
-                     exchange_assignment(main_usv_task, other_usv_task);
-
-                     candidates.push_back({swarm_assignment_copy, 0.0});
-                     // Reset
-                     main_usv_task = main_usv_task_tmp;
-                     other_usv_task = other_usv_task_tmp;
-//                   }else{
+                     if (main_usv_assignment.size()!=1 || main_usv_task.task_idx!=other_usv_task.task_idx){
+                         exchange_assignment(main_usv_task, other_usv_task);
+                         candidates.push_back({swarm_assignment_copy, 0.0});
+                         // Reset
+                         main_usv_task = main_usv_task_tmp;
+                         other_usv_task = other_usv_task_tmp;
+                     }
                         // Share Task
                    if(main_usv_task.task_type==agent::TaskType::Delay){
                        if(!has_delay_task){
@@ -173,12 +173,7 @@ namespace swarm_task_manager{
        double dist_to_asset=-1;
        bool terminated=false;
        time_t sample_t= std::clock();
-        std::map<int, agent::AgentCommand> intruder_commands_map;
-       if (use_model){
-           time_t batch_t= std::clock();
-           swarm_control::get_batch_intruder_commands(swarm, intruder_commands_map);
-           ROS_INFO("Batch query time %f", (std::clock()-batch_t)/(double) CLOCKS_PER_SEC);
-       }
+
        // ROS_INFO("%s", agent::swarm_assignment_to_string(swarm.get_swarm_assignment()).c_str());
        int count_since_shuffle = 0;
        while (!terminated) {
@@ -210,7 +205,6 @@ namespace swarm_task_manager{
                            sim_id_type_pair.first);
                    if(!intruder.is_threat()){
                        command = agent::AgentCommand();
-
                        collision_avoidance::correct_command(intruder, obstacle_states, command);
                    }
                    else{
@@ -247,8 +241,8 @@ namespace swarm_task_manager{
        ROS_INFO("Sample time %f", (std::clock()-sample_t)/(double) CLOCKS_PER_SEC);
     }
 
-    void evaluate_swarm_assignment(const agent::SwarmAssignment &swarm_assignment,
-                                   const agent::USVSwarm &swarm,
+    void evaluate_swarm_assignment(agent::SwarmAssignment swarm_assignment,
+                             agent::USVSwarm swarm,
                                    int num_timesteps,
                                    double delta_time_secs,
                                    double threshold,
@@ -324,8 +318,8 @@ namespace swarm_task_manager{
             if(use_threads) {
                 ROS_INFO("STARTING THREAD");
                 threads[i] = std::thread(evaluate_swarm_assignment,
-                                         std::ref(assignment_pair.first),
-                                         std::ref(swarm),
+                                         assignment_pair.first,
+                                         swarm,
                                          num_timesteps,
                                          delta_time_secs,
                                          threshold,
@@ -389,16 +383,20 @@ namespace swarm_task_manager{
                                            candidate_assignments);
         ROS_INFO("Total Evaluation time %f",  (clock()-t)/(double) CLOCKS_PER_SEC);
     }
-    agent::WeightedSwarmAssignment max_weighted_swarm_assignment(
-        const std::vector<agent::WeightedSwarmAssignment> &weighted_assignments){
-        assert(weighted_assignments.size()!=0);
-        agent::WeightedSwarmAssignment max_assignment=weighted_assignments[0];
-        for (const auto &assignment_pair : weighted_assignments){
-            if(max_assignment.second<assignment_pair.second){
-                max_assignment=assignment_pair;
+    void max_weighted_swarm_assignment(
+        const std::vector<agent::WeightedSwarmAssignment> &weighted_assignments,
+        agent::WeightedSwarmAssignment &max_assignment){
+        ROS_INFO("Calculating max candidate assignment");
+        assert(!weighted_assignments.empty());
+        time_t t= std::clock();
+        auto max_it = weighted_assignments.begin();
+        for (auto it = weighted_assignments.begin(); it<weighted_assignments.end(); it++){
+            if(max_it->second < it->second){
+                max_it=it;
             }
         }
-        return max_assignment;
+        max_assignment = *max_it;
+        ROS_INFO("Max calculation time %f",  (clock()-t)/(double) CLOCKS_PER_SEC);
     }
     void get_best_candidate_swarm_assignment(int sim_id,
                                             const agent::USVSwarm &swarm,
@@ -416,6 +414,6 @@ namespace swarm_task_manager{
                 delta_time_secs,
                 threshold,
                 weighted_assignments);
-        weighted_swarm_assignment = max_weighted_swarm_assignment(weighted_assignments);
+        max_weighted_swarm_assignment(weighted_assignments, weighted_swarm_assignment);
     }
 }

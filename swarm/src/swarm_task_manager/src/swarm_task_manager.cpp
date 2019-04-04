@@ -54,7 +54,8 @@ void reallocate_tasks(){
             ROS_INFO("%s", agent::agent_assignment_to_string(assignment_pair.second).c_str());
         }
     }
-    auto local_max_weighted_assignment = swarm_task_manager::max_weighted_swarm_assignment(weighted_assignments);
+    agent::WeightedSwarmAssignment local_max_weighted_assignment;
+    swarm_task_manager::max_weighted_swarm_assignment(weighted_assignments, local_max_weighted_assignment);
     auto swarm_assignment_msg = convert_to_swarm_assignment_msg(local_max_weighted_assignment.first);
     task_allocation_publisher.publish(swarm_assignment_msg);
 }

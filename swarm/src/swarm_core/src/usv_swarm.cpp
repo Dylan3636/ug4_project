@@ -129,6 +129,13 @@ namespace agent{
 
     void USVSwarm::update_swarm_assignment(const SwarmAssignment &swarm_assignment){
         for(const auto &assignment_pair : swarm_assignment){
+            if (assignment_pair.second.empty()){
+                if(!task_queue.empty()){
+                    auto assignment = assignment_pair.second;
+                    assignment.push_back(task_queue.top());
+                    task_queue.pop();
+                }
+            }
             bool has_delay=false;
             for(const auto &task: assignment_pair.second){
                 if(task.task_type==Delay){
@@ -474,7 +481,7 @@ namespace agent{
             if(successful) return;
         }
         agent::WeightedTask wt = agent::WeightedTask(agent::TaskType::Observe, intruder.get_sim_id(), agent::get_observation_weight(intruder, asset));
-        task_queue.push(wt);
+        add_task_to_queue(wt);
     }
     void USVSwarm::assign_guard_task_to_usv(int usv_id){
         assert(contains_usv(usv_id));
@@ -514,7 +521,8 @@ namespace agent{
         }else if (top_task.task_type==agent::TaskType::Guard){
             top_task_weight = get_guard_weight();
         }else{
-            return false;
+            task_queue.pop();
+            return shuffle_tasks();
         }
         std::vector<int> unoccupied_usv_ids;
         get_unoccupied_usvs(unoccupied_usv_ids);
@@ -528,10 +536,23 @@ namespace agent{
 
         }
 
+        for(const auto &usv_id : sorted_usv_ids){
+            if(usv_map[usv_id].get_current_assignment().empty()){
+                if(top_task.task_type==agent::TaskType::Observe) {
+                    usv_map[usv_id].add_observe_task(top_task.task_idx);
+                }else{
+                    usv_map[usv_id].add_guard_task(top_task.task_idx);
+                }
+                task_queue.pop();
+                return true;
+            }
+        }
+
         for(const auto &usv_id: sorted_usv_ids){
             agent::AgentTask min_task = top_task;
             double min_weight=top_task_weight;
             ROS_DEBUG("Top weighted task on queue: %s", top_task.to_string().c_str());
+
             if(usv_map[usv_id].has_delay_task()) continue;
             for(const auto &task : usv_map[usv_id].get_current_assignment()){
                 ROS_DEBUG("USV %d candidate task: %s", usv_id, task.to_string().c_str());
@@ -552,7 +573,7 @@ namespace agent{
             }
             if(min_task.task_idx!=top_task.task_idx){
                 task_queue.pop();
-                task_queue.push(WeightedTask(min_task, min_weight));
+                add_task_to_queue(WeightedTask(min_task, min_weight));
                 usv_map[usv_id].swap_tasks(min_task, top_task);
                 return true;
             }
